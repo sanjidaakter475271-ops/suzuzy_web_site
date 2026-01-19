@@ -1,0 +1,696 @@
+🏍️ RoyalConsortium - Complete Implementation Plan
+Multi-Dealer Bike Showroom Marketplace
+NOTE
+
+Project Summary: A B2B2C multi-vendor marketplace for motorcycle dealers in Bangladesh, featuring subscription-based access, bKash payment integration, and role-based access control with Super Admin, Admin, Dealer, and Customer portals.
+
+📊 Phase Overview
+2026-01-18
+2026-01-25
+2026-02-01
+2026-02-08
+2026-02-15
+2026-02-22
+2026-03-01
+2026-03-08
+2026-03-15
+2026-03-22
+2026-03-29
+2026-04-05
+Foundation & Auth
+Core Modules
+Dealer & Products
+Orders & Payments
+Admin & Reports
+Polish & Deploy
+Phase 1
+Phase 2
+Phase 3
+Phase 4
+Phase 5
+Phase 6
+RoyalConsortium Development Timeline
+User Review Required
+IMPORTANT
+
+Design Aesthetic Decision Required: Based on the skill rules, we need to choose a BOLD aesthetic direction. I recommend:
+
+Direction: "Luxury Automotive Dark Mode" - Sleek dark theme with metallic gold/champagne accents, reminiscent of premium automotive brands
+Typography: Playfair Display (display) + DM Sans (body) - elegant, refined feel
+Color Palette: Deep charcoal (#0D0D0F), Champagne Gold (#D4AF37), Pearl White (#F8F8F8), Racing Red (#DC2626) for CTAs
+Alternative directions:
+
+"Neon Racing" - Bold neon colors on dark, aggressive sports aesthetic
+"Clean Modern Minimal" - Light theme, crisp whites, subtle shadows
+"Retro Moto" - Vintage motorcycle aesthetic with sepia tones
+CAUTION
+
+Payment Gateway: bKash integration requires Merchant Account approval from bKash. Production credentials needed before launch.
+
+🔥 Existing Project Status
+Component	Status	Notes
+Next.js 16.1.1	✅ Configured	App Router ready
+TypeScript	✅ Configured	Strict mode enabled
+Tailwind CSS v4	✅ Installed	PostCSS configured
+Supabase Client	✅ Installed	@supabase/ssr + supabase-js
+Shadcn/ui	✅ Configured	components.json present
+Framer Motion	✅ Installed	Ready for animations
+Zustand	✅ Installed	State management ready
+React Query	✅ Installed	Data fetching ready
+📋 PHASE 1: Foundation & Authentication
+Duration: Week 1-2 (14 days)
+
+1.1 Design System & Visual Foundation
+[NEW] src/styles/tokens.css
+Define comprehensive CSS custom properties for the luxury automotive theme:
+
+Color palette (primary, secondary, accent, surface, text colors)
+Typography scale (font families, sizes, line heights, letter spacing)
+Spacing system (8px base grid)
+Border radius variants
+Shadow levels (elevation system)
+Animation timing functions
+[MODIFY] 
+globals.css
+Implement dark mode as default with light mode support
+Apply custom font imports (Google Fonts: Playfair Display, DM Sans)
+Set up animation keyframes
+Define utility classes for consistent styling
+[NEW] src/components/ui/premium/ (Directory)
+Create premium UI components following the design aesthetic:
+
+GlassCard.tsx - Glassmorphism card with backdrop blur
+GradientButton.tsx - CTA buttons with gradient/glow effects
+AnimatedSection.tsx - Scroll-triggered animations wrapper
+MetallicText.tsx - Text with metallic gradient effect
+ShimmerLoader.tsx - Premium loading skeleton
+1.2 Supabase Database Setup
+Supabase Project Configuration
+Create new Supabase project (or use existing)
+Configure Row Level Security (RLS) policies
+Set up database triggers and functions
+Configure Supabase Auth settings
+Database Migrations (Apply in Order)
+Migration 1: Core Tables
+Tables: roles, permissions, role_permissions, users
+- System roles (super_admin, admin, dealer, dealer_manager, dealer_staff, support, viewer)
+- Permission matrix for RBAC
+Migration 2: Business Tables
+Tables: plans, dealers, subscriptions, categories, brands
+- Subscription plans (Starter, Professional, Enterprise)
+- Default categories (Sports Bike, Commuter, Cruiser, Scooter, Electric)
+- Default brands (Honda, Yamaha, Suzuki, Bajaj, TVS, Hero, KTM, etc.)
+Migration 3: Product & Order Tables
+Tables: products, orders, order_items, payments, refunds
+- Full product schema with JSONB for flexible data (colors, features, specifications)
+- Multi-dealer order support
+Migration 4: System Tables
+Tables: settings, feature_flags, audit_logs, notifications, invoices
+- Immutable audit logs with trigger protection
+- Feature flag system for gradual rollout
+Migration 5: RLS Policies & Functions
+- Row Level Security policies for all tables
+- Helper functions (generate_order_number, generate_invoice_number)
+- Triggers (updated_at timestamp, audit_log protection)
+1.3 Authentication System
+[NEW] src/lib/supabase/
+client.ts - Browser Supabase client (existing, verify)
+server.ts - Server-side Supabase client with cookies
+middleware.ts - Auth middleware for route protection
+auth-actions.ts - Server actions for auth operations
+[NEW] src/app/(auth)/ Routes
+[NEW] login/page.tsx
+Premium login page with:
+
+Email/Password form (React Hook Form + Zod validation)
+"Remember me" functionality
+Rate limiting feedback (5 attempts/15 min)
+Password visibility toggle
+Link to registration
+Animated background/decorative elements
+[MODIFY] register/page.tsx
+Complete registration with:
+
+Multi-step form (Personal Info → Business Info → Verification)
+Trade license upload
+bKash/Bank details collection for dealers
+Email verification flow
+Terms acceptance
+[NEW] forgot-password/page.tsx
+Email input for password reset
+Token-based reset flow
+Success/error states
+[NEW] verify-email/page.tsx
+Email verification confirmation
+Resend verification option
+[NEW] src/hooks/
+useAuth.ts - Authentication state & methods
+useUser.ts - Current user data with role info
+usePermissions.ts - Permission checking hook
+1.4 Route Protection & Middleware
+[MODIFY] 
+middleware.ts
+Implement comprehensive route protection:
+
+/dashboard/* → Requires authentication
+/admin/* → Requires admin/super_admin role
+/dealer/* → Requires dealer role & active subscription
+/super-admin/* → Requires super_admin role only
+[NEW] src/components/guards/
+AuthGuard.tsx - Client-side auth verification
+RoleGuard.tsx - Role-based access component
+SubscriptionGuard.tsx - Check dealer subscription status
+📋 PHASE 2: Public Website & Landing
+Duration: Week 3-4 (14 days)
+
+2.1 Premium Landing Page
+[MODIFY] 
+page.tsx
+ (Homepage)
+Redesign with luxury automotive aesthetic:
+
+Hero Section
+
+Full-screen animated hero with motorcycle imagery
+Staggered text reveal animations
+Gradient overlays with depth
+CTA buttons with hover glow effects
+Scroll indicator animation
+Featured Bikes Section
+
+Horizontal scroll carousel with snap points
+3D card hover effects (perspective transform)
+Quick view modal
+Brand Showcase
+
+Logo grid with metallic hover effects
+Filter by brand capability
+Why Choose Us Section
+
+Animated counters (dealers, products, customers)
+Feature cards with icons
+Trust badges
+Featured Dealers Section
+
+Dealer spotlight cards
+Rating display
+Location info
+Footer
+
+Newsletter signup
+Social links
+Legal pages links
+Contact information
+2.2 Product Catalog Pages
+[NEW] src/app/bikes/page.tsx
+Product listing with:
+
+Advanced filter sidebar (price, brand, category, CC, condition, location)
+Sort options (price, newest, popular)
+Grid/List view toggle
+Infinite scroll pagination
+Active filter pills
+"No results" state
+[NEW] src/app/bikes/[slug]/page.tsx
+Product detail page:
+
+Image gallery with zoom (lightbox)
+Specification table
+Color selector
+Price with discount display
+Dealer info card
+Add to Cart / Buy Now buttons
+Similar bikes section
+Share functionality
+[NEW] src/app/brands/page.tsx
+All brands listing with category filtering
+
+[NEW] src/app/brands/[slug]/page.tsx
+Brand-specific product listings
+
+[NEW] src/app/categories/[slug]/page.tsx
+Category-specific product listings
+
+[NEW] src/app/dealers/page.tsx
+Dealer directory with map view option
+
+[NEW] src/app/dealers/[slug]/page.tsx
+Dealer profile page with their products
+
+2.3 Static Pages
+[NEW] src/app/(static)/
+about/page.tsx - Company story, mission, team
+contact/page.tsx - Contact form, map, support info
+terms/page.tsx - Terms and conditions
+privacy/page.tsx - Privacy policy
+faq/page.tsx - Accordion FAQ component
+2.4 Search & Navigation
+[NEW] src/components/layout/
+Header.tsx - Responsive navigation with mega menu
+Footer.tsx - Site-wide footer
+MobileNav.tsx - Mobile slide-out navigation
+SearchModal.tsx - Full-screen search with instant results
+CartDrawer.tsx - Slide-out cart preview
+[NEW] src/app/search/page.tsx
+Search results page with faceted filtering
+
+📋 PHASE 3: Dealer Portal
+Duration: Week 5-6 (14 days)
+
+3.1 Dealer Registration & Onboarding
+[NEW] src/app/become-dealer/page.tsx
+Multi-step dealer application:
+
+Step 1: Business Information
+Step 2: Owner Details
+Step 3: Trade License Upload
+Step 4: Bank/bKash Details
+Step 5: Terms Agreement
+Confirmation: "Application Submitted" state
+[NEW] src/lib/dealer/
+registration-schema.ts - Zod validation schemas
+dealer-actions.ts - Server actions for dealer operations
+3.2 Dealer Dashboard
+[NEW] src/app/dealer/layout.tsx
+Dealer portal layout with:
+
+Sidebar navigation
+Header with notifications
+Subscription status indicator
+Mobile-responsive drawer
+[NEW] src/app/dealer/dashboard/page.tsx
+Dealer dashboard with:
+
+Subscription status widget
+Today's orders count
+Pending orders alert
+Monthly revenue chart
+Recent orders list
+Product performance overview
+Notifications panel
+3.3 Dealer Product Management
+[NEW] src/app/dealer/products/page.tsx
+Product listing for dealer:
+
+DataTable with sorting, filtering
+Status filter (Pending, Approved, Rejected, Blocked)
+Bulk actions (Delete, Mark as Featured)
+Quick edit modal
+[NEW] src/app/dealer/products/new/page.tsx
+Add new product:
+
+Multi-section form (Basic Info, Specifications, Media, Pricing)
+Image upload with drag-drop
+Color picker
+Feature list builder
+Preview before submit
+[NEW] src/app/dealer/products/[id]/edit/page.tsx
+Edit existing product
+
+3.4 Dealer Order Management
+[NEW] src/app/dealer/orders/page.tsx
+Order listing:
+
+Status tabs (All, Pending, Processing, Shipped, Delivered, Cancelled)
+Order cards with quick actions
+Date range filter
+Search by order number
+[NEW] src/app/dealer/orders/[id]/page.tsx
+Order detail:
+
+Order timeline
+Customer info (with privacy controls)
+Order items list
+Status update actions
+Add tracking info
+Print/download invoice
+3.5 Dealer Settings & Profile
+[NEW] src/app/dealer/settings/page.tsx
+Tabbed settings:
+
+Business Profile
+Contact Information
+Bank/bKash Details
+Password Change
+Notification Preferences
+[NEW] src/app/dealer/subscription/page.tsx
+Subscription management:
+
+Current plan display
+Usage vs limits
+Upgrade/downgrade modal
+Billing history table
+[NEW] src/app/dealer/sub-users/page.tsx
+Sub-user management (Manager/Staff):
+
+User list with roles
+Add new sub-user modal
+Edit permissions
+Disable/enable accounts
+[NEW] src/app/dealer/analytics/page.tsx
+Dealer-specific analytics:
+
+Sales trends chart
+Top products
+Revenue breakdown
+Export reports (CSV, PDF)
+📋 PHASE 4: Cart, Checkout & Payments
+Duration: Week 7-8 (14 days)
+
+4.1 Cart System
+[NEW] src/store/cart.ts
+Zustand cart store:
+
+Add/remove items
+Update quantity
+Persist to localStorage
+Multi-dealer cart support
+[NEW] src/app/cart/page.tsx
+Shopping cart page:
+
+Item list grouped by dealer
+Quantity controls
+Remove item
+Price summary
+Continue shopping / Checkout buttons
+4.2 Checkout Flow
+[NEW] src/app/checkout/page.tsx
+Multi-step checkout:
+
+Step 1: Customer Information (name, phone, email, address)
+Step 2: Order Review
+Step 3: Payment Method Selection
+Step 4: bKash Payment Processing
+[NEW] src/app/checkout/success/page.tsx
+Order confirmation:
+
+Order number display
+Order summary
+Track order link
+Continue shopping
+[NEW] src/app/checkout/failed/page.tsx
+Payment failure:
+
+Error message
+Retry payment option
+Contact support link
+4.3 bKash Integration
+[NEW] src/lib/bkash/
+config.ts - bKash credentials & mode (sandbox/production)
+client.ts - bKash API wrapper
+actions.ts - Server actions for payment processing
+[NEW] src/app/api/bkash/
+create/route.ts - Create payment intent
+execute/route.ts - Execute payment
+callback/route.ts - Webhook handler
+refund/route.ts - Process refunds (admin only)
+[NEW] Supabase Edge Function: bkash-webhook
+Secure webhook handler for payment confirmations
+
+4.4 Order Tracking
+[NEW] src/app/track/page.tsx
+Public order tracking:
+
+Order ID input
+Phone verification
+Order status timeline
+Shipping information
+[NEW] src/app/track/[orderId]/page.tsx
+Order tracking result page
+
+📋 PHASE 5: Admin & Super Admin Portals
+Duration: Week 9-10 (14 days)
+
+5.1 Admin Panel
+[NEW] src/app/admin/layout.tsx
+Admin layout with navigation
+
+[NEW] src/app/admin/dashboard/page.tsx
+Admin dashboard:
+
+Pending dealer approvals count
+Pending product approvals count
+Today's orders
+Quick action buttons
+[NEW] src/app/admin/dealers/page.tsx
+Dealer management:
+
+Dealer list with status filters
+View details action
+Approve/Reject pending dealers
+[NEW] src/app/admin/dealers/[id]/page.tsx
+Dealer detail view:
+
+Business information
+Documents view (trade license, NID)
+Order history
+Product list
+Communication log
+[NEW] src/app/admin/products/page.tsx
+Product approval queue:
+
+Pending products list
+Quick approve/reject
+View product details
+[NEW] src/app/admin/products/[id]/page.tsx
+Product review page:
+
+Full product preview
+Approve/Reject with reason
+Edit capability (override)
+[NEW] src/app/admin/orders/page.tsx
+All orders view (across all dealers)
+
+[NEW] src/app/admin/catalog/
+categories/page.tsx - Category CRUD
+brands/page.tsx - Brand CRUD
+5.2 Super Admin Panel
+[NEW] src/app/super-admin/layout.tsx
+Super admin layout (distinctive from admin)
+
+[NEW] src/app/super-admin/dashboard/page.tsx
+Platform overview:
+
+Total revenue (platform)
+Subscription vs commission income
+Active dealers count
+Growth charts
+Critical alerts
+Quick actions
+[NEW] src/app/super-admin/users/page.tsx
+User & role management:
+
+Create admin/support/viewer accounts
+Assign roles
+Disable/enable users
+Force logout
+[NEW] src/app/super-admin/roles/page.tsx
+Permission matrix editor:
+
+Create custom roles
+Granular permission assignment
+Role templates
+[NEW] src/app/super-admin/dealers/page.tsx
+Advanced dealer management:
+
+All dealer operations from admin +
+Suspend/reactivate
+Override limits
+Force subscription changes
+[NEW] src/app/super-admin/plans/page.tsx
+Subscription plan management:
+
+Create new plans
+Edit pricing, limits, commission
+Enable/disable plans
+Plan analytics
+[NEW] src/app/super-admin/payments/page.tsx
+Payment management:
+
+bKash gateway configuration
+Transaction list
+Refund approval queue
+Settlement reports
+[NEW] src/app/super-admin/settings/page.tsx
+Platform settings:
+
+General settings
+Invoice settings
+Feature flags toggle
+Notification templates
+Maintenance mode
+[NEW] src/app/super-admin/audit-logs/page.tsx
+Audit log viewer:
+
+Searchable/filterable logs
+Export capability
+Timeline view
+[NEW] src/app/super-admin/reports/page.tsx
+Comprehensive reports:
+
+Platform overview
+Dealer performance
+Product analytics
+Order reports
+Payment reports
+Export (PDF, Excel)
+[NEW] src/app/super-admin/emergency/page.tsx
+Emergency controls:
+
+Freeze specific dealer
+Freeze all payments
+Enable maintenance mode
+Force logout all users
+Generate incident report
+📋 PHASE 6: Customer Features & Polish
+Duration: Week 11-12 (14 days)
+
+6.1 Customer Account (Optional Feature Flag)
+[NEW] src/app/account/
+page.tsx - Account dashboard
+orders/page.tsx - Order history
+orders/[id]/page.tsx - Order detail
+profile/page.tsx - Profile settings
+wishlist/page.tsx - Saved products (if enabled)
+6.2 Notifications System
+[NEW] src/lib/notifications/
+types.ts - Notification types
+actions.ts - CRUD operations
+templates.ts - Email/SMS templates
+[NEW] src/components/ui/NotificationCenter.tsx
+Real-time notification dropdown
+
+Supabase Realtime Integration
+Subscribe to notifications table for instant updates
+
+6.3 Email & SMS Integration
+[NEW] src/lib/email/
+client.ts - Resend/SendGrid client
+templates/ - Email templates (order confirmation, password reset, etc.)
+[NEW] src/lib/sms/
+client.ts - SSL Wireless/Twilio client
+templates.ts - SMS templates
+6.4 Performance & Optimization
+Image Optimization
+Configure Next.js Image component
+Set up Supabase Storage with CDN
+Implement lazy loading
+SEO
+Dynamic meta tags for products
+Structured data (JSON-LD)
+Sitemap generation
+robots.txt
+Caching Strategy
+React Query stale-while-revalidate
+Edge caching with Vercel
+Database query optimization
+6.5 Testing & QA
+Testing Coverage
+Unit tests for utility functions
+Component tests for UI
+E2E tests for critical flows (registration, checkout)
+Payment flow testing (sandbox)
+Security Audit
+RLS policy verification
+Input validation review
+XSS/CSRF protection check
+Rate limiting verification
+6.6 Deployment
+Environment Setup
+Production Supabase project
+Environment variables
+bKash production credentials
+Email/SMS service keys
+CI/CD Pipeline
+GitHub Actions for tests
+Vercel deployment
+Database migration automation
+Monitoring
+Error tracking (Sentry)
+Analytics (Vercel Analytics)
+Uptime monitoring
+📋 Component & File Structure Summary
+src/
+├── app/
+│   ├── (auth)/                    # Auth routes (login, register, etc.)
+│   ├── (static)/                  # Static pages (about, contact, etc.)
+│   ├── account/                   # Customer account
+│   ├── admin/                     # Admin portal
+│   ├── api/
+│   │   └── bkash/                 # bKash API routes
+│   ├── bikes/                     # Product catalog
+│   ├── brands/                    # Brand pages
+│   ├── cart/                      # Shopping cart
+│   ├── categories/                # Category pages
+│   ├── checkout/                  # Checkout flow
+│   ├── dealer/                    # Dealer portal
+│   ├── dealers/                   # Dealer directory (public)
+│   ├── search/                    # Search results
+│   ├── super-admin/               # Super admin portal
+│   ├── track/                     # Order tracking
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx                   # Homepage
+├── components/
+│   ├── guards/                    # Route protection
+│   ├── layout/                    # Header, Footer, Nav
+│   └── ui/
+│       ├── premium/               # Custom premium components
+│       └── [shadcn components]
+├── hooks/
+│   ├── useAuth.ts
+│   ├── useUser.ts
+│   ├── usePermissions.ts
+│   └── ...
+├── lib/
+│   ├── bkash/                     # bKash integration
+│   ├── dealer/                    # Dealer operations
+│   ├── email/                     # Email service
+│   ├── notifications/             # Notification system
+│   ├── sms/                       # SMS service
+│   └── supabase/                  # Supabase clients
+├── store/
+│   ├── auth.ts                    # Auth state
+│   ├── cart.ts                    # Cart state
+│   └── ui.ts                      # UI state
+├── styles/
+│   └── tokens.css                 # Design tokens
+└── types/
+    ├── database.ts                # Supabase generated types
+    └── index.ts                   # Common types
+📋 Verification Plan
+Automated Tests
+Jest unit tests for utilities and hooks
+React Testing Library for component tests
+Playwright E2E for critical user journeys
+Supabase CLI for migration testing
+Manual Verification
+Phase 1-2
+ Auth flow: Register → Verify → Login → Logout
+ Password reset flow
+ Public pages render correctly
+ Responsive design check (mobile, tablet, desktop)
+Phase 3-4
+ Dealer registration submission
+ Admin: Approve dealer flow
+ Dealer: Add product → Admin approves → Visible on catalog
+ Cart: Add items → Checkout → bKash sandbox payment
+ Order tracking with valid order ID
+Phase 5-6
+ Super Admin: All administrative functions
+ Audit log verification
+ Notification delivery (email, in-app)
+ Edge cases: Suspended dealer, expired subscription, etc.
+📅 Timeline Summary
+Phase	Duration	Focus Area
+Phase 1	Week 1-2	Foundation, Auth, Database
+Phase 2	Week 3-4	Public Website, Landing, Catalog
+Phase 3	Week 5-6	Dealer Portal
+Phase 4	Week 7-8	Cart, Checkout, bKash
+Phase 5	Week 9-10	Admin & Super Admin Portals
+Phase 6	Week 11-12	Polish, Testing, Deployment
+Total Estimated Duration: 12 Weeks (3 Months)
+
+TIP
+
+Development Approach: Build features incrementally with each phase resulting in a deployable state. This allows early user testing and feedback incorporation.

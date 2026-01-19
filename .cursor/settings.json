@@ -1,0 +1,10 @@
+{
+    "mcpServers": {
+        "sequential-thinking": {
+            "command": "python",
+            "args": [
+                "c:/Users/NAZMUL/Desktop/Pocket options/mcp-sequential-thinking/server.py"
+            ]
+        }
+    }
+}

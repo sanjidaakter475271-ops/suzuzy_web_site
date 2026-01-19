@@ -1,0 +1,22 @@
+{
+    "compilerOptions": {
+        "skipLibCheck": true,
+        "noEmit": true,
+        "baseUrl": ".",
+        "paths": {
+            "supabase": [
+                "../../node_modules/@supabase/supabase-js"
+            ],
+            "edge-runtime": [
+                "../../node_modules/@supabase/functions-js/src/edge-runtime.d.ts"
+            ]
+        }
+    },
+    "include": [
+        "./**/*.ts",
+        "./deno.d.ts"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}

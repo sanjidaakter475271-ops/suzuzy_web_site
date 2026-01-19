@@ -1,0 +1,4 @@
+supabase: sanjidaakter475271@gmail.com
+pass: Nazmul@2@@@
+database: royal_suzuky
+supabase acc token: sbp_31e017ac34c54ee28ae7b959105d2e8ef1a506ac
