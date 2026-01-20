@@ -20,7 +20,8 @@ import {
     PieChart,
     UserPlus,
     Megaphone,
-    Bell
+    Bell,
+    ReceiptText
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useUser } from "@/hooks/useUser";
@@ -61,6 +62,10 @@ const ADMIN_NAV: NavItem[] = [
 const DEALER_NAV: NavItem[] = [
     { name: "Dashboard", href: "/dealer/dashboard", icon: BarChart3 },
     { name: "My Products", href: "/dealer/products", icon: Briefcase },
+    { name: "Vendors", href: "/dealer/vendors", icon: Store },
+    { name: "Purchase Orders", href: "/dealer/purchase", icon: ShoppingCart },
+    { name: "POS Terminal", href: "/dealer/pos", icon: LayoutGrid },
+    { name: "Sales Registry", href: "/dealer/sales", icon: ReceiptText },
     { name: "Store Orders", href: "/dealer/orders", icon: ShoppingCart },
     { name: "Marketing", href: "/dealer/marketing", icon: Megaphone },
     { name: "Analytics", href: "/dealer/analytics", icon: PieChart },

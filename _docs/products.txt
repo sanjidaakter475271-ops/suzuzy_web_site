@@ -1,0 +1,2699 @@
+E-commerce Inventory Management System Planning
+আপনার requirement অনুযায়ী একটা সম্পূর্ণ planning করছি। এটা হবে Dealer-focused Product & Inventory Management System।
+
+📋 Core Requirements Analysis
+আপনার চাহিদা:
+Category-based product management (Oil → Brand → Size)
+Purchase tracking (Vendor, Price, Quantity, Barcode)
+Stock management (Real-time tracking)
+Sales tracking (Daily sales, profit calculation)
+Multi-variant support (1L, ½L, 2L same product)
+🎯 Database Structure Planning
+1. CATEGORIES Table (Already exists ✅)
+text
+
+- id
+- name (Oil, Filter, Battery etc)
+- parent_id (for subcategories)
+- slug
+2. PRODUCTS Table (Modify existing)
+text
+
+Main Product Entry:
+- id
+- dealer_id
+- category_id
+- name (Brand name: Castrol, Mobil, etc)
+- base_price (যেকোনো একটা variant এর price - optional)
+- description
+- brand (manufacturer)
+- status
+3. PRODUCT_VARIANTS Table (Already exists - এইটা ব্যবহার করবো ✅)
+text
+
+Variant = Size variations (1L, ½L, 2L):
+- id
+- product_id
+- sku (unique barcode/product code)
+- attributes → {"size": "1L", "type": "Synthetic"}
+- price (selling price)
+- stock_quantity (current stock)
+4. PURCHASE_ORDERS Table (NEW - তৈরি করতে হবে)
+text
+
+Purchase Record:
+- id
+- dealer_id
+- vendor_id (supplier)
+- purchase_date
+- total_amount
+- status (pending, completed)
+- created_at
+5. PURCHASE_ORDER_ITEMS Table (NEW - তৈরি করতে হবে)
+text
+
+Individual Purchase Items:
+- id
+- purchase_order_id
+- product_id
+- variant_id (size: 1L, ½L)
+- quantity (কয়টা কিনলেন)
+- unit_cost_price (vendor থেকে কত টাকায় কিনলেন)
+- total_cost (quantity × unit_cost_price)
+- barcode (unique identifier)
+- expiry_date (optional - oil এর জন্য)
+- created_at
+6. INVENTORY Table (Already exists - Modify করতে হবে)
+text
+
+Stock Movement Tracking:
+- id
+- product_id
+- variant_id
+- change_quantity (+100 purchase, -5 sale)
+- type (purchase, sale, adjustment, return)
+- reference_id (purchase_order_id or order_id)
+- description
+- created_at
+
+Purpose: Every stock movement এর history track করা
+7. SALES Table (NEW - তৈরি করতে হবে)
+text
+
+Daily Sales Summary:
+- id
+- dealer_id
+- sale_date
+- total_sales_amount
+- total_profit
+- total_items_sold
+- created_at
+8. SALE_ITEMS Table (NEW - তৈরি করতে হবে)
+text
+
+Individual Sale Items:
+- id
+- sale_id
+- product_id
+- variant_id
+- quantity
+- cost_price (যে দামে কিনেছিলেন)
+- selling_price (যে দামে বিক্রি করলেন)
+- profit (selling_price - cost_price) × quantity
+- barcode (track which batch sold)
+- sold_at
+🔄 Complete Workflow Planning
+Phase 1: Category Setup
+text
+
+Step 1: Admin/Dealer creates categories
+- Oil
+  - Engine Oil
+  - Gear Oil
+  - Brake Oil
+
+Step 2: সব categories একবারে setup হয়ে যাবে
+Phase 2: Product Entry (First Time)
+text
+
+Scenario: Dealer নতুন product add করছে
+
+Step 1: Select Category
+- Category: Engine Oil
+
+Step 2: Add Main Product (Brand)
+- Name: Castrol POWER1 4T
+- Brand: Castrol
+- Category: Engine Oil
+- Description: Synthetic engine oil
+
+Step 3: Add Variants (Sizes)
+Variant 1:
+- Size: 1L
+- SKU/Barcode: CAST-P1-1L
+- Selling Price: 850 টাকা
+
+Variant 2:
+- Size: 800ml
+- SKU/Barcode: CAST-P1-800ML
+- Selling Price: 680 টাকা
+
+Variant 3:
+- Size: 4L
+- SKU/Barcode: CAST-P1-4L
+- Selling Price: 3200 টাকা
+
+Note: এই পর্যায়ে stock_quantity = 0 (কারণ এখনো purchase করা হয়নি)
+Phase 3: Purchase Entry (Stock In)
+text
+
+Scenario: Dealer vendor থেকে stock কিনছে
+
+Purchase Entry Form:
+------------------------
+Vendor: ABC Distributors
+Purchase Date: 2024-01-15
+Invoice Number: INV-2024-001
+
+Items:
+------
+1. Product: Castrol POWER1 4T
+   Variant: 1L (CAST-P1-1L)
+   Quantity: 50 pieces
+   Unit Cost Price: 720 টাকা
+   Total: 36,000 টাকা
+   
+2. Product: Castrol POWER1 4T
+   Variant: 800ml (CAST-P1-800ML)
+   Quantity: 30 pieces
+   Unit Cost Price: 580 টাকা
+   Total: 17,400 টাকা
+
+Total Purchase Amount: 53,400 টাকা
+
+Backend Process:
+----------------
+1. PURCHASE_ORDERS table এ entry
+2. PURCHASE_ORDER_ITEMS table এ প্রতিটা item এর entry
+3. PRODUCT_VARIANTS table এ stock update:
+   - 1L variant: stock_quantity = 0 + 50 = 50
+   - 800ml variant: stock_quantity = 0 + 30 = 30
+   
+4. INVENTORY table এ movement record:
+   Entry 1:
+   - variant_id: 1L
+   - change_quantity: +50
+   - type: purchase
+   - reference_id: purchase_order_id
+   
+   Entry 2:
+   - variant_id: 800ml
+   - change_quantity: +30
+   - type: purchase
+Phase 4: Sales Entry (Stock Out)
+text
+
+Scenario: আজকে customer কাছে বিক্রি হলো
+
+Sale Entry:
+-----------
+Sale Date: 2024-01-16
+
+Item 1:
+- Product: Castrol POWER1 4T
+- Variant: 1L (CAST-P1-1L)
+- Quantity: 5 pieces
+- Cost Price: 720 টাকা (purchase থেকে automatically আসবে)
+- Selling Price: 850 টাকা
+- Profit per unit: 130 টাকা
+- Total Profit: 650 টাকা
+
+Item 2:
+- Product: Castrol POWER1 4T
+- Variant: 800ml
+- Quantity: 3 pieces
+- Cost Price: 580 টাকা
+- Selling Price: 680 টাকা
+- Profit per unit: 100 টাকা
+- Total Profit: 300 টাকা
+
+Backend Process:
+----------------
+1. SALES table এ daily summary:
+   - total_sales_amount: (5×850) + (3×680) = 6,290 টাকা
+   - total_profit: 650 + 300 = 950 টাকা
+   - total_items_sold: 8
+
+2. SALE_ITEMS table এ প্রতিটা item:
+   - All details সহ entry
+
+3. PRODUCT_VARIANTS stock update:
+   - 1L: 50 - 5 = 45
+   - 800ml: 30 - 3 = 27
+
+4. INVENTORY movement record:
+   - variant_id: 1L, change: -5, type: sale
+   - variant_id: 800ml, change: -3, type: sale
+📊 Report & Dashboard Features
+1. Stock Report
+SQL
+
+Query Logic:
+SELECT 
+  p.name as product_name,
+  pv.attributes->>'size' as size,
+  pv.stock_quantity as current_stock,
+  pv.sku as barcode,
+  pv.price as selling_price,
+  (SELECT unit_cost_price 
+   FROM purchase_order_items 
+   WHERE variant_id = pv.id 
+   ORDER BY created_at DESC 
+   LIMIT 1) as last_cost_price
+FROM products p
+JOIN product_variants pv ON p.id = pv.product_id
+WHERE p.dealer_id = :dealer_id
+  AND p.category_id = :category_id
+ORDER BY p.name, pv.attributes->>'size'
+
+Output:
+---------------------------------------------
+Product          | Size  | Stock | Barcode      | Sell Price | Cost
+---------------------------------------------
+Castrol POWER1   | 800ml | 27    | CAST-P1-800ML| 680       | 580
+Castrol POWER1   | 1L    | 45    | CAST-P1-1L   | 850       | 720
+Mobil Super      | 1L    | 30    | MOB-SUP-1L   | 780       | 650
+2. Daily Sales Report
+SQL
+
+SELECT 
+  si.sold_at::date as sale_date,
+  p.name as product,
+  pv.attributes->>'size' as size,
+  si.quantity,
+  si.selling_price,
+  si.cost_price,
+  si.profit,
+  (si.selling_price * si.quantity) as total_sale,
+  (si.profit * si.quantity) as total_profit
+FROM sale_items si
+JOIN product_variants pv ON si.variant_id = pv.id
+JOIN products p ON si.product_id = p.id
+WHERE si.sold_at::date = CURRENT_DATE
+  AND p.dealer_id = :dealer_id
+
+Output:
+-------------------------------------------------------------------
+Date       | Product        | Size | Qty | Price | Cost | Profit | Total
+-------------------------------------------------------------------
+2024-01-16 | Castrol POWER1 | 1L   | 5   | 850   | 720  | 130    | 650
+2024-01-16 | Castrol POWER1 | 800ml| 3   | 680   | 580  | 100    | 300
+-------------------------------------------------------------------
+                                                    Total Profit: 950
+3. Profit Analysis
+SQL
+
+-- Monthly Profit
+SELECT 
+  DATE_TRUNC('month', sold_at) as month,
+  SUM(profit * quantity) as total_profit
+FROM sale_items si
+JOIN products p ON si.product_id = p.id
+WHERE p.dealer_id = :dealer_id
+GROUP BY month
+
+-- Product-wise Profit
+SELECT 
+  p.name,
+  SUM(si.quantity) as units_sold,
+  SUM(si.profit * si.quantity) as total_profit
+FROM sale_items si
+JOIN products p ON si.product_id = p.id
+WHERE p.dealer_id = :dealer_id
+GROUP BY p.name
+ORDER BY total_profit DESC
+🛡️ Stock Accuracy Guarantee
+Prevention Methods:
+1. Transaction-based Updates
+text
+
+সব stock movement একটা transaction এ হবে:
+
+BEGIN TRANSACTION;
+  -- Sale entry
+  INSERT INTO sale_items...
+  
+  -- Stock decrease
+  UPDATE product_variants 
+  SET stock_quantity = stock_quantity - 5
+  WHERE id = :variant_id;
+  
+  -- Movement log
+  INSERT INTO inventory...
+COMMIT;
+
+যদি কোনো error হয়, সব rollback হয়ে যাবে
+2. Stock Validation
+text
+
+Sale করার আগে check:
+
+IF (current_stock < sale_quantity) THEN
+  RAISE ERROR 'Insufficient stock'
+END IF;
+3. Audit Trail
+text
+
+INVENTORY table এ সব movement থাকবে:
+- কখন stock add হলো (purchase)
+- কখন stock কমলো (sale)
+- কে করলো (user_id)
+
+যেকোনো সময় verify করা যাবে:
+Current Stock = Total Purchase - Total Sale - Total Adjustments
+4. Stock Reconciliation
+text
+
+প্রতিদিন/সপ্তাহে একবার:
+
+Calculated Stock = 
+  (Total Purchase) - (Total Sales) - (Damage/Loss)
+
+যদি Calculated Stock ≠ Current Stock:
+  Alert to admin
+🎨 UI/UX Flow
+Purchase Entry Screen
+text
+
+┌─────────────────────────────────────┐
+│  New Purchase Entry                 │
+├─────────────────────────────────────┤
+│  Vendor: [Select Vendor ▼]          │
+│  Date: [2024-01-15]                 │
+│  Invoice: [INV-2024-001]            │
+├─────────────────────────────────────┤
+│  Add Items:                         │
+│  ┌───────────────────────────────┐  │
+│  │ Category: [Engine Oil ▼]      │  │
+│  │ Product: [Castrol POWER1 ▼]   │  │
+│  │ Variant: [1L ▼]               │  │
+│  │ Quantity: [50]                │  │
+│  │ Unit Cost: [720]              │  │
+│  │ Total: 36,000                 │  │
+│  │        [+ Add Item]           │  │
+│  └───────────────────────────────┘  │
+│                                     │
+│  Items Added:                       │
+│  1. Castrol 1L - 50 pcs - 36,000   │
+│  2. Castrol 800ml - 30 pcs - 17,400│
+│                                     │
+│  Grand Total: 53,400                │
+│         [Save Purchase]             │
+└─────────────────────────────────────┘
+Sales Entry Screen
+text
+
+┌─────────────────────────────────────┐
+│  New Sale                           │
+├─────────────────────────────────────┤
+│  Date: [2024-01-16]                 │
+│  Customer: [Optional]               │
+├─────────────────────────────────────┤
+│  Scan/Select Product:               │
+│  ┌───────────────────────────────┐  │
+│  │ Barcode: [CAST-P1-1L____]     │  │
+│  │        OR                     │  │
+│  │ Category: [Engine Oil ▼]      │  │
+│  │ Product: [Castrol POWER1 ▼]   │  │
+│  │ Size: [1L ▼]                  │  │
+│  │                               │  │
+│  │ Available Stock: 45           │  │
+│  │ Cost Price: 720               │  │
+│  │ Selling Price: [850]          │  │
+│  │ Quantity: [5]                 │  │
+│  │ Profit/Unit: 130              │  │
+│  │        [Add to Cart]          │  │
+│  └───────────────────────────────┘  │
+│                                     │
+│  Cart:                              │
+│  1. Castrol 1L × 5 = 4,250 (650↑)  │
+│  2. Castrol 800ml × 3 = 2,040 (300↑)│
+│                                     │
+│  Total: 6,290                       │
+│  Profit: 950                        │
+│         [Complete Sale]             │
+└─────────────────────────────────────┘
+✅ Advantages of This Planning
+Accurate Stock: Transaction-based, কোনো discrepancy হবে না
+Profit Tracking: প্রতিটা sale এ exact profit জানা যাবে
+Audit Trail: সব movement logged থাকবে
+Multi-variant: Same product এর different sizes handle করা যাবে
+Barcode Support: Fast selling এর জন্য barcode scan
+Vendor Management: কোন vendor থেকে কত টাকায় কিনেছেন track
+Historical Data: Past purchase price দেখে current pricing decision নেওয়া যাবে
+এই planning follow করলে আপনার system 100% accurate থাকবে! 🎯
+
+
+Advance hisabe add koro::
+
+🚀 Advanced E-commerce Inventory Management System - Complete Blueprint
+📑 Table of Contents
+System Architecture
+Enhanced Database Design
+Advanced Features
+Complete Workflows
+Business Rules & Validations
+Reports & Analytics
+UI/UX Design
+Edge Cases & Solutions
+🏗️ System Architecture
+Multi-Tenant Architecture
+text
+
+┌─────────────────────────────────────────────┐
+│           Platform Level (Admin)            │
+│  - Manage all dealers                       │
+│  - System settings                          │
+│  - Master data (categories, brands)         │
+└─────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────┐
+│           Dealer Level (Tenant)             │
+│  - Own products                             │
+│  - Own inventory                            │
+│  - Own sales                                │
+│  - Own customers                            │
+└─────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────┐
+│           Customer Level                    │
+│  - Browse products                          │
+│  - Place orders                             │
+│  - Track orders                             │
+└─────────────────────────────────────────────┘
+🗄️ Enhanced Database Design
+NEW TABLES TO CREATE
+1. VENDORS Table (Supplier Management)
+SQL
+
+CREATE TABLE vendors (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  dealer_id uuid REFERENCES dealers(id),
+  name varchar NOT NULL,
+  code varchar UNIQUE, -- VEN-001
+  contact_person varchar,
+  phone varchar,
+  email varchar,
+  address text,
+  
+  -- Financial
+  credit_limit numeric DEFAULT 0,
+  current_balance numeric DEFAULT 0, -- outstanding amount
+  payment_terms varchar, -- 'cash', '7_days', '15_days', '30_days'
+  
+  -- Performance
+  total_purchases numeric DEFAULT 0,
+  total_transactions integer DEFAULT 0,
+  average_rating numeric DEFAULT 0,
+  
+  -- Status
+  status varchar DEFAULT 'active' 
+    CHECK (status IN ('active', 'inactive', 'blocked')),
+  is_preferred boolean DEFAULT false,
+  
+  -- Metadata
+  notes text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_vendors_dealer ON vendors(dealer_id);
+CREATE INDEX idx_vendors_code ON vendors(code);
+2. BRANDS Table (Master Data)
+SQL
+
+CREATE TABLE brands (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name varchar NOT NULL UNIQUE,
+  slug varchar UNIQUE,
+  logo_url text,
+  country varchar,
+  description text,
+  website varchar,
+  is_active boolean DEFAULT true,
+  display_order integer DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Pre-populate with common brands
+INSERT INTO brands (name, slug, country) VALUES
+('Castrol', 'castrol', 'UK'),
+('Mobil', 'mobil', 'USA'),
+('Shell', 'shell', 'Netherlands'),
+('Motul', 'motul', 'France'),
+('Total', 'total', 'France');
+3. PRODUCT_ATTRIBUTES Table (Enhanced)
+SQL
+
+-- Already exists, but modify usage
+CREATE TABLE product_attribute_sets (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name varchar NOT NULL, -- 'Engine Oil Attributes'
+  category_id uuid REFERENCES categories(id),
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE product_attribute_definitions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  attribute_set_id uuid REFERENCES product_attribute_sets(id),
+  name varchar NOT NULL, -- 'Viscosity', 'Type', 'Size'
+  type varchar NOT NULL 
+    CHECK (type IN ('text', 'number', 'select', 'multi_select')),
+  options jsonb, -- For select types: ["10W-30", "10W-40", "20W-50"]
+  is_required boolean DEFAULT false,
+  is_variant_attribute boolean DEFAULT false, -- Size, Color = true
+  display_order integer DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Example for Engine Oil:
+-- Attribute Set: "Engine Oil"
+-- Attributes:
+--   - Viscosity (select): 10W-30, 10W-40, 20W-50
+--   - Type (select): Mineral, Semi-Synthetic, Fully Synthetic
+--   - Size (select, variant): 800ml, 1L, 2L, 4L [VARIANT CREATOR]
+--   - Bike Type (multi_select): 2-Stroke, 4-Stroke
+4. PURCHASE_ORDERS Table (Enhanced)
+SQL
+
+CREATE TABLE purchase_orders (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  po_number varchar UNIQUE NOT NULL, -- PO-2024-001
+  dealer_id uuid REFERENCES dealers(id) NOT NULL,
+  vendor_id uuid REFERENCES vendors(id) NOT NULL,
+  
+  -- Dates
+  order_date date NOT NULL DEFAULT CURRENT_DATE,
+  expected_delivery_date date,
+  received_date date,
+  
+  -- Financial
+  subtotal numeric NOT NULL DEFAULT 0,
+  tax_amount numeric DEFAULT 0,
+  discount_amount numeric DEFAULT 0,
+  shipping_cost numeric DEFAULT 0,
+  other_charges numeric DEFAULT 0,
+  grand_total numeric NOT NULL,
+  paid_amount numeric DEFAULT 0,
+  due_amount numeric DEFAULT 0,
+  
+  -- Status
+  status varchar DEFAULT 'draft' CHECK (status IN (
+    'draft',        -- Being created
+    'pending',      -- Sent to vendor
+    'confirmed',    -- Vendor confirmed
+    'partial',      -- Partially received
+    'received',     -- Fully received
+    'cancelled'
+  )),
+  
+  payment_status varchar DEFAULT 'unpaid' CHECK (payment_status IN (
+    'unpaid', 'partial', 'paid'
+  )),
+  
+  -- Documents
+  invoice_number varchar,
+  invoice_file_url text,
+  
+  -- References
+  warehouse_location varchar,
+  received_by uuid REFERENCES profiles(id),
+  created_by uuid REFERENCES profiles(id),
+  
+  -- Metadata
+  notes text,
+  internal_notes text, -- Not visible in print
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_po_dealer ON purchase_orders(dealer_id);
+CREATE INDEX idx_po_vendor ON purchase_orders(vendor_id);
+CREATE INDEX idx_po_number ON purchase_orders(po_number);
+CREATE INDEX idx_po_date ON purchase_orders(order_date);
+5. PURCHASE_ORDER_ITEMS Table (Enhanced)
+SQL
+
+CREATE TABLE purchase_order_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  purchase_order_id uuid REFERENCES purchase_orders(id) ON DELETE CASCADE,
+  
+  -- Product Reference
+  product_id uuid REFERENCES products(id) NOT NULL,
+  variant_id uuid REFERENCES product_variants(id),
+  
+  -- Identification
+  barcode varchar,
+  batch_number varchar, -- LOT-2024-JAN-001
+  
+  -- Quantity
+  ordered_quantity integer NOT NULL,
+  received_quantity integer DEFAULT 0,
+  damaged_quantity integer DEFAULT 0,
+  accepted_quantity integer DEFAULT 0, -- received - damaged
+  
+  -- Pricing
+  unit_cost_price numeric NOT NULL,
+  total_cost numeric GENERATED ALWAYS AS (ordered_quantity * unit_cost_price) STORED,
+  
+  -- Discount
+  discount_type varchar CHECK (discount_type IN ('percentage', 'fixed', 'none')),
+  discount_value numeric DEFAULT 0,
+  discount_amount numeric DEFAULT 0,
+  net_amount numeric, -- total_cost - discount_amount
+  
+  -- Quality Check
+  quality_status varchar DEFAULT 'pending' CHECK (quality_status IN (
+    'pending', 'passed', 'failed', 'partial'
+  )),
+  quality_notes text,
+  
+  -- Expiry (for products like oil, batteries)
+  manufacturing_date date,
+  expiry_date date,
+  
+  -- Metadata
+  notes text,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_po_items_po ON purchase_order_items(purchase_order_id);
+CREATE INDEX idx_po_items_product ON purchase_order_items(product_id);
+CREATE INDEX idx_po_items_variant ON purchase_order_items(variant_id);
+CREATE INDEX idx_po_items_batch ON purchase_order_items(batch_number);
+6. INVENTORY_BATCHES Table (Batch/Lot Tracking)
+SQL
+
+CREATE TABLE inventory_batches (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  dealer_id uuid REFERENCES dealers(id),
+  product_id uuid REFERENCES products(id),
+  variant_id uuid REFERENCES product_variants(id),
+  
+  -- Batch Info
+  batch_number varchar UNIQUE NOT NULL,
+  barcode varchar UNIQUE,
+  
+  -- Purchase Reference
+  purchase_order_id uuid REFERENCES purchase_orders(id),
+  purchase_order_item_id uuid REFERENCES purchase_order_items(id),
+  vendor_id uuid REFERENCES vendors(id),
+  
+  -- Quantity Tracking
+  initial_quantity integer NOT NULL,
+  current_quantity integer NOT NULL,
+  sold_quantity integer DEFAULT 0,
+  damaged_quantity integer DEFAULT 0,
+  returned_quantity integer DEFAULT 0,
+  
+  -- Pricing (FIFO/LIFO/Average Cost)
+  unit_cost_price numeric NOT NULL,
+  
+  -- Dates
+  manufacturing_date date,
+  expiry_date date,
+  received_date date NOT NULL,
+  
+  -- Location
+  warehouse_location varchar,
+  rack_number varchar,
+  bin_number varchar,
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN (
+    'active',      -- Available for sale
+    'low_stock',   -- Below threshold
+    'expired',     -- Past expiry date
+    'damaged',     -- Damaged goods
+    'depleted'     -- Fully sold
+  )),
+  
+  -- Alerts
+  low_stock_threshold integer DEFAULT 5,
+  expires_in_days integer GENERATED ALWAYS AS (
+    CASE 
+      WHEN expiry_date IS NOT NULL 
+      THEN expiry_date - CURRENT_DATE 
+      ELSE NULL 
+    END
+  ) STORED,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_batches_dealer ON inventory_batches(dealer_id);
+CREATE INDEX idx_batches_product ON inventory_batches(product_id);
+CREATE INDEX idx_batches_variant ON inventory_batches(variant_id);
+CREATE INDEX idx_batches_number ON inventory_batches(batch_number);
+CREATE INDEX idx_batches_status ON inventory_batches(status);
+CREATE INDEX idx_batches_expiry ON inventory_batches(expiry_date);
+7. SALES Table (Enhanced - Daily Sales Register)
+SQL
+
+CREATE TABLE sales (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  sale_number varchar UNIQUE NOT NULL, -- SALE-2024-0001
+  dealer_id uuid REFERENCES dealers(id) NOT NULL,
+  
+  -- Customer Info
+  customer_id uuid REFERENCES profiles(id), -- Registered customer
+  customer_name varchar, -- Walk-in customer
+  customer_phone varchar,
+  customer_address text,
+  
+  -- Sale Type
+  sale_type varchar DEFAULT 'retail' CHECK (sale_type IN (
+    'retail',      -- Direct customer
+    'wholesale',   -- Bulk sale
+    'online',      -- From e-commerce order
+    'return'       -- Return entry (negative sale)
+  )),
+  
+  -- Reference
+  order_id uuid REFERENCES orders(id), -- If from online order
+  
+  -- Financial
+  subtotal numeric NOT NULL,
+  discount_type varchar CHECK (discount_type IN ('percentage', 'fixed', 'none')),
+  discount_value numeric DEFAULT 0,
+  discount_amount numeric DEFAULT 0,
+  tax_amount numeric DEFAULT 0,
+  other_charges numeric DEFAULT 0,
+  grand_total numeric NOT NULL,
+  
+  total_cost numeric, -- Sum of cost prices
+  total_profit numeric, -- grand_total - total_cost
+  profit_margin numeric, -- (profit/grand_total) * 100
+  
+  -- Payment
+  payment_method varchar CHECK (payment_method IN (
+    'cash', 'card', 'mobile_banking', 'bank_transfer', 'credit', 'multiple'
+  )),
+  payment_status varchar DEFAULT 'paid' CHECK (payment_status IN (
+    'paid', 'partial', 'unpaid', 'credit'
+  )),
+  paid_amount numeric DEFAULT 0,
+  due_amount numeric DEFAULT 0,
+  
+  -- Sale Info
+  sale_date date NOT NULL DEFAULT CURRENT_DATE,
+  sale_time time NOT NULL DEFAULT CURRENT_TIME,
+  
+  -- Staff
+  sold_by uuid REFERENCES profiles(id), -- Salesperson
+  
+  -- Status
+  status varchar DEFAULT 'completed' CHECK (status IN (
+    'draft',       -- Being created
+    'completed',   -- Sale completed
+    'returned',    -- Fully returned
+    'partial_return', -- Partially returned
+    'cancelled'
+  )),
+  
+  -- Metadata
+  notes text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_sales_dealer ON sales(dealer_id);
+CREATE INDEX idx_sales_customer ON sales(customer_id);
+CREATE INDEX idx_sales_date ON sales(sale_date);
+CREATE INDEX idx_sales_number ON sales(sale_number);
+CREATE INDEX idx_sales_order ON sales(order_id);
+8. SALE_ITEMS Table (Enhanced)
+SQL
+
+CREATE TABLE sale_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  sale_id uuid REFERENCES sales(id) ON DELETE CASCADE,
+  
+  -- Product Reference
+  product_id uuid REFERENCES products(id) NOT NULL,
+  variant_id uuid REFERENCES product_variants(id),
+  
+  -- Batch Tracking (FIFO - First In First Out)
+  batch_id uuid REFERENCES inventory_batches(id),
+  batch_number varchar,
+  
+  -- Product Info (Snapshot at time of sale)
+  product_name varchar NOT NULL,
+  variant_name varchar,
+  sku varchar,
+  barcode varchar,
+  
+  -- Quantity
+  quantity integer NOT NULL,
+  returned_quantity integer DEFAULT 0,
+  net_quantity integer GENERATED ALWAYS AS (quantity - returned_quantity) STORED,
+  
+  -- Pricing
+  unit_cost_price numeric NOT NULL, -- From batch
+  unit_selling_price numeric NOT NULL,
+  mrp numeric, -- Maximum Retail Price
+  
+  -- Calculations
+  subtotal numeric GENERATED ALWAYS AS (quantity * unit_selling_price) STORED,
+  discount_amount numeric DEFAULT 0,
+  tax_amount numeric DEFAULT 0,
+  total_amount numeric, -- subtotal - discount + tax
+  
+  -- Profit
+  unit_profit numeric GENERATED ALWAYS AS (unit_selling_price - unit_cost_price) STORED,
+  total_profit numeric GENERATED ALWAYS AS (
+    (unit_selling_price - unit_cost_price) * (quantity - returned_quantity)
+  ) STORED,
+  
+  -- Warranty
+  warranty_period_days integer,
+  warranty_expires_at date,
+  
+  -- Status
+  status varchar DEFAULT 'sold' CHECK (status IN (
+    'sold', 'returned', 'exchanged', 'warranty_claim'
+  )),
+  
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_sale_items_sale ON sale_items(sale_id);
+CREATE INDEX idx_sale_items_product ON sale_items(product_id);
+CREATE INDEX idx_sale_items_variant ON sale_items(variant_id);
+CREATE INDEX idx_sale_items_batch ON sale_items(batch_id);
+9. INVENTORY_MOVEMENTS Table (Enhanced - Replaces INVENTORY)
+SQL
+
+CREATE TABLE inventory_movements (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  dealer_id uuid REFERENCES dealers(id),
+  
+  -- Product Reference
+  product_id uuid REFERENCES products(id) NOT NULL,
+  variant_id uuid REFERENCES product_variants(id),
+  batch_id uuid REFERENCES inventory_batches(id),
+  
+  -- Movement Details
+  movement_type varchar NOT NULL CHECK (movement_type IN (
+    'purchase',           -- Stock in from purchase
+    'sale',              -- Stock out from sale
+    'return_to_vendor',  -- Returned to supplier
+    'return_from_customer', -- Customer returned
+    'adjustment_increase', -- Manual stock increase
+    'adjustment_decrease', -- Manual stock decrease
+    'damage',            -- Damaged goods
+    'expired',           -- Expired products
+    'transfer_in',       -- From another location
+    'transfer_out',      -- To another location
+    'opening_stock'      -- Initial stock entry
+  )),
+  
+  -- Quantity
+  quantity_before integer NOT NULL,
+  quantity_change integer NOT NULL, -- +ve for in, -ve for out
+  quantity_after integer NOT NULL,
+  
+  -- Reference
+  reference_type varchar, -- 'purchase_order', 'sale', 'adjustment'
+  reference_id uuid, -- ID of the reference document
+  reference_number varchar, -- PO-001, SALE-001
+  
+  -- Additional Info
+  unit_cost numeric, -- Cost at time of movement
+  total_value numeric, -- quantity_change * unit_cost
+  
+  -- User & Date
+  performed_by uuid REFERENCES profiles(id),
+  movement_date date NOT NULL DEFAULT CURRENT_DATE,
+  movement_time time NOT NULL DEFAULT CURRENT_TIME,
+  
+  -- Notes
+  reason text,
+  notes text,
+  
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_movements_dealer ON inventory_movements(dealer_id);
+CREATE INDEX idx_movements_product ON inventory_movements(product_id);
+CREATE INDEX idx_movements_variant ON inventory_movements(variant_id);
+CREATE INDEX idx_movements_batch ON inventory_movements(batch_id);
+CREATE INDEX idx_movements_type ON inventory_movements(movement_type);
+CREATE INDEX idx_movements_date ON inventory_movements(movement_date);
+CREATE INDEX idx_movements_reference ON inventory_movements(reference_type, reference_id);
+10. STOCK_ADJUSTMENTS Table
+SQL
+
+CREATE TABLE stock_adjustments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  adjustment_number varchar UNIQUE NOT NULL, -- ADJ-2024-001
+  dealer_id uuid REFERENCES dealers(id),
+  
+  -- Type
+  adjustment_type varchar CHECK (adjustment_type IN (
+    'physical_count',  -- After physical counting
+    'damage',         -- Damaged goods
+    'expired',        -- Expired products
+    'theft',          -- Stolen items
+    'correction'      -- Data entry correction
+  )),
+  
+  -- Status
+  status varchar DEFAULT 'draft' CHECK (status IN (
+    'draft', 'pending_approval', 'approved', 'rejected'
+  )),
+  
+  -- Approval
+  approved_by uuid REFERENCES profiles(id),
+  approved_at timestamptz,
+  rejection_reason text,
+  
+  -- Summary
+  total_items integer DEFAULT 0,
+  total_value_impact numeric DEFAULT 0, -- +ve or -ve
+  
+  -- Meta
+  reason text NOT NULL,
+  notes text,
+  performed_by uuid REFERENCES profiles(id),
+  adjustment_date date NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE stock_adjustment_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  adjustment_id uuid REFERENCES stock_adjustments(id) ON DELETE CASCADE,
+  
+  product_id uuid REFERENCES products(id),
+  variant_id uuid REFERENCES product_variants(id),
+  batch_id uuid REFERENCES inventory_batches(id),
+  
+  -- Quantities
+  system_quantity integer NOT NULL, -- What system shows
+  actual_quantity integer NOT NULL, -- What was counted
+  difference integer GENERATED ALWAYS AS (actual_quantity - system_quantity) STORED,
+  
+  -- Value Impact
+  unit_cost numeric,
+  value_impact numeric GENERATED ALWAYS AS (
+    (actual_quantity - system_quantity) * unit_cost
+  ) STORED,
+  
+  reason text,
+  created_at timestamptz DEFAULT now()
+);
+11. PAYMENT_TRANSACTIONS Table
+SQL
+
+CREATE TABLE payment_transactions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  transaction_number varchar UNIQUE NOT NULL, -- TXN-2024-0001
+  dealer_id uuid REFERENCES dealers(id),
+  
+  -- Transaction Type
+  transaction_type varchar CHECK (transaction_type IN (
+    'sale_payment',        -- Customer payment for sale
+    'purchase_payment',    -- Payment to vendor
+    'expense',            -- Business expense
+    'vendor_refund',      -- Refund from vendor
+    'customer_refund'     -- Refund to customer
+  )),
+  
+  -- References
+  reference_type varchar, -- 'sale', 'purchase_order', 'expense'
+  reference_id uuid,
+  reference_number varchar,
+  
+  -- Parties
+  vendor_id uuid REFERENCES vendors(id),
+  customer_id uuid REFERENCES profiles(id),
+  
+  -- Payment Details
+  payment_method varchar CHECK (payment_method IN (
+    'cash', 'card', 'mobile_banking', 'bank_transfer', 'cheque'
+  )),
+  amount numeric NOT NULL,
+  
+  -- Bank Details (if applicable)
+  bank_name varchar,
+  account_number varchar,
+  transaction_id varchar, -- bKash/Nagad transaction ID
+  cheque_number varchar,
+  cheque_date date,
+  
+  -- Status
+  status varchar DEFAULT 'completed' CHECK (status IN (
+    'pending', 'completed', 'failed', 'cancelled'
+  )),
+  
+  -- Metadata
+  notes text,
+  received_by uuid REFERENCES profiles(id),
+  payment_date date NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_payment_txn_dealer ON payment_transactions(dealer_id);
+CREATE INDEX idx_payment_txn_type ON payment_transactions(transaction_type);
+CREATE INDEX idx_payment_txn_date ON payment_transactions(payment_date);
+12. EXPENSES Table
+SQL
+
+CREATE TABLE expense_categories (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name varchar NOT NULL,
+  description text,
+  parent_id uuid REFERENCES expense_categories(id),
+  is_active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Seed data
+INSERT INTO expense_categories (name) VALUES
+('Rent'),
+('Utilities'),
+('Salaries'),
+('Transportation'),
+('Marketing'),
+('Maintenance'),
+('Office Supplies');
+
+CREATE TABLE expenses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  expense_number varchar UNIQUE NOT NULL, -- EXP-2024-001
+  dealer_id uuid REFERENCES dealers(id),
+  
+  category_id uuid REFERENCES expense_categories(id),
+  
+  -- Details
+  title varchar NOT NULL,
+  description text,
+  amount numeric NOT NULL,
+  
+  -- Payment
+  payment_method varchar,
+  payment_transaction_id uuid REFERENCES payment_transactions(id),
+  
+  -- Vendor (if applicable)
+  vendor_id uuid REFERENCES vendors(id),
+  
+  -- Documents
+  receipt_url text,
+  
+  -- Date
+  expense_date date NOT NULL,
+  
+  -- Status
+  status varchar DEFAULT 'paid' CHECK (status IN (
+    'pending', 'paid', 'cancelled'
+  )),
+  
+  -- Approval
+  approved_by uuid REFERENCES profiles(id),
+  
+  created_by uuid REFERENCES profiles(id),
+  created_at timestamptz DEFAULT now()
+);
+13. CUSTOMER_LEDGER Table (For Credit Sales)
+SQL
+
+CREATE TABLE customer_ledger (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  dealer_id uuid REFERENCES dealers(id),
+  customer_id uuid REFERENCES profiles(id),
+  
+  -- Transaction
+  transaction_type varchar CHECK (transaction_type IN (
+    'sale',           -- Credit sale
+    'payment',        -- Payment received
+    'refund',         -- Refund given
+    'adjustment'      -- Manual adjustment
+  )),
+  
+  -- Reference
+  reference_type varchar,
+  reference_id uuid,
+  reference_number varchar,
+  
+  -- Amount
+  debit numeric DEFAULT 0,   -- What customer owes
+  credit numeric DEFAULT 0,  -- What customer paid
+  balance numeric,           -- Running balance
+  
+  -- Details
+  description text,
+  transaction_date date NOT NULL,
+  
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_customer_ledger_customer ON customer_ledger(customer_id);
+CREATE INDEX idx_customer_ledger_date ON customer_ledger(transaction_date);
+14. VENDOR_LEDGER Table
+SQL
+
+CREATE TABLE vendor_ledger (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  dealer_id uuid REFERENCES dealers(id),
+  vendor_id uuid REFERENCES vendors(id),
+  
+  -- Transaction
+  transaction_type varchar CHECK (transaction_type IN (
+    'purchase',       -- Purchase made (we owe)
+    'payment',        -- Payment made (we paid)
+    'return',         -- Goods returned (reduce debt)
+    'adjustment'
+  )),
+  
+  -- Reference
+  reference_type varchar,
+  reference_id uuid,
+  reference_number varchar,
+  
+  -- Amount
+  debit numeric DEFAULT 0,   -- What we paid/returned
+  credit numeric DEFAULT 0,  -- What we owe
+  balance numeric,           -- Running balance (what we owe)
+  
+  -- Details
+  description text,
+  transaction_date date NOT NULL,
+  
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_vendor_ledger_vendor ON vendor_ledger(vendor_id);
+CREATE INDEX idx_vendor_ledger_date ON vendor_ledger(transaction_date);
+🔄 Complete Workflows (Step-by-Step)
+WORKFLOW 1: Initial System Setup
+text
+
+┌─────────────────────────────────────────────────────────┐
+│ STEP 1: Master Data Setup (One-time, Admin)            │
+└─────────────────────────────────────────────────────────┘
+
+1.1 Create Categories Hierarchy:
+    └── Lubricants
+        ├── Engine Oil
+        │   ├── 2-Stroke
+        │   └── 4-Stroke
+        ├── Gear Oil
+        └── Brake Oil
+    └── Filters
+        ├── Oil Filter
+        ├── Air Filter
+        └── Fuel Filter
+    └── Batteries
+    └── Spark Plugs
+
+1.2 Create Brands:
+    - Castrol (Logo, Country, Description)
+    - Mobil
+    - Shell
+    - Motul
+    - Total
+
+1.3 Create Attribute Sets per Category:
+
+    For "Engine Oil":
+    ┌──────────────────────────────────────┐
+    │ Attribute Name  │ Type     │ Variant│
+    ├──────────────────────────────────────┤
+    │ Viscosity       │ Select   │ No     │
+    │   - 10W-30                           │
+    │   - 10W-40                           │
+    │   - 20W-50                           │
+    ├──────────────────────────────────────┤
+    │ Type            │ Select   │ No     │
+    │   - Mineral                          │
+    │   - Semi-Synthetic                   │
+    │   - Fully Synthetic                  │
+    ├──────────────────────────────────────┤
+    │ Size/Volume     │ Select   │ YES ✓  │
+    │   - 800ml                            │
+    │   - 1L                               │
+    │   - 2L                               │
+    │   - 4L                               │
+    ├──────────────────────────────────────┤
+    │ Bike Type       │ Multi    │ No     │
+    │   - 2-Stroke                         │
+    │   - 4-Stroke                         │
+    └──────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│ STEP 2: Dealer Setup                                    │
+└─────────────────────────────────────────────────────────┘
+
+2.1 Create Vendor:
+    Name: ABC Distributors Ltd.
+    Code: VEN-001
+    Contact Person: Mr. Karim
+    Phone: 01711-XXXXXX
+    Email: abc@example.com
+    Payment Terms: 30 Days Credit
+    Credit Limit: 500,000 BDT
+
+2.2 Add Multiple Vendors:
+    - VEN-002: XYZ Trading
+    - VEN-003: Local Supplier
+    - VEN-004: Import House
+
+2.3 Setup Warehouse Locations:
+    - Main Store
+    - Rack-A (Shelf 1-10)
+    - Rack-B (Shelf 1-10)
+WORKFLOW 2: Product Creation (First Time)
+text
+
+┌──────────────────────────────────────────────────────────┐
+│ Creating: Castrol POWER1 4T Engine Oil                   │
+└──────────────────────────────────────────────────────────┘
+
+STEP 1: Basic Product Information
+─────────────────────────────────
+Category: Lubricants > Engine Oil > 4-Stroke
+Brand: Castrol
+Product Name: POWER1 4T
+SKU Prefix: CAST-P1
+
+STEP 2: Product Attributes (Non-Variant)
+─────────────────────────────────────────
+Viscosity: 10W-40
+Type: Semi-Synthetic
+Bike Type: 4-Stroke
+Description: Premium engine oil for 4-stroke motorcycles
+
+STEP 3: Variant Attributes (Size-based)
+────────────────────────────────────────
+System auto-generates variants based on "Size" attribute:
+
+Variant 1:
+  - Size: 800ml
+  - Auto-generated SKU: CAST-P1-800ML
+  - Barcode: [Can be auto-generated or manual]
+  - Base Selling Price: 680 BDT
+  - MRP: 720 BDT
+  - Initial Stock: 0 (will be added via purchase)
+
+Variant 2:
+  - Size: 1L
+  - SKU: CAST-P1-1L
+  - Barcode: 8901030896453 (EAN-13)
+  - Base Selling Price: 850 BDT
+  - MRP: 900 BDT
+  - Initial Stock: 0
+
+Variant 3:
+  - Size: 4L
+  - SKU: CAST-P1-4L
+  - Barcode: 8901030896460
+  - Base Selling Price: 3200 BDT
+  - MRP: 3400 BDT
+  - Initial Stock: 0
+
+STEP 4: Additional Product Info
+────────────────────────────────
+Images: Upload 4 images
+  - Primary image
+  - Back label
+  - Cap/seal
+  - Product in use
+
+Weight: 1kg (per liter)
+Dimensions: 10cm × 8cm × 25cm
+
+Low Stock Alert: 10 units
+Reorder Level: 15 units
+
+STEP 5: Save Product
+────────────────────
+Status: Draft → Submit for Approval → Active
+
+Database Entries Created:
+┌─────────────────────────────────────┐
+│ products table:                     │
+│   - 1 row (main product)            │
+│                                     │
+│ product_variants table:             │
+│   - 3 rows (800ml, 1L, 4L)         │
+│                                     │
+│ product_images table:               │
+│   - 4 rows (images)                 │
+└─────────────────────────────────────┘
+
+Current Stock: ALL VARIANTS = 0
+WORKFLOW 3: Purchase Order (Stock In)
+text
+
+┌────────────────────────────────────────────────────────────┐
+│ PURCHASE ORDER CREATION - Complete Flow                    │
+└────────────────────────────────────────────────────────────┘
+
+STEP 1: Create Purchase Order Header
+─────────────────────────────────────
+PO Number: PO-2024-001 (Auto-generated)
+Vendor: ABC Distributors (VEN-001)
+Order Date: 15-Jan-2024
+Expected Delivery: 20-Jan-2024
+Warehouse: Main Store
+
+STEP 2: Add Items to PO
+───────────────────────
+
+Item 1:
+┌─────────────────────────────────────────────┐
+│ Product Search: "Castrol POWER1"            │
+│   → Shows: Castrol POWER1 4T                │
+│                                             │
+│ Select Variant: 1L (CAST-P1-1L)            │
+│                                             │
+│ Ordered Quantity: 100 pcs                   │
+│ Unit Cost Price: 720 BDT                    │
+│ Subtotal: 72,000 BDT                       │
+│                                             │
+│ Discount: 5% = 3,600 BDT                   │
+│ Net Amount: 68,400 BDT                     │
+│                                             │
+│ Batch Number: LOT-CAST-JAN24-001           │
+│ Manufacturing Date: Dec-2023                │
+│ Expiry Date: Dec-2026 (3 years)            │
+│                                             │
+│ Barcode: Generate unique batch barcode      │
+│         BCH-2024-00001                      │
+└─────────────────────────────────────────────┘
+
+Item 2:
+┌─────────────────────────────────────────────┐
+│ Product: Castrol POWER1 4T                  │
+│ Variant: 800ml (CAST-P1-800ML)             │
+│                                             │
+│ Ordered Quantity: 50 pcs                    │
+│ Unit Cost Price: 580 BDT                    │
+│ Subtotal: 29,000 BDT                       │
+│ Discount: 5% = 1,450 BDT                   │
+│ Net Amount: 27,550 BDT                     │
+│                                             │
+│ Batch: LOT-CAST-JAN24-002                  │
+│ Mfg: Dec-2023, Exp: Dec-2026               │
+│ Barcode: BCH-2024-00002                    │
+└─────────────────────────────────────────────┘
+
+Item 3:
+┌─────────────────────────────────────────────┐
+│ Product: Mobil Super Moto 4T                │
+│ Variant: 1L                                 │
+│ Quantity: 80 pcs                            │
+│ Unit Cost: 650 BDT                          │
+│ Subtotal: 52,000 BDT                       │
+│ Discount: 10% = 5,200 BDT                  │
+│ Net: 46,800 BDT                            │
+│ Batch: LOT-MOB-JAN24-001                   │
+└─────────────────────────────────────────────┘
+
+STEP 3: Financial Summary
+─────────────────────────
+Items Subtotal:     153,000 BDT
+Total Discount:      10,250 BDT
+After Discount:     142,750 BDT
+Shipping Cost:        2,000 BDT
+Other Charges:          500 BDT
+──────────────────────────────
+Grand Total:        145,250 BDT
+
+Payment Terms: 30 Days Credit
+Due Date: 15-Feb-2024
+
+STEP 4: Save as Draft
+─────────────────────
+Status: Draft
+(Can edit, add more items)
+
+STEP 5: Submit/Confirm PO
+─────────────────────────
+Status: Draft → Pending
+(PO sent to vendor, waiting confirmation)
+
+STEP 6: Vendor Confirms
+───────────────────────
+Status: Pending → Confirmed
+Confirmed Date: 16-Jan-2024
+
+STEP 7: Receive Goods (GRN - Goods Receipt Note)
+────────────────────────────────────────────────
+
+Received Date: 20-Jan-2024
+Received By: Staff User (Salesman-001)
+
+Quality Check:
+──────────────
+Item 1: Castrol 1L
+  - Ordered: 100 pcs
+  - Received: 100 pcs ✓
+  - Damaged: 2 pcs (seal broken)
+  - Accepted: 98 pcs
+  - Quality Status: Partial (due to damage)
+  - Notes: "2 bottles seal damaged"
+
+Item 2: Castrol 800ml
+  - Ordered: 50 pcs
+  - Received: 50 pcs ✓
+  - Damaged: 0 pcs
+  - Accepted: 50 pcs
+  - Quality Status: Passed ✓
+
+Item 3: Mobil 1L
+  - Ordered: 80 pcs
+  - Received: 80 pcs ✓
+  - Damaged: 0 pcs
+  - Accepted: 80 pcs
+  - Quality Status: Passed ✓
+
+STEP 8: Backend Processing (Automatic)
+──────────────────────────────────────
+
+8.1 Update Purchase Order Items:
+    - received_quantity updated
+    - damaged_quantity updated
+    - accepted_quantity calculated
+    - quality_status updated
+
+8.2 Create Inventory Batches:
+    
+    Batch 1: LOT-CAST-JAN24-001
+    ┌──────────────────────────────────────┐
+    │ Product: Castrol POWER1 4T           │
+    │ Variant: 1L                          │
+    │ Batch Number: LOT-CAST-JAN24-001     │
+    │ Barcode: BCH-2024-00001              │
+    │ Initial Quantity: 98                 │
+    │ Current Quantity: 98                 │
+    │ Unit Cost: 720 BDT                   │
+    │ Manufacturing: Dec-2023              │
+    │ Expiry: Dec-2026                     │
+    │ Location: Main Store > Rack-A > S1   │
+    │ Status: Active                       │
+    └──────────────────────────────────────┘
+    
+    Batch 2: LOT-CAST-JAN24-002
+    ┌──────────────────────────────────────┐
+    │ Product: Castrol POWER1 4T           │
+    │ Variant: 800ml                       │
+    │ Quantity: 50                         │
+    │ Cost: 580 BDT                        │
+    │ Location: Rack-A > S2                │
+    └──────────────────────────────────────┘
+    
+    Batch 3: LOT-MOB-JAN24-001
+    ┌──────────────────────────────────────┐
+    │ Product: Mobil Super Moto 4T         │
+    │ Variant: 1L                          │
+    │ Quantity: 80                         │
+    │ Cost: 650 BDT                        │
+    └──────────────────────────────────────┘
+
+8.3 Update Product Variants Stock:
+    
+    UPDATE product_variants
+    SET stock_quantity = stock_quantity + accepted_quantity
+    
+    - CAST-P1-1L: 0 + 98 = 98 units
+    - CAST-P1-800ML: 0 + 50 = 50 units
+    - MOB-SUP-1L: 0 + 80 = 80 units
+
+8.4 Create Inventory Movements:
+    
+    Movement 1:
+    ┌──────────────────────────────────────┐
+    │ Product: Castrol POWER1 4T 1L        │
+    │ Batch: LOT-CAST-JAN24-001            │
+    │ Type: purchase                       │
+    │ Quantity Before: 0                   │
+    │ Quantity Change: +98                 │
+    │ Quantity After: 98                   │
+    │ Unit Cost: 720 BDT                   │
+    │ Total Value: 70,560 BDT              │
+    │ Reference: PO-2024-001               │
+    │ Date: 20-Jan-2024                    │
+    │ Performed By: Staff-001              │
+    └──────────────────────────────────────┘
+    
+    (Similar entries for other 2 items)
+
+8.5 Update Vendor Ledger:
+    
+    ┌──────────────────────────────────────┐
+    │ Vendor: ABC Distributors             │
+    │ Type: purchase                       │
+    │ Debit: 0                             │
+    │ Credit: 145,250 BDT (we owe)        │
+    │ Balance: 145,250 BDT                │
+    │ Reference: PO-2024-001               │
+    │ Description: Purchase as per PO-001  │
+    └──────────────────────────────────────┘
+
+8.6 Update Purchase Order Status:
+    Status: Confirmed → Received
+
+8.7 Handle Damaged Goods:
+    
+    Create Stock Adjustment:
+    ┌──────────────────────────────────────┐
+    │ Adjustment: ADJ-2024-001             │
+    │ Type: damage                         │
+    │ Product: Castrol 1L                  │
+    │ Batch: LOT-CAST-JAN24-001            │
+    │ System Qty: 100 (ordered)            │
+    │ Actual Qty: 98 (accepted)            │
+    │ Difference: -2                       │
+    │ Value Impact: -1,440 BDT             │
+    │ Reason: Seal broken during transit   │
+    │ Status: Auto-approved                │
+    └──────────────────────────────────────┘
+
+STEP 9: Payment Entry (Later - when paying vendor)
+──────────────────────────────────────────────────
+
+Payment Date: 10-Feb-2024 (before due date)
+Amount: 145,250 BDT
+Method: Bank Transfer
+Bank: DBBL, Account: 123456789
+Transaction ID: TXN-2024-DBBL-001
+
+Backend:
+────────
+1. Create Payment Transaction:
+   ┌──────────────────────────────────────┐
+   │ Type: purchase_payment               │
+   │ Amount: 145,250 BDT                  │
+   │ Reference: PO-2024-001               │
+   │ Vendor: ABC Distributors             │
+   │ Method: bank_transfer                │
+   │ Status: completed                    │
+   └──────────────────────────────────────┘
+
+2. Update Vendor Ledger:
+   ┌──────────────────────────────────────┐
+   │ Type: payment                        │
+   │ Debit: 145,250 BDT (we paid)        │
+   │ Credit: 0                            │
+   │ Balance: 0 (fully paid)              │
+   └──────────────────────────────────────┘
+
+3. Update Purchase Order:
+   Payment Status: unpaid → paid
+   Paid Amount: 145,250 BDT
+   Due Amount: 0 BDT
+
+FINAL STATE:
+────────────
+✓ Purchase Order Completed & Paid
+✓ Stock Received & Updated
+✓ Batches Created
+✓ Movements Logged
+✓ Vendor Ledger Updated
+✓ Ready for Sale
+WORKFLOW 4: Sales Entry (Stock Out)
+text
+
+┌────────────────────────────────────────────────────────────┐
+│ RETAIL SALE - Complete Flow                                │
+└────────────────────────────────────────────────────────────┘
+
+Scenario: Customer walks in to buy engine oil
+
+STEP 1: Create New Sale
+───────────────────────
+Sale Number: SALE-2024-0001 (Auto)
+Sale Date: 22-Jan-2024
+Sale Time: 2:30 PM
+Sale Type: Retail
+Salesperson: Staff-001
+
+Customer Info (Optional for walk-in):
+  Name: Rahim Mia
+  Phone: 01711-XXXXXX
+
+STEP 2: Add Items (Method 1: Barcode Scan)
+──────────────────────────────────────────
+
+Scan Barcode: CAST-P1-1L (or BCH-2024-00001)
+  ↓
+System Auto-fills:
+┌─────────────────────────────────────────────┐
+│ Product: Castrol POWER1 4T                  │
+│ Variant: 1L                                 │
+│ Available Stock: 98 units                   │
+│                                             │
+│ Batch Selection (FIFO - First In First Out):│
+│ ┌─────────────────────────────────────────┐ │
+│ │ Batch: LOT-CAST-JAN24-001               │ │
+│ │ Available: 98 units                     │ │
+│ │ Cost Price: 720 BDT                     │ │
+│ │ Expiry: Dec-2026                        │ │
+│ │ [Auto-selected - oldest batch first]    │ │
+│ └─────────────────────────────────────────┘ │
+│                                             │
+│ MRP: 900 BDT                               │
+│ Selling Price: [850] BDT (editable)        │
+│                                             │
+│ Quantity: [5] pcs                          │
+│                                             │
+│ Line Total: 4,250 BDT                      │
+│ Profit/Unit: 130 BDT                       │
+│ Line Profit: 650 BDT                       │
+│                                             │
+│ [Add to Cart]                              │
+└─────────────────────────────────────────────┘
+
+STEP 3: Add More Items (Method 2: Manual Select)
+────────────────────────────────────────────────
+
+Select Category: Engine Oil
+Select Product: Castrol POWER1 4T
+Select Variant: 800ml
+
+┌─────────────────────────────────────────────┐
+│ Available Stock: 50 units                   │
+│ Batch: LOT-CAST-JAN24-002                  │
+│ Cost: 580 BDT                               │
+│ Selling Price: 680 BDT                      │
+│ Quantity: 3 pcs                             │
+│ Total: 2,040 BDT                           │
+│ Profit: 300 BDT                            │
+└─────────────────────────────────────────────┘
+
+STEP 4: Cart Summary
+────────────────────
+
+┌─────────────────────────────────────────────────────────┐
+│ SHOPPING CART                                           │
+├─────────────────────────────────────────────────────────┤
+│ #  Product            Qty   Price    Total    Profit    │
+├─────────────────────────────────────────────────────────┤
+│ 1  Castrol POWER1 1L   5    850    4,250      650      │
+│ 2  Castrol POWER1 800ml 3    680    2,040      300      │
+├─────────────────────────────────────────────────────────┤
+│                     Subtotal:       6,290               │
+│                                                         │
+│ Discount Type: [Percentage ▼]                          │
+│ Discount Value: [5]%                                    │
+│ Discount Amount:           -315 BDT                     │
+│                                                         │
+│ Tax (if any):                 0 BDT                     │
+│                     ─────────────────                   │
+│                  Grand Total: 5,975 BDT                 │
+│                                                         │
+│ Cost Price Total:            4,640 BDT                  │
+│ Total Profit:                1,335 BDT                  │
+│ Profit Margin:               22.3%                      │
+└─────────────────────────────────────────────────────────┘
+
+STEP 5: Payment
+───────────────
+
+Payment Method: [Cash ▼]
+  Options: Cash, Card, bKash, Nagad, Bank, Credit
+
+Amount Received: [6,000] BDT
+Change to Return: 25 BDT
+
+[Complete Sale]
+
+STEP 6: Backend Processing (Automatic)
+──────────────────────────────────────
+
+6.1 Create Sale Record:
+    
+    INSERT INTO sales:
+    ┌──────────────────────────────────────┐
+    │ sale_number: SALE-2024-0001          │
+    │ dealer_id: (current dealer)          │
+    │ customer_name: Rahim Mia             │
+    │ customer_phone: 01711-XXXXXX         │
+    │ sale_type: retail                    │
+    │ subtotal: 6,290                      │
+    │ discount_amount: 315                 │
+    │ grand_total: 5,975                   │
+    │ total_cost: 4,640                    │
+    │ total_profit: 1,335                  │
+    │ profit_margin: 22.3                  │
+    │ payment_method: cash                 │
+    │ payment_status: paid                 │
+    │ paid_amount: 6,000                   │
+    │ sale_date: 22-Jan-2024               │
+    │ sale_time: 14:30                     │
+    │ sold_by: Staff-001                   │
+    │ status: completed                    │
+    └──────────────────────────────────────┘
+
+6.2 Create Sale Items:
+    
+    Item 1:
+    ┌──────────────────────────────────────┐
+    │ sale_id: (sale record ID)            │
+    │ product_id: Castrol POWER1 4T        │
+    │ variant_id: 1L variant               │
+    │ batch_id: LOT-CAST-JAN24-001         │
+    │ batch_number: LOT-CAST-JAN24-001     │
+    │ product_name: Castrol POWER1 4T      │
+    │ variant_name: 1L                     │
+    │ sku: CAST-P1-1L                      │
+    │ barcode: BCH-2024-00001              │
+    │ quantity: 5                          │
+    │ unit_cost_price: 720                 │
+    │ unit_selling_price: 850              │
+    │ mrp: 900                             │
+    │ subtotal: 4,250                      │
+    │ discount_amount: 212.5 (pro-rata)    │
+    │ total_amount: 4,037.5                │
+    │ unit_profit: 130                     │
+    │ total_profit: 650                    │
+    │ status: sold                         │
+    └──────────────────────────────────────┘
+    
+    Item 2: (Similar structure for 800ml)
+
+6.3 Update Batch Quantities:
+    
+    Batch LOT-CAST-JAN24-001:
+    ┌──────────────────────────────────────┐
+    │ current_quantity: 98 - 5 = 93        │
+    │ sold_quantity: 0 + 5 = 5             │
+    │ status: active                       │
+    └──────────────────────────────────────┘
+    
+    Batch LOT-CAST-JAN24-002:
+    ┌──────────────────────────────────────┐
+    │ current_quantity: 50 - 3 = 47        │
+    │ sold_quantity: 0 + 3 = 3             │
+    │ status: active                       │
+    └──────────────────────────────────────┘
+
+6.4 Update Product Variant Stock:
+    
+    UPDATE product_variants:
+    - CAST-P1-1L: 98 - 5 = 93 units
+    - CAST-P1-800ML: 50 - 3 = 47 units
+
+6.5 Create Inventory Movements:
+    
+    Movement 1:
+    ┌──────────────────────────────────────┐
+    │ product_id: Castrol POWER1 4T        │
+    │ variant_id: 1L                       │
+    │ batch_id: LOT-CAST-JAN24-001         │
+    │ movement_type: sale                  │
+    │ quantity_before: 98                  │
+    │ quantity_change: -5                  │
+    │ quantity_after: 93                   │
+    │ unit_cost: 720                       │
+    │ total_value: -3,600                  │
+    │ reference_type: sale                 │
+    │ reference_id: (sale ID)              │
+    │ reference_number: SALE-2024-0001     │
+    │ performed_by: Staff-001              │
+    │ movement_date: 22-Jan-2024           │
+    │ movement_time: 14:30                 │
+    └──────────────────────────────────────┘
+    
+    Movement 2: (Similar for 800ml)
+
+6.6 Create Payment Transaction:
+    
+    ┌──────────────────────────────────────┐
+    │ transaction_type: sale_payment       │
+    │ amount: 6,000                        │
+    │ reference_type: sale                 │
+    │ reference_id: (sale ID)              │
+    │ reference_number: SALE-2024-0001     │
+    │ payment_method: cash                 │
+    │ status: completed                    │
+    │ received_by: Staff-001               │
+    │ payment_date: 22-Jan-2024            │
+    └──────────────────────────────────────┘
+
+6.7 Update Product Statistics:
+    
+    UPDATE products:
+    - total_sold: +8 (5+3)
+    - total_revenue: +5,975
+    - Update average_rating (if applicable)
+
+STEP 7: Generate Receipt/Invoice
+────────────────────────────────
+
+┌─────────────────────────────────────────────┐
+│           MOTORBIKE PARTS STORE             │
+│           123 Main Road, Dhaka              │
+│           Phone: 01XXX-XXXXXX               │
+│                                             │
+│ Invoice: SALE-2024-0001                     │
+│ Date: 22-Jan-2024  Time: 02:30 PM          │
+│ Customer: Rahim Mia                         │
+│ Phone: 01711-XXXXXX                         │
+│ Served by: Salesman Ali                     │
+├─────────────────────────────────────────────┤
+│ Item             Qty  Price   Total         │
+├─────────────────────────────────────────────┤
+│ Castrol POWER1    5   850    4,250         │
+│   1L                                        │
+│                                             │
+│ Castrol POWER1    3   680    2,040         │
+│   800ml                                     │
+├─────────────────────────────────────────────┤
+│                        Subtotal: 6,290      │
+│                    Discount(5%): -315       │
+│                           Total: 5,975      │
+│                                             │
+│ Payment Method: Cash                        │
+│ Amount Paid: 6,000                          │
+│ Change: 25                                  │
+├─────────────────────────────────────────────┤
+│ You Saved: 315 BDT                          │
+│                                             │
+│ Thank you for your purchase!                │
+│ Visit again!                                │
+└─────────────────────────────────────────────┘
+
+STEP 8: Stock Alerts (Auto-check)
+─────────────────────────────────
+
+After sale, system checks:
+
+Product: Castrol POWER1 1L
+  Current Stock: 93
+  Low Stock Threshold: 10
+  Status: OK ✓
+
+Product: Castrol POWER1 800ml
+  Current Stock: 47
+  Low Stock Threshold: 10
+  Status: OK ✓
+
+(If stock < threshold, create alert/notification)
+
+FINAL STATE:
+────────────
+✓ Sale Completed
+✓ Stock Deducted
+✓ Profit Calculated
+✓ Movement Logged
+✓ Payment Recorded
+✓ Invoice Generated
+✓ Ready for next sale
+WORKFLOW 5: Daily Sales Report
+text
+
+┌────────────────────────────────────────────────────────────┐
+│ DAILY SALES REPORT - 22-Jan-2024                           │
+└────────────────────────────────────────────────────────────┘
+
+SQL Query:
+──────────
+SELECT 
+  s.sale_number,
+  s.sale_time,
+  s.customer_name,
+  p.name as product,
+  pv.attributes->>'size' as size,
+  si.quantity,
+  si.unit_cost_price as cost,
+  si.unit_selling_price as price,
+  si.total_amount,
+  si.total_profit,
+  s.payment_method,
+  u.full_name as sold_by
+FROM sales s
+JOIN sale_items si ON s.id = si.sale_id
+JOIN products p ON si.product_id = p.id
+JOIN product_variants pv ON si.variant_id = pv.id
+LEFT JOIN profiles u ON s.sold_by = u.id
+WHERE s.sale_date = '2024-01-22'
+  AND s.dealer_id = :dealer_id
+  AND s.status = 'completed'
+ORDER BY s.sale_time;
+
+Output:
+───────
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ Time  │ Invoice       │ Customer  │ Product          │ Qty │ Price │ Total │
+├────────────────────────────────────────────────────────────────────────────┤
+│ 10:15 │ SALE-2024-001 │ Rahim     │ Castrol 1L       │  5  │  850  │ 4,250 │
+│       │               │           │ Castrol 800ml    │  3  │  680  │ 2,040 │
+│       │               │           │                  │     │       │ 5,975 │ (after discount)
+├────────────────────────────────────────────────────────────────────────────┤
+│ 11:30 │ SALE-2024-002 │ Karim     │ Mobil 1L         │  2  │  780  │ 1,560 │
+├────────────────────────────────────────────────────────────────────────────┤
+│ 14:20 │ SALE-2024-003 │ Walk-in   │ Castrol 1L       │  1  │  850  │   850 │
+│       │               │           │ Shell 1L         │  2  │  820  │ 1,640 │
+│       │               │           │                  │     │       │ 2,490 │
+├────────────────────────────────────────────────────────────────────────────┤
+│ 16:45 │ SALE-2024-004 │ Sumon     │ Castrol 4L       │  1  │ 3,200 │ 3,200 │
+└────────────────────────────────────────────────────────────────────────────┘
+
+Daily Summary:
+──────────────
+Total Invoices: 4
+Total Items Sold: 14
+Total Sales Amount: 13,225 BDT
+Total Cost: 10,120 BDT
+Total Profit: 3,105 BDT
+Average Profit Margin: 23.5%
+
+Payment Method Breakdown:
+─────────────────────────
+Cash:     10,975 BDT (3 invoices)
+bKash:     2,250 BDT (1 invoice)
+
+Salesperson Performance:
+────────────────────────
+Ali:      8,465 BDT (2 sales)
+Hasan:    4,760 BDT (2 sales)
+
+Top Selling Products:
+─────────────────────
+1. Castrol POWER1 1L    - 6 units
+2. Castrol POWER1 800ml - 3 units
+3. Mobil Super 1L       - 2 units
+📊 Advanced Reports & Analytics
+1. Stock Valuation Report
+SQL
+
+-- Current Stock Value (FIFO Method)
+SELECT 
+  p.name as product,
+  pv.attributes->>'size' as variant,
+  pv.sku,
+  pv.stock_quantity as current_stock,
+  ib.batch_number,
+  ib.current_quantity as batch_stock,
+  ib.unit_cost_price,
+  (ib.current_quantity * ib.unit_cost_price) as batch_value,
+  ib.expiry_date,
+  CASE 
+    WHEN ib.expiry_date < CURRENT_DATE THEN 'Expired'
+    WHEN ib.expiry_date < CURRENT_DATE + INTERVAL '90 days' THEN 'Expiring Soon'
+    ELSE 'Good'
+  END as status
+FROM products p
+JOIN product_variants pv ON p.id = pv.product_id
+LEFT JOIN inventory_batches ib ON pv.id = ib.variant_id 
+  AND ib.current_quantity > 0
+WHERE p.dealer_id = :dealer_id
+ORDER BY p.name, pv.sku, ib.received_date;
+
+Output:
+───────
+┌──────────────────────────────────────────────────────────────────────┐
+│ Product          │ Size  │ Stock │ Batch       │ Cost │ Value      │
+├──────────────────────────────────────────────────────────────────────┤
+│ Castrol POWER1   │ 1L    │ 93    │ LOT-JAN24-1 │ 720  │ 66,960     │
+│ Castrol POWER1   │ 800ml │ 47    │ LOT-JAN24-2 │ 580  │ 27,260     │
+│ Mobil Super      │ 1L    │ 78    │ LOT-JAN24-3 │ 650  │ 50,700     │
+├──────────────────────────────────────────────────────────────────────┤
+│                                      Total Inventory Value: 144,920  │
+└──────────────────────────────────────────────────────────────────────┘
+2. Profit & Loss Statement
+SQL
+
+-- Monthly P&L
+WITH sales_summary AS (
+  SELECT 
+    SUM(grand_total) as total_revenue,
+    SUM(total_cost) as cost_of_goods_sold,
+    SUM(total_profit) as gross_profit
+  FROM sales
+  WHERE dealer_id = :dealer_id
+    AND sale_date BETWEEN :start_date AND :end_date
+    AND status = 'completed'
+),
+expense_summary AS (
+  SELECT SUM(amount) as total_expenses
+  FROM expenses
+  WHERE dealer_id = :dealer_id
+    AND expense_date BETWEEN :start_date AND :end_date
+    AND status = 'paid'
+)
+SELECT 
+  ss.total_revenue as "Revenue",
+  ss.cost_of_goods_sold as "Cost of Goods Sold",
+  ss.gross_profit as "Gross Profit",
+  ROUND((ss.gross_profit / NULLIF(ss.total_revenue, 0)) * 100, 2) as "Gross Margin %",
+  es.total_expenses as "Operating Expenses",
+  (ss.gross_profit - es.total_expenses) as "Net Profit",
+  ROUND(((ss.gross_profit - es.total_expenses) / NULLIF(ss.total_revenue, 0)) * 100, 2) as "Net Margin %"
+FROM sales_summary ss, expense_summary es;
+
+Output:
+───────
+┌──────────────────────────────────────────────┐
+│ PROFIT & LOSS STATEMENT                      │
+│ Month: January 2024                          │
+├──────────────────────────────────────────────┤
+│ Revenue:                    450,000 BDT      │
+│ Cost of Goods Sold:        -320,000 BDT      │
+│                             ─────────────     │
+│ Gross Profit:               130,000 BDT      │
+│ Gross Margin:                  28.9%         │
+│                                              │
+│ Operating Expenses:                          │
+│   Rent:                     -15,000 BDT      │
+│   Salaries:                 -25,000 BDT      │
+│   Utilities:                 -3,000 BDT      │
+│   Others:                    -7,000 BDT      │
+│                             ─────────────     │
+│ Total Expenses:             -50,000 BDT      │
+│                             ─────────────     │
+│ Net Profit:                  80,000 BDT      │
+│ Net Margin:                    17.8%         │
+└──────────────────────────────────────────────┘
+3. Product Performance Report
+SQL
+
+SELECT 
+  p.name as product,
+  pv.attributes->>'size' as variant,
+  COUNT(DISTINCT si.sale_id) as times_sold,
+  SUM(si.quantity) as total_units_sold,
+  SUM(si.total_amount) as total_revenue,
+  SUM(si.total_profit) as total_profit,
+  ROUND(AVG(si.total_profit / NULLIF(si.total_amount, 0)) * 100, 2) as avg_margin,
+  pv.stock_quantity as current_stock,
+  CASE 
+    WHEN pv.stock_quantity = 0 THEN 'Out of Stock'
+    WHEN pv.stock_quantity < pv.low_stock_threshold THEN 'Low Stock'
+    ELSE 'In Stock'
+  END as stock_status
+FROM products p
+JOIN product_variants pv ON p.id = pv.product_id
+LEFT JOIN sale_items si ON pv.id = si.variant_id
+  AND si.created_at >= :start_date
+WHERE p.dealer_id = :dealer_id
+GROUP BY p.id, p.name, pv.id, pv.attributes, pv.stock_quantity
+ORDER BY total_revenue DESC NULLS LAST;
+
+Output:
+───────
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Product           │ Variant │ Sold │ Revenue │ Profit │ Margin │ Stock │
+├─────────────────────────────────────────────────────────────────────────┤
+│ Castrol POWER1    │ 1L      │  45  │ 38,250  │ 5,850  │ 15.3%  │ 55    │
+│ Mobil Super       │ 1L      │  32  │ 24,960  │ 4,160  │ 16.7%  │ 48    │
+│ Castrol POWER1    │ 4L      │  12  │ 38,400  │ 4,800  │ 12.5%  │ 8     │ ⚠️
+│ Shell Advance     │ 1L      │  28  │ 22,400  │ 3,920  │ 17.5%  │ 42    │
+│ Castrol POWER1    │ 800ml   │  25  │ 17,000  │ 2,500  │ 14.7%  │ 25    │
+└─────────────────────────────────────────────────────────────────────────┘
+
+⚠️ Low Stock Alert
+4. Vendor Performance Report
+SQL
+
+SELECT 
+  v.name as vendor,
+  v.code,
+  COUNT(DISTINCT po.id) as total_orders,
+  SUM(po.grand_total) as total_purchase_value,
+  SUM(CASE WHEN po.payment_status = 'paid' THEN po.grand_total ELSE 0 END) as paid_amount,
+  SUM(po.due_amount) as outstanding_amount,
+  ROUND(AVG(po.received_date - po.order_date), 1) as avg_delivery_days,
+  ROUND(AVG(v.average_rating), 1) as rating
+FROM vendors v
+LEFT JOIN purchase_orders po ON v.id = po.vendor_id
+  AND po.order_date >= :start_date
+WHERE v.dealer_id = :dealer_id
+  AND v.status = 'active'
+GROUP BY v.id, v.name, v.code, v.average_rating
+ORDER BY total_purchase_value DESC;
+
+Output:
+───────
+┌──────────────────────────────────────────────────────────────────┐
+│ Vendor           │ Orders │ Total Value │ Outstanding │ Rating  │
+├──────────────────────────────────────────────────────────────────┤
+│ ABC Distributors │   12   │ 1,450,000   │   145,000   │ 4.5 ⭐  │
+│ XYZ Trading      │    8   │   980,000   │    50,000   │ 4.2 ⭐  │
+│ Local Supplier   │    5   │   420,000   │         0   │ 4.8 ⭐  │
+└──────────────────────────────────────────────────────────────────┘
+🎨 Advanced UI/UX Design
+Dashboard Layout
+text
+
+┌────────────────────────────────────────────────────────────────┐
+│ DEALER DASHBOARD                              [Date: Today] ▼  │
+├────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌───────────┐│
+│ │ Today Sales │ │ Today Profit│ │ Items Sold  │ │ Customers ││
+│ │   45,250    │ │   8,450     │ │     127     │ │    23     ││
+│ │   ↑ 12%     │ │   ↑ 8%      │ │   ↑ 15%     │ │  ↑ 5%     ││
+│ └─────────────┘ └─────────────┘ └─────────────┘ └───────────┘│
+│                                                                 │
+│ ┌────────────────────────────┐ ┌──────────────────────────┐   │
+│ │  Sales Chart (Last 7 Days) │ │  Top Selling Products    │   │
+│ │                            │ │                          │   │
+│ │  [Line/Bar Chart]          │ │  1. Castrol 1L - 45 pcs  │   │
+│ │                            │ │  2. Mobil 1L - 32 pcs    │   │
+│ │                            │ │  3. Shell 1L - 28 pcs    │   │
+│ └────────────────────────────┘ └──────────────────────────┘   │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐│
+│ │ ALERTS & NOTIFICATIONS                               [View]│││
+│ ├─────────────────────────────────────────────────────────────┤│
+│ │ ⚠️  5 products are low on stock                            │││
+│ │ ⚠️  2 products expiring within 30 days                     │││
+│ │ ⚠️  Outstanding payment to ABC Dist: 145,000 BDT          │││
+│ │ ℹ️  New order #12345 received                              │││
+│ └─────────────────────────────────────────────────────────────┘│
+│                                                                 │
+│ ┌──────────────────────────┐ ┌──────────────────────────────┐ │
+│ │ Recent Sales             │ │ Pending Purchase Orders      │ │
+│ ├──────────────────────────┤ ├──────────────────────────────┤ │
+│ │ SALE-001  Rahim  5,975   │ │ PO-025   ABC Dist   Pending  │ │
+│ │ SALE-002  Karim  1,560   │ │ PO-026   XYZ Trade Confirmed │ │
+│ │ SALE-003  Walk-in 2,490  │ │                              │ │
+│ └──────────────────────────┘ └──────────────────────────────┘ │
+└────────────────────────────────────────────────────────────────┘
+POS (Point of Sale) Interface
+text
+
+┌──────────────────────────────────────────────────────────────────┐
+│ POINT OF SALE                          [Staff: Ali] [Sign Out] │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│ ┌─────────────────────────┐  ┌────────────────────────────────┐ │
+│ │ PRODUCT SEARCH          │  │ SHOPPING CART                  │ │
+│ ├─────────────────────────┤  ├────────────────────────────────┤ │
+│ │                         │  │ #  Item         Qty  Price     │ │
+│ │ [🔍 Scan/Search______]  │  ├────────────────────────────────┤ │
+│ │                         │  │ 1  Castrol 1L    5   850   ✕   │ │
+│ │ ┌─ Quick Categories ──┐ │  │ 2  Castrol 800ml 3   680   ✕   │ │
+│ │ │ [Engine Oil]        │ │  │                                │ │
+│ │ │ [Filters]           │ │  ├────────────────────────────────┤ │
+│ │ │ [Batteries]         │ │  │ Items: 2                       │ │
+│ │ │ [Spark Plugs]       │ │  │ Qty: 8                         │ │
+│ │ └─────────────────────┘ │  │                                │ │
+│ │                         │  │ Subtotal:      6,290           │ │
+│ │ [Recent Products]       │  │ Discount (5%):  -315           │ │
+│ │ • Castrol 1L            │  │ Tax:               0           │ │
+│ │ • Mobil 1L              │  │ ──────────────────────         │ │
+│ │ • Shell 1L              │  │ TOTAL:         5,975           │ │
+│ └─────────────────────────┘  │                                │ │
+│                              │ Profit: 1,335 (22.3%)          │ │
+│                              │                                │ │
+│                              │ ┌────────────────────────────┐ │ │
+│                              │ │ Customer (Optional)        │ │ │
+│                              │ │ Name: [Rahim___]           │ │ │
+│                              │ │ Phone: [01711____]         │ │ │
+│                              │ └────────────────────────────┘ │ │
+│                              │                                │ │
+│                              │ Payment Method:                │ │
+│                              │ [Cash] [Card] [bKash] [Credit] │ │
+│                              │                                │ │
+│                              │ Amount Received: [6000___]     │ │
+│                              │ Change: 25                     │ │
+│                              │                                │ │
+│                              │ [COMPLETE SALE]    [Clear]     │ │
+│                              └────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────┘
+
+Keyboard Shortcuts:
+F1 - New Sale
+F2 - Search Product
+F3 - Add Customer
+F4 - Apply Discount
+F5 - Cash Payment
+F9 - Hold Sale
+F12 - Complete Sale
+🛡️ Business Rules & Validations
+Purchase Order Validations
+JavaScript
+
+// Before creating PO
+VALIDATE:
+  ✓ Vendor must be active
+  ✓ At least 1 item required
+  ✓ Quantities must be > 0
+  ✓ Unit cost must be > 0
+  ✓ Expected delivery date >= order date
+
+// Before receiving goods
+VALIDATE:
+  ✓ PO must be in 'confirmed' status
+  ✓ Received quantity <= ordered quantity
+  ✓ Damaged + Accepted = Received
+
+// Stock update
+RULE:
+  Only add "accepted_quantity" to stock
+  Log damaged items separately
+  Create alert if damage % > threshold (e.g., 5%)
+Sales Validations
+JavaScript
+
+// Before adding item to cart
+VALIDATE:
+  ✓ Product must be active
+  ✓ Variant must be active
+  ✓ Stock must be available
+  ✓ Sale quantity <= available stock
+  ✓ Selling price should not be < cost price (warning, not error)
+
+// Batch selection (FIFO)
+RULE:
+  Always pick oldest batch first (by received_date)
+  If batch expires soon, show warning
+  If batch expired, block sale
+
+// Before completing sale
+VALIDATE:
+  ✓ Cart must have items
+  ✓ Payment amount >= grand total (for cash)
+  ✓ Customer info required for credit sales
+  ✓ All batches still have stock (prevent race condition)
+
+// Stock deduction (TRANSACTION)
+BEGIN TRANSACTION;
+  1. Lock product_variants row (FOR UPDATE)
+  2. Check stock again
+  3. Deduct stock
+  4. Create sale records
+  5. Log movements
+COMMIT;
+
+// If anything fails → ROLLBACK
+Stock Adjustment Rules
+JavaScript
+
+// Physical count adjustment
+RULE:
+  If difference > threshold (e.g., 10 units or 5%):
+    Require manager approval
+  Else:
+    Auto-approve
+
+  Always require reason
+  Always log who performed
+
+// Expiry management
+AUTO-PROCESS:
+  Daily job checks expiry dates
+  If expired:
+    - Move to 'expired' status
+    - Create auto-adjustment
+    - Don't show in sale
+    - Alert dealer
+
+// Damaged goods
+PROCESS:
+  - Create adjustment record
+  - Deduct from batch
+  - Update variant stock
+  - Log movement
+  - Option to return to vendor
+🔍 Advanced Edge Cases & Solutions
+Edge Case 1: Concurrent Sales (Same Product)
+text
+
+PROBLEM:
+Two salespersons sell the same product simultaneously
+Stock: 5 units
+Person A sells: 3 units
+Person B sells: 3 units
+Total: 6 units (OVERSOLD!)
+
+SOLUTION: Row-Level Locking
+──────────────────────────
+
+BEGIN TRANSACTION;
+
+-- Lock the variant row
+SELECT stock_quantity 
+FROM product_variants 
+WHERE id = :variant_id
+FOR UPDATE; -- ← This locks the row
+
+-- Check stock
+IF stock_quantity < sale_quantity THEN
+  ROLLBACK;
+  RAISE ERROR 'Insufficient stock';
+END IF;
+
+-- Deduct
+UPDATE product_variants
+SET stock_quantity = stock_quantity - :sale_quantity
+WHERE id = :variant_id;
+
+-- Create sale records
+INSERT INTO sales...
+INSERT INTO sale_items...
+
+COMMIT;
+
+Result:
+Person A's transaction commits first (3 sold, 2 remain)
+Person B's transaction waits
+When B's turn comes, stock = 2
+Check fails: 2 < 3
+Transaction rolls back
+User sees: "Only 2 units available"
+Edge Case 2: Partial Returns
+text
+
+SCENARIO:
+Customer bought:
+  - Castrol 1L × 5 = 4,250 BDT
+  - Castrol 800ml × 3 = 2,040 BDT
+Total: 6,290 BDT (After 5% discount: 5,975 BDT)
+
+Customer returns:
+  - Castrol 1L × 2 (out of 5)
+
+SOLUTION: Proportional Return
+─────────────────────────────
+
+Original Sale Item:
+  Quantity: 5
+  Unit Price: 850
+  Discount on this item: 212.5 BDT (proportional)
+  Final Unit Price: 807.5 BDT
+
+Return Calculation:
+  Return Qty: 2
+  Return Amount: 2 × 807.5 = 1,615 BDT
+  
+PROCESS:
+1. Create return sale:
+   Type: return
+   Amount: -1,615 BDT (negative)
+   Reference: Original SALE-2024-0001
+
+2. Update original sale_item:
+   returned_quantity: 0 → 2
+   net_quantity: 5 - 2 = 3
+
+3. Add stock back:
+   UPDATE product_variants
+   SET stock_quantity = stock_quantity + 2
+
+4. Add to batch:
+   UPDATE inventory_batches
+   SET current_quantity = current_quantity + 2,
+       returned_quantity = returned_quantity + 2
+
+5. Create movement:
+   Type: return_from_customer
+   Quantity: +2
+
+6. Refund:
+   Create payment_transaction:
+   Type: customer_refund
+   Amount: 1,615 BDT
+Edge Case 3: Price Change After Purchase
+text
+
+SCENARIO:
+Batch 1: Bought at 720 BDT (100 units)
+Batch 2: Bought at 750 BDT (100 units) ← Price increased
+Selling Price: 850 BDT (constant)
+
+Customer buys 150 units
+
+QUESTION: Which cost to use for profit?
+
+SOLUTION: FIFO (First In First Out)
+────────────────────────────────────
+
+Sale breakdown:
+  100 units from Batch 1 @ 720 BDT cost
+  50 units from Batch 2 @ 750 BDT cost
+
+Profit calculation:
+  From Batch 1: 100 × (850 - 720) = 13,000 BDT
+  From Batch 2: 50 × (850 - 750) = 5,000 BDT
+  Total Profit: 18,000 BDT
+  Average Profit/Unit: 120 BDT
+
+IMPLEMENTATION:
+───────────────
+SELECT * FROM inventory_batches
+WHERE variant_id = :variant_id
+  AND current_quantity > 0
+  AND status = 'active'
+ORDER BY received_date ASC; -- FIFO
+
+FOR each batch:
+  IF remaining_sale_qty > 0:
+    take_qty = MIN(batch.current_quantity, remaining_sale_qty)
+    
+    CREATE sale_item:
+      batch_id: batch.id
+      quantity: take_qty
+      unit_cost: batch.unit_cost_price
+      unit_selling_price: 850
+      profit: (850 - batch.unit_cost_price) × take_qty
+    
+    UPDATE batch:
+      current_quantity -= take_qty
+    
+    remaining_sale_qty -= take_qty
+Edge Case 4: Batch Expiry During Sale
+text
+
+SCENARIO:
+Batch has expiry_date = today
+Someone tries to sell it
+
+SOLUTION: Real-time Validation
+───────────────────────────────
+
+BEFORE adding to cart:
+
+SELECT 
+  ib.*,
+  CASE 
+    WHEN ib.expiry_date < CURRENT_DATE THEN 'expired'
+    WHEN ib.expiry_date = CURRENT_DATE THEN 'expires_today'
+    WHEN ib.expiry_date < CURRENT_DATE + 7 THEN 'expires_soon'
+    ELSE 'valid'
+  END as expiry_status
+FROM inventory_batches ib
+WHERE ib.id = :batch_id;
+
+IF expiry_status = 'expired':
+  BLOCK sale
+  Show: "This batch has expired. Cannot sell."
+  Auto-create stock adjustment
+
+ELSE IF expiry_status = 'expires_today':
+  WARN: "This product expires today. Proceed?"
+  Allow with confirmation
+
+ELSE IF expiry_status = 'expires_soon':
+  INFO: "Expires in X days"
+  Allow sale
+Edge Case 5: Multi-warehouse Transfer
+text
+
+SCENARIO:
+Main Store has 100 units
+Branch Store needs 50 units
+
+SOLUTION: Transfer Process
+───────────────────────────
+
+CREATE stock_transfer:
+  from_location: Main Store
+  to_location: Branch Store
+  product: Castrol 1L
+  batch: LOT-JAN24-001
+  quantity: 50
+  status: pending
+
+PROCESS:
+1. Deduct from Main Store:
+   UPDATE inventory_batches
+   SET current_quantity = 100 - 50 = 50
+   WHERE location = 'Main Store'
+   
+   CREATE movement:
+   Type: transfer_out
+   Location: Main Store
+   Qty: -50
+
+2. Add to Branch Store:
+   CREATE new batch OR update existing:
+   INSERT INTO inventory_batches (
+     batch_number: LOT-JAN24-001-BRANCH
+     location: Branch Store
+     current_quantity: 50
+     ...
+   )
+   
+   CREATE movement:
+   Type: transfer_in
+   Location: Branch Store
+   Qty: +50
+
+3. Update transfer status:
+   status: pending → completed
+📈 Performance Optimization
+Database Indexes
+SQL
+
+-- Critical indexes for fast queries
+
+-- Products
+CREATE INDEX idx_products_dealer_category ON products(dealer_id, category_id);
+CREATE INDEX idx_products_status ON products(dealer_id, status);
+CREATE INDEX idx_products_name_search ON products USING gin(to_tsvector('english', name));
+
+-- Variants
+CREATE INDEX idx_variants_stock ON product_variants(stock_quantity) 
+  WHERE stock_quantity < 10; -- Partial index for low stock
+
+-- Sales
+CREATE INDEX idx_sales_date_dealer ON sales(sale_date, dealer_id);
+CREATE INDEX idx_sales_customer ON sales(dealer_id, customer_id);
+
+-- Sale Items (covering index for profit reports)
+CREATE INDEX idx_sale_items_profit ON sale_items(
+  sale_id, product_id, variant_id, total_profit
+);
+
+-- Inventory Batches
+CREATE INDEX idx_batches_expiry_alert ON inventory_batches(expiry_date, status)
+  WHERE status = 'active' AND expiry_date IS NOT NULL;
+
+-- Movements
+CREATE INDEX idx_movements_date_type ON inventory_movements(
+  dealer_id, movement_date, movement_type
+);
+Materialized Views for Reports
+SQL
+
+-- Daily sales summary (refresh every hour)
+CREATE MATERIALIZED VIEW daily_sales_summary AS
+SELECT 
+  dealer_id,
+  sale_date,
+  COUNT(*) as total_invoices,
+  SUM(grand_total) as total_sales,
+  SUM(total_profit) as total_profit,
+  SUM(CASE WHEN payment_method = 'cash' THEN grand_total ELSE 0 END) as cash_sales,
+  SUM(CASE WHEN payment_method = 'card' THEN grand_total ELSE 0 END) as card_sales
+FROM sales
+WHERE status = 'completed'
+GROUP BY dealer_id, sale_date;
+
+CREATE UNIQUE INDEX ON daily_sales_summary(dealer_id, sale_date);
+
+-- Refresh strategy
+REFRESH MATERIALIZED VIEW CONCURRENTLY daily_sales_summary;
+
+-- Use in queries
+SELECT * FROM daily_sales_summary
+WHERE dealer_id = :id 
+  AND sale_date BETWEEN :start AND :end;
+✅ Complete Feature Checklist
+text
+
+PRODUCTS
+✓ Multi-level categories
+✓ Brand management
+✓ Dynamic attributes per category
+✓ Variant auto-generation
+✓ Multiple images
+✓ Barcode support
+✓ SKU management
+✓ Status workflow (draft → pending → active)
+✓ Bulk import/export
+
+INVENTORY
+✓ Batch/lot tracking
+✓ FIFO costing
+✓ Multi-location support
+✓ Expiry date tracking
+✓ Low stock alerts
+✓ Stock adjustments (with approval)
+✓ Physical count
+✓ Damaged goods handling
+✓ Real-time stock updates
+✓ Movement history
+
+PURCHASE
+✓ Vendor management
+✓ Purchase orders
+✓ GRN (Goods Receipt Note)
+✓ Quality check
+✓ Partial receiving
+✓ Vendor ledger
+✓ Payment tracking
+✓ Purchase returns
+
+SALES
+✓ POS interface
+✓ Barcode scanning
+✓ Quick product search
+✓ Customer management
+✓ Multiple payment methods
+✓ Discount management
+✓ Credit sales
+✓ Sale returns (full & partial)
+✓ Invoice generation
+✓ Receipt printing
+✓ Customer ledger
+
+REPORTS
+✓ Daily sales report
+✓ Sales summary (weekly/monthly)
+✓ Profit & loss
+✓ Stock valuation
+✓ Product performance
+✓ Vendor performance
+✓ Salesperson performance
+✓ Low stock report
+✓ Expiry alert report
+✓ Inventory movement report
+✓ Payment collection report
+✓ Outstanding payments
+
+FINANCIALS
+✓ Payment transactions
+✓ Expense tracking
+✓ Vendor payments
+✓ Customer payments
+✓ Cash flow
+✓ Bank reconciliation
+
+SECURITY
+✓ Role-based access
+✓ Row-level security (dealer isolation)
+✓ Audit logs
+✓ Transaction integrity
+✓ Concurrent access control
+
+ALERTS & NOTIFICATIONS
+✓ Low stock alerts
+✓ Expiry alerts
+✓ Overdue payments
+✓ New orders
+✓ Daily sales summary
+🎯 Summary
+এই planning অনুসরণ করলে আপনি পাবেন:
+
+Accuracy Guarantee:
+✅ Transaction-based stock updates
+✅ Row-level locking (concurrent sale prevention)
+✅ Batch tracking (FIFO costing)
+✅ Complete audit trail
+✅ Automatic validation
+Business Value:
+💰 Exact profit calculation per sale
+📊 Real-time inventory visibility
+📈 Comprehensive reports
+🔔 Proactive alerts
+💳 Complete financial tracking
+Scalability:
+🏢 Multi-dealer support
+📦 Unlimited products
+🔄 Unlimited transactions
+📍 Multi-location ready
+🌐 Online integration ready
+User Experience:
+⚡ Fast POS (barcode scan)
+🎨 Intuitive UI
+📱 Mobile responsive
+🖨️ Print-ready invoices
+🔍 Powerful search

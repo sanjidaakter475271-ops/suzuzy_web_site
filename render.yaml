@@ -1,0 +1,42 @@
+# Render.com Blueprint Configuration
+# This file defines all services for Royal Suzuky deployment
+# https://render.com/docs/blueprint-spec
+
+services:
+  # ============================================
+  # Portal App (Admin/Dealer Dashboard)
+  # ============================================
+  - type: web
+    name: royal-suzuky-portal
+    runtime: docker
+    dockerfilePath: ./apps/portal/Dockerfile
+    dockerContext: ./apps/portal
+    region: singapore
+    plan: free
+    branch: main
+    envVars:
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production
+
+  # ============================================
+  # Storefront App (Public Website)
+  # ============================================
+  - type: web
+    name: royal-suzuky-storefront
+    runtime: docker
+    dockerfilePath: ./apps/storefront/Dockerfile
+    dockerContext: ./apps/storefront
+    region: singapore
+    plan: free
+    branch: main
+    envVars:
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production

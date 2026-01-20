@@ -105,8 +105,8 @@ export default function AdminProductModeration() {
             accessorKey: "name",
             header: "Product Asset",
             cell: ({ row }) => (
-                <div className="relative group overflow-hidden rounded-xl">
-                    <div className="flex items-center gap-4 p-2 transition-all group-hover:pb-16">
+                <div className="relative group rounded-xl overflow-visible">
+                    <div className="flex items-center gap-4 p-2 transition-all group-hover:bg-white/[0.02]">
                         <div className="relative w-12 h-12 rounded-xl bg-white/5 border border-white/10 overflow-hidden flex-shrink-0 group-hover:border-[#D4AF37]/40 transition-all">
                             {row.original.product_images?.[0]?.image_url ? (
                                 <Image
@@ -119,22 +119,54 @@ export default function AdminProductModeration() {
                                 <ImageIcon className="w-5 h-5 text-white/20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                             )}
                         </div>
-                        <div>
-                            <p className="font-bold text-[#F8F8F8] tracking-tight line-clamp-1">{row.original.name}</p>
-                            <p className="text-[10px] text-[#D4AF37] uppercase font-black tracking-widest">{row.original.dealers?.business_name}</p>
+                        <div className="flex-1 min-w-0">
+                            <p className="font-bold text-[#F8F8F8] tracking-tight line-clamp-1 group-hover:text-[#D4AF37] transition-colors">{row.original.name}</p>
+                            <p className="text-[10px] text-[#A1A1AA] uppercase font-bold tracking-widest">{row.original.dealers?.business_name}</p>
                         </div>
                     </div>
 
-                    {/* Slide-up Detail Panel */}
-                    <div className="absolute bottom-0 left-0 w-full min-w-[300px] bg-[#F8F8F8] translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out z-20 p-3 shadow-lg flex flex-col gap-2">
-                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-black/80">
-                            <span className="flex items-center gap-1"><User className="w-3 h-3" /> {row.original.dealers?.business_name || 'Unknown Dealer'}</span>
-                            <span className="flex items-center gap-1"><Package className="w-3 h-3" /> {row.original.stock_quantity || 0} Units</span>
+                    {/* Premium Slide-up Detail Overlay */}
+                    <div className="absolute left-0 bottom-full mb-2 w-[320px] opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-300 ease-out z-[100] pointer-events-none group-hover:pointer-events-auto">
+                        <div className="bg-[#F8F8F8] rounded-2xl p-5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-[#D4AF37]/20 flex flex-col gap-4 overflow-hidden relative">
+                            {/* Decorative Accent */}
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-[#D4AF37]/5 rounded-full -mr-12 -mt-12 blur-2xl" />
+
+                            <div className="flex items-center justify-between border-b border-black/5 pb-3">
+                                <div className="space-y-0.5">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]">Dealer Source</p>
+                                    <p className="text-xs font-bold text-black flex items-center gap-1.5">
+                                        <User className="w-3.5 h-3.5 text-black/40" />
+                                        {row.original.dealers?.business_name || 'System Auto-Assign'}
+                                    </p>
+                                </div>
+                                <div className="text-right space-y-0.5">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]">Available</p>
+                                    <p className="text-xs font-bold text-black flex items-center justify-end gap-1.5">
+                                        <Package className="w-3.5 h-3.5 text-black/40" />
+                                        {row.original.stock_quantity ?? 0} <span className="text-[10px] text-black/40">Units</span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black/40">Submission Date</p>
+                                    <p className="text-[11px] font-bold text-black flex items-center gap-1.5">
+                                        <Calendar className="w-3.5 h-3.5 text-black/20" />
+                                        {formatDate(row.original.created_at)}
+                                    </p>
+                                </div>
+                                <div className="text-right space-y-0.5">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black/40">Classification</p>
+                                    <p className="text-[11px] font-bold text-black flex items-center justify-end gap-1.5">
+                                        <Layers className="w-3.5 h-3.5 text-black/20" />
+                                        {row.original.categories?.name || 'Unmapped'}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
-                        <div className="flex items-center justify-between text-[10px] font-medium text-black/60">
-                            <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(row.original.created_at).toLocaleDateString()}</span>
-                            <span className="flex items-center gap-1"><Layers className="w-3 h-3" /> {row.original.categories?.name || 'Uncategorized'}</span>
-                        </div>
+                        {/* Triangle Connector */}
+                        <div className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[10px] border-t-[#F8F8F8] ml-8 shadow-sm" />
                     </div>
                 </div>
             )
@@ -195,7 +227,7 @@ export default function AdminProductModeration() {
                 </div>
             </div>
 
-            <div className="bg-[#0D0D0F]/40 backdrop-blur-xl rounded-3xl border border-[#D4AF37]/10 overflow-hidden">
+            <div className="bg-[#0D0D0F]/40 backdrop-blur-xl rounded-3xl border border-[#D4AF37]/10 overflow-visible">
                 <DataTable
                     columns={columns}
                     data={products}
