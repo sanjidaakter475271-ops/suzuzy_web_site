@@ -3,9 +3,6 @@ import { resolve } from "path";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  turbopack: {
-    root: resolve(process.cwd(), "../../"),
-  },
   images: {
     remotePatterns: [
       {
