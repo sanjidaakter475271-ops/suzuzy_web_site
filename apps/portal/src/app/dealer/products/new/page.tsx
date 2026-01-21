@@ -13,7 +13,8 @@ import {
     X,
     Info,
     Check,
-    Loader2
+    Loader2,
+    Layers
 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/premium/GlassCard';
 import { MetallicText } from '@/components/ui/premium/MetallicText';
@@ -27,6 +28,8 @@ import { useUser } from '@/hooks/useUser';
 import { formatCurrency, cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { AttributeForm } from '@/components/products/attribute-form';
+import { VariantGenerator, Variant } from '@/components/products/variant-generator';
 
 interface Category {
     id: string;
@@ -58,6 +61,8 @@ export default function NewProductPage() {
         brand: ''
     });
 
+    const [attributes, setAttributes] = useState<Record<string, any>>({});
+    const [variants, setVariants] = useState<Variant[]>([]);
     const [selectedModels, setSelectedModels] = useState<string[]>([]);
     const [images, setImages] = useState<string[]>([]);
 
@@ -84,12 +89,12 @@ export default function NewProductPage() {
         );
     };
 
-    const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 4));
+    const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 5));
     const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
     const handleSubmit = async () => {
         if (!profile?.dealer_id) return;
-        if (!formData.name || !formData.base_price || !formData.stock_quantity) {
+        if (!formData.name || !formData.base_price) {
             toast.error("Essential credentials missing in the registry");
             return;
         }
@@ -102,23 +107,39 @@ export default function NewProductPage() {
                 .insert({
                     dealer_id: profile.dealer_id,
                     name: formData.name,
-                    slug: formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') + '-' + Date.now().toString().slice(-4), // Simple slug gen
+                    slug: formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') + '-' + Date.now().toString().slice(-4),
                     description: formData.description,
                     sku: formData.sku,
                     part_number: formData.part_number,
                     base_price: Number(formData.base_price),
                     sale_price: formData.sale_price ? Number(formData.sale_price) : null,
-                    stock_quantity: Number(formData.stock_quantity),
+                    stock_quantity: variants.length > 0 ? variants.reduce((acc, v) => acc + v.stock, 0) : Number(formData.stock_quantity || 0),
                     category_id: formData.category_id,
                     status: 'pending',
-                    brand: formData.brand
+                    brand: formData.brand,
+                    metadata: attributes // Save dynamic attributes here
                 })
                 .select()
                 .single();
 
             if (pError) throw pError;
 
-            // 2. Insert Model Mapping
+            // 2. Insert Variants if any
+            if (variants.length > 0) {
+                const variantMappings = variants.map(v => ({
+                    product_id: product.id,
+                    sku: v.sku,
+                    price: v.price,
+                    stock_quantity: v.stock,
+                    low_stock_threshold: v.threshold,
+                    attributes: v.attributes,
+                    dealer_id: profile.dealer_id
+                }));
+                const { error: vError } = await supabase.from('product_variants').insert(variantMappings);
+                if (vError) throw vError;
+            }
+
+            // 3. Insert Model Mapping
             if (selectedModels.length > 0) {
                 const modelMappings = selectedModels.map(mid => ({
                     product_id: product.id,
@@ -128,7 +149,7 @@ export default function NewProductPage() {
                 if (mError) throw mError;
             }
 
-            // 3. Insert Images
+            // 4. Insert Images
             if (images.length > 0) {
                 const imageMappings = images.map((url, idx) => ({
                     product_id: product.id,
@@ -151,10 +172,13 @@ export default function NewProductPage() {
 
     const STEPS = [
         { id: 1, label: 'Identity', icon: Info },
-        { id: 2, label: 'Finance', icon: CircleDollarSign },
-        { id: 3, label: 'Media', icon: ImageIcon },
-        { id: 4, label: 'Logic', icon: LayoutGrid }
+        { id: 2, label: 'Specs', icon: Settings2 },
+        { id: 3, label: 'Finance', icon: CircleDollarSign },
+        { id: 4, label: 'Variants', icon: Layers },
+        { id: 5, label: 'Assets', icon: ImageIcon },
     ];
+
+    const currentCategoryName = categories.find(c => c.id === formData.category_id)?.name || "";
 
     return (
         <div className="max-w-6xl mx-auto selection:bg-[#D4AF37] selection:text-[#0D0D0F] p-8 -mt-8">
@@ -178,7 +202,7 @@ export default function NewProductPage() {
                         >
                             Discard Draft
                         </Button>
-                        {currentStep === 4 ? (
+                        {currentStep === 5 ? (
                             <GradientButton
                                 disabled={isSubmitting}
                                 onClick={handleSubmit}
@@ -198,7 +222,7 @@ export default function NewProductPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-5 gap-4">
                     {STEPS.map((step) => {
                         const Icon = step.icon;
                         const isActive = currentStep === step.id;
@@ -255,6 +279,16 @@ export default function NewProductPage() {
                                 </div>
                                 <div className="space-y-8">
                                     <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-[#D4AF37]/70 uppercase tracking-widest ml-1">Product Classification</label>
+                                        <select
+                                            value={formData.category_id}
+                                            onChange={(e) => setFormData(p => ({ ...p, category_id: e.target.value }))}
+                                            className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-xl px-4 text-xs font-bold text-white/80 outline-none focus:border-[#D4AF37]/50 appearance-none bg-[#0D0D0F]"
+                                        >
+                                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-3">
                                         <label className="text-[10px] font-black text-[#D4AF37]/70 uppercase tracking-widest ml-1">Product Title</label>
                                         <Input
                                             value={formData.name}
@@ -269,7 +303,7 @@ export default function NewProductPage() {
                                             value={formData.description}
                                             onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
                                             placeholder="Provide detailed technical specifications..."
-                                            className="min-h-[200px] bg-white/[0.03] border-white/10 rounded-xl focus:border-[#D4AF37]/50 resize-none leading-relaxed p-6"
+                                            className="min-h-[160px] bg-white/[0.03] border-white/10 rounded-xl focus:border-[#D4AF37]/50 resize-none leading-relaxed p-6"
                                         />
                                     </div>
                                     <div className="grid grid-cols-2 gap-6">
@@ -283,7 +317,7 @@ export default function NewProductPage() {
                                             />
                                         </div>
                                         <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-[#D4AF37]/70 uppercase tracking-widest ml-1">SKU / Serial</label>
+                                            <label className="text-[10px] font-black text-[#D4AF37]/70 uppercase tracking-widest ml-1">SKU / Protocol ID</label>
                                             <Input
                                                 value={formData.sku}
                                                 onChange={(e) => setFormData(p => ({ ...p, sku: e.target.value }))}
@@ -297,6 +331,15 @@ export default function NewProductPage() {
                         )}
 
                         {currentStep === 2 && (
+                            <AttributeForm
+                                categoryId={formData.category_id}
+                                categoryName={currentCategoryName}
+                                values={attributes}
+                                onChange={(id, val) => setAttributes(p => ({ ...p, [id]: val }))}
+                            />
+                        )}
+
+                        {currentStep === 3 && (
                             <GlassCard className="p-8 border-[#D4AF37]/10">
                                 <div className="flex items-center gap-4 mb-8">
                                     <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center border border-[#D4AF37]/20">
@@ -315,18 +358,10 @@ export default function NewProductPage() {
                                         />
                                     </div>
                                     <div className="space-y-3">
-                                        <label className="text-[10px] font-black text-[#D4AF37]/70 uppercase tracking-widest ml-1">Sale Rate (৳)</label>
+                                        <label className="text-[10px] font-black text-[#D4AF37]/70 uppercase tracking-widest ml-1">Stock Baseline</label>
                                         <Input
                                             type="number"
-                                            value={formData.sale_price}
-                                            onChange={(e) => setFormData(p => ({ ...p, sale_price: e.target.value }))}
-                                            className="h-14 bg-white/[0.03] border-white/10 rounded-xl text-lg font-bold text-[#D4AF37]"
-                                        />
-                                    </div>
-                                    <div className="space-y-3">
-                                        <label className="text-[10px] font-black text-[#D4AF37]/70 uppercase tracking-widest ml-1">Inventory Units</label>
-                                        <Input
-                                            type="number"
+                                            placeholder="Ignored if variants exist"
                                             value={formData.stock_quantity}
                                             onChange={(e) => setFormData(p => ({ ...p, stock_quantity: e.target.value }))}
                                             className="h-14 bg-white/[0.03] border-white/10 rounded-xl text-lg font-bold"
@@ -336,71 +371,56 @@ export default function NewProductPage() {
                             </GlassCard>
                         )}
 
-                        {currentStep === 3 && (
-                            <GlassCard className="p-8 border-[#D4AF37]/10">
-                                <div className="flex items-center gap-4 mb-8">
-                                    <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center border border-[#D4AF37]/20">
-                                        <ImageIcon className="w-5 h-5 text-[#D4AF37]" />
-                                    </div>
-                                    <h2 className="text-lg font-display font-bold text-white uppercase tracking-widest italic">Visual Gallery</h2>
-                                </div>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                                    {images.map((url, idx) => (
-                                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-white/10 group">
-                                            <img src={url} alt="Product" className="w-full h-full object-cover" />
-                                            <button
-                                                onClick={() => setImages(prev => prev.filter((_, i) => i !== idx))}
-                                                className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                                <X className="w-3 h-3 text-white" />
-                                            </button>
-                                        </div>
-                                    ))}
-                                    <div
-                                        onClick={() => {
-                                            const url = prompt("Enter asset URL for prototyping:");
-                                            if (url) setImages(prev => [...prev, url]);
-                                        }}
-                                        className="aspect-square rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 hover:bg-[#D4AF37]/5 hover:border-[#D4AF37]/30 transition-all cursor-pointer group"
-                                    >
-                                        <Plus className="w-6 h-6 text-white/20 group-hover:text-[#D4AF37]" />
-                                        <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">Add Asset</span>
-                                    </div>
-                                </div>
-                            </GlassCard>
+                        {currentStep === 4 && (
+                            <VariantGenerator
+                                baseSku={formData.sku || "PROD"}
+                                basePrice={Number(formData.base_price || 0)}
+                                onUpdate={setVariants}
+                            />
                         )}
 
-                        {currentStep === 4 && (
+                        {currentStep === 5 && (
                             <div className="space-y-8">
+                                <GlassCard className="p-8 border-[#D4AF37]/10">
+                                    <div className="flex items-center gap-4 mb-8">
+                                        <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center border border-[#D4AF37]/20">
+                                            <ImageIcon className="w-5 h-5 text-[#D4AF37]" />
+                                        </div>
+                                        <h2 className="text-lg font-display font-bold text-white uppercase tracking-widest italic">Visual Gallery</h2>
+                                    </div>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                                        {images.map((url, idx) => (
+                                            <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-white/10 group">
+                                                <img src={url} alt="Product" className="w-full h-full object-cover" />
+                                                <button
+                                                    onClick={() => setImages(prev => prev.filter((_, i) => i !== idx))}
+                                                    className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <X className="w-3 h-3 text-white" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <div
+                                            onClick={() => {
+                                                const url = prompt("Enter asset URL for prototyping:");
+                                                if (url) setImages(prev => [...prev, url]);
+                                            }}
+                                            className="aspect-square rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 hover:bg-[#D4AF37]/5 hover:border-[#D4AF37]/30 transition-all cursor-pointer group"
+                                        >
+                                            <Plus className="w-6 h-6 text-white/20 group-hover:text-[#D4AF37]" />
+                                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">Add Asset</span>
+                                        </div>
+                                    </div>
+                                </GlassCard>
+
                                 <GlassCard className="p-8 border-[#D4AF37]/10">
                                     <div className="flex items-center gap-4 mb-8">
                                         <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center border border-[#D4AF37]/20">
                                             <LayoutGrid className="w-5 h-5 text-[#D4AF37]" />
                                         </div>
-                                        <h2 className="text-lg font-display font-bold text-white uppercase tracking-widest italic">Asset Logic</h2>
-                                    </div>
-                                    <div className="space-y-6">
-                                        <div className="space-y-2">
-                                            <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">Category Classification</label>
-                                            <select
-                                                value={formData.category_id}
-                                                onChange={(e) => setFormData(p => ({ ...p, category_id: e.target.value }))}
-                                                className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-xl px-4 text-xs font-bold text-white/80 outline-none focus:border-[#D4AF37]/50 appearance-none bg-[#0D0D0F]"
-                                            >
-                                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                            </select>
-                                        </div>
-                                    </div>
-                                </GlassCard>
-
-                                <GlassCard className="p-8 border-[#D4AF37]/10 max-h-[400px] overflow-y-auto custom-scrollbar">
-                                    <div className="flex items-center gap-4 mb-8">
-                                        <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center border border-[#D4AF37]/20">
-                                            <Settings2 className="w-5 h-5 text-[#D4AF37]" />
-                                        </div>
                                         <h2 className="text-lg font-display font-bold text-white uppercase tracking-widest italic">Fleet Compatibility</h2>
                                     </div>
-                                    <div className="flex flex-wrap gap-2">
+                                    <div className="flex flex-wrap gap-2 max-h-[200px] overflow-y-auto custom-scrollbar">
                                         {bikeModels.map(model => (
                                             <Badge
                                                 key={model.id}
@@ -429,28 +449,44 @@ export default function NewProductPage() {
                             <div className="space-y-6">
                                 <div>
                                     <label className="text-[8px] font-black text-[#D4AF37]/60 uppercase tracking-widest">Product Identity</label>
-                                    <p className="text-xs font-bold text-white mt-1">{formData.name || 'Undefined Registry Name'}</p>
+                                    <p className="text-xs font-bold text-white mt-1 capitalize">{formData.name || 'Undefined Registry Name'}</p>
                                     <p className="text-[9px] text-white/30 font-mono mt-1">{formData.sku || 'SKU-PENDING'}</p>
                                 </div>
-                                <div>
-                                    <label className="text-[8px] font-black text-[#D4AF37]/60 uppercase tracking-widest">Financials</label>
-                                    <p className="text-sm font-display font-black text-[#D4AF37] italic mt-1">{formData.base_price ? formatCurrency(Number(formData.base_price)) : 'MSRP Unset'}</p>
-                                    <p className="text-[9px] text-white/30 mt-1 uppercase font-bold tracking-tighter">{formData.stock_quantity || 0} Units in Logistics</p>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[8px] font-black text-[#D4AF37]/60 uppercase tracking-widest">Pricing</label>
+                                        <p className="text-xs font-black text-white mt-1">{formData.base_price ? formatCurrency(Number(formData.base_price)) : 'MSRP Unset'}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-[8px] font-black text-[#D4AF37]/60 uppercase tracking-widest">Variants</label>
+                                        <p className="text-xs font-black text-white mt-1">{variants.length} protocols</p>
+                                    </div>
                                 </div>
-                                <div className="pt-6 border-t border-white/5">
-                                    <div className="flex items-center gap-3 mb-4">
+
+                                {Object.keys(attributes).length > 0 && (
+                                    <div className="pt-4 border-t border-white/5 space-y-2">
+                                        <label className="text-[8px] font-black text-[#D4AF37]/60 uppercase tracking-widest">Specifications</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {Object.entries(attributes).slice(0, 4).map(([k, v]) => (
+                                                <div key={k} className="text-[9px] text-white/40 truncate">
+                                                    <span className="font-black text-[#D4AF37]/30 uppercase">{k.replace('_', ' ')}:</span> {v}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="pt-6 border-t border-white/5 flex flex-col gap-4">
+                                    <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                                             <Check className="w-4 h-4 text-emerald-500" />
                                         </div>
                                         <div>
-                                            <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Cloud Ready</p>
-                                            <p className="text-[9px] text-white/20 font-bold">Registry validation passed</p>
+                                            <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Inventory Level</p>
+                                            <p className="text-[9px] text-white/20 font-bold">
+                                                {variants.length > 0 ? variants.reduce((acc, v) => acc + v.stock, 0) : formData.stock_quantity || 0} Total Units
+                                            </p>
                                         </div>
-                                    </div>
-                                    <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl">
-                                        <p className="text-[8px] text-white/30 leading-relaxed uppercase font-bold italic">
-                                            Note: New assets are subject to manual editorial moderation before becoming visible on the public fleet gallery.
-                                        </p>
                                     </div>
                                 </div>
                             </div>

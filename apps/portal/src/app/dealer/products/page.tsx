@@ -14,7 +14,6 @@ import {
     AlertCircle,
     Loader2,
     FileUp,
-    Download,
     X
 } from "lucide-react";
 import Link from "next/link";
@@ -42,6 +41,12 @@ interface Product {
     product_images?: {
         image_url: string;
     }[];
+    product_variants?: {
+        id: string;
+        sku: string;
+        has_duplicate_barcode: boolean;
+        stock_quantity: number;
+    }[];
     rejection_reason?: string;
     created_at: string;
 }
@@ -51,7 +56,6 @@ export default function ProductsPage() {
     const [loading, setLoading] = useState(true);
     const [products, setProducts] = useState<Product[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
-    const [showImport, setShowImport] = useState(false);
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [stockFilter, setStockFilter] = useState<string>("all");
     const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -64,7 +68,7 @@ export default function ProductsPage() {
 
         try {
             const [prodRes, catRes] = await Promise.all([
-                supabase.from('products').select('*, categories(name), product_images(image_url)').eq('dealer_id', profile.dealer_id).order('created_at', { ascending: false }),
+                supabase.from('products').select('*, categories(name), product_images(image_url), product_variants(id, sku, has_duplicate_barcode, stock_quantity)').eq('dealer_id', profile.dealer_id).order('created_at', { ascending: false }),
                 supabase.from('categories').select('id, name').eq('is_active', true).order('name')
             ]);
 
@@ -213,13 +217,14 @@ export default function ProductsPage() {
                     </h1>
                 </div>
                 <div className="flex gap-4">
-                    <Button
-                        onClick={() => setShowImport(true)}
-                        variant="outline"
-                        className="px-6 h-12 border-[#D4AF37]/20 text-[#D4AF37] hover:bg-[#D4AF37]/5 text-[10px] font-black uppercase italic tracking-widest rounded-xl transition-all"
-                    >
-                        <FileUp className="mr-2 h-4 w-4" /> Bulk Import
-                    </Button>
+                    <Link href="/dealer/products/import">
+                        <Button
+                            variant="outline"
+                            className="px-6 h-12 border-[#D4AF37]/20 text-[#D4AF37] hover:bg-[#D4AF37]/5 text-[10px] font-black uppercase italic tracking-widest rounded-xl transition-all"
+                        >
+                            <FileUp className="mr-2 h-4 w-4" /> Bulk Import
+                        </Button>
+                    </Link>
                     <Link href="/dealer/products/new">
                         <GradientButton className="px-8 h-12 text-[10px] font-black uppercase italic tracking-widest shadow-[0_10px_30px_rgba(212,175,55,0.15)]">
                             <Plus className="mr-2 h-4 w-4" /> Register New Asset
@@ -414,8 +419,15 @@ export default function ProductsPage() {
                                                     )}
                                                 </div>
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-white font-bold text-sm group-hover:text-[#D4AF37] transition-colors tracking-tight line-clamp-1">{product.name}</span>
-                                                    <span className="text-[10px] text-white/30 font-mono tracking-wider">{product.sku || 'PENDING-SKU'}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-white font-bold text-sm group-hover:text-[#D4AF37] transition-colors tracking-tight line-clamp-1">{product.name}</span>
+                                                        {product.product_variants?.some(v => v.has_duplicate_barcode) && (
+                                                            <Badge variant="destructive" className="bg-red-500 text-white text-[8px] px-1.5 py-0 rounded-md animate-pulse">
+                                                                Duplicate Barcode
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-[10px] text-white/30 font-mono tracking-wider">{product.sku || product.product_variants?.[0]?.sku || 'PENDING-SKU'}</span>
                                                 </div>
                                             </div>
                                         </td>
@@ -423,9 +435,9 @@ export default function ProductsPage() {
                                             <div className="flex flex-col gap-1">
                                                 <span className="text-[10px] text-white/50 font-black uppercase tracking-widest italic">{product.categories?.name || 'Unclassified'}</span>
                                                 <div className="flex items-center gap-2">
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${product.stock_quantity > 10 ? 'bg-green-500' : product.stock_quantity > 0 ? 'bg-orange-500' : 'bg-red-500'} shadow-[0_0_8px_rgba(0,0,0,0.5)]`} />
-                                                    <span className={`text-[10px] font-bold tracking-tight ${product.stock_quantity > 0 ? 'text-white/80' : 'text-red-500/80 uppercase italic'}`}>
-                                                        {product.stock_quantity > 0 ? `${product.stock_quantity} Units Available` : 'Stock Depleted'}
+                                                    <div className={`w-1.5 h-1.5 rounded-full ${(product.stock_quantity ?? 0) > 10 ? 'bg-green-500' : (product.stock_quantity ?? 0) > 0 ? 'bg-orange-500' : 'bg-red-500'} shadow-[0_0_8px_rgba(0,0,0,0.5)]`} />
+                                                    <span className={`text-[10px] font-bold tracking-tight ${(product.stock_quantity ?? 0) > 0 ? 'text-white/80' : 'text-red-500/80 uppercase italic'}`}>
+                                                        {(product.stock_quantity ?? 0) > 0 ? `${product.stock_quantity} Units Available` : 'Stock Depleted'}
                                                     </span>
                                                 </div>
                                             </div>
@@ -500,65 +512,7 @@ export default function ProductsPage() {
                 </div>
             </GlassCard>
 
-            {/* Import Modal */}
-            <AnimatePresence>
-                {showImport && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowImport(false)}
-                            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100]"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl bg-[#0D0D0F] border border-[#D4AF37]/20 rounded-[2.5rem] p-10 z-[101] shadow-[0_40px_100px_rgba(0,0,0,0.8)]"
-                        >
-                            <div className="flex justify-between items-center mb-10">
-                                <div>
-                                    <h3 className="text-2xl font-display font-black italic text-white uppercase tracking-tighter">Bulk <span className="text-[#D4AF37]">Import</span></h3>
-                                    <p className="text-[10px] text-white/40 uppercase font-bold tracking-widest mt-1">Registry Synchronization Engine</p>
-                                </div>
-                                <Button variant="ghost" size="icon" onClick={() => setShowImport(false)} className="text-white/20 hover:text-white">
-                                    <X className="w-6 h-6" />
-                                </Button>
-                            </div>
-
-                            <div className="space-y-8">
-                                <div className="aspect-video rounded-3xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-4 hover:border-[#D4AF37]/30 hover:bg-[#D4AF37]/5 transition-all cursor-pointer group">
-                                    <FileUp className="w-12 h-12 text-white/10 group-hover:text-[#D4AF37] transition-colors" />
-                                    <div className="text-center">
-                                        <p className="text-sm font-bold text-white group-hover:text-[#D4AF37]">Drop CSV or Excel Asset Registry</p>
-                                        <p className="text-[10px] text-white/20 font-black uppercase tracking-widest mt-1">Maximum 500 records per upload</p>
-                                    </div>
-                                </div>
-
-                                <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/10 flex items-center justify-center">
-                                                <Download className="w-4 h-4 text-[#D4AF37]" />
-                                            </div>
-                                            <span className="text-[10px] font-black text-white uppercase tracking-widest">Inventory Template</span>
-                                        </div>
-                                        <Button variant="link" className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37] p-0 h-auto">Get Link</Button>
-                                    </div>
-                                    <p className="text-[9px] text-white/30 leading-relaxed italic">
-                                        Ensure your CSV matches the platform taxonomy for Categories and Brand IDs to prevent validation failure in the editorial queue.
-                                    </p>
-                                </div>
-
-                                <GradientButton className="w-full h-14 text-xs font-black uppercase tracking-widest italic" onClick={() => toast.info("Synchronization Engine Offline for Prototyping")}>
-                                    Initialize Import Sequence
-                                </GradientButton>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+            {/* Removed Legacy Import Modal */}
         </div>
     );
 }

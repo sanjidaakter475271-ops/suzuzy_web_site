@@ -43,6 +43,7 @@ interface Product {
     categories?: {
         name: string;
     };
+    brand?: string;
     created_at: string;
     submitted_at?: string;
 }
@@ -57,9 +58,7 @@ export default function AdminProductModeration() {
         try {
             const { data, error } = await supabase
                 .from('products')
-                .select('*, dealers(business_name), categories(name), product_images(image_url)')
-                .eq('status', 'pending')
-                .eq('product_images.is_primary', true)
+                .select('*, dealers(business_name), categories(name), product_images(image_url), product_variants(price, stock_quantity)')
                 .order('created_at', { ascending: true });
 
             if (error) throw error;
@@ -213,24 +212,61 @@ export default function AdminProductModeration() {
         }
     ];
 
+    const brands = Array.from(new Set(products.map(p => p.brand).filter(Boolean)));
+    const [selectedBrand, setSelectedBrand] = useState<string>("all");
+    const [statusFilter, setStatusFilter] = useState<string>("pending");
+
+    const filteredProducts = products.filter(p => {
+        const matchesBrand = selectedBrand === "all" || p.brand === selectedBrand;
+        const matchesStatus = statusFilter === "all" || p.status === statusFilter;
+        return matchesBrand && matchesStatus;
+    });
+
     return (
         <div className="space-y-10 relative">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div className="space-y-1">
                     <h2 className="text-4xl font-display font-black italic tracking-tight text-[#F8F8F8]">
-                        PRODUCT <span className="text-[#DC2626]">AUDIT</span>
+                        CATALOG <span className="text-[#D4AF37]">INTELLIGENCE</span>
                     </h2>
                     <p className="text-[#A1A1AA] text-[10px] uppercase tracking-[0.3em] font-black">
-                        {products.length} Items Awaiting Catalog Compliance
+                        {filteredProducts.length} Assets in Filtered Context
                     </p>
+                </div>
+
+                <div className="flex flex-wrap gap-4">
+                    <div className="space-y-2">
+                        <label className="text-[8px] font-black text-[#D4AF37]/60 uppercase tracking-widest ml-1">Fleet Brand</label>
+                        <select
+                            value={selectedBrand}
+                            onChange={(e) => setSelectedBrand(e.target.value)}
+                            className="h-10 bg-[#0D0D0F]/60 border border-white/10 rounded-xl px-4 text-[10px] font-black uppercase text-white outline-none focus:border-[#D4AF37]/50 appearance-none min-w-[140px]"
+                        >
+                            <option value="all">Every Brand</option>
+                            {brands.map(b => <option key={b} value={b!}>{b}</option>)}
+                        </select>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[8px] font-black text-[#D4AF37]/60 uppercase tracking-widest ml-1">Compliance Status</label>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="h-10 bg-[#0D0D0F]/60 border border-white/10 rounded-xl px-4 text-[10px] font-black uppercase text-white outline-none focus:border-[#D4AF37]/50 appearance-none min-w-[140px]"
+                        >
+                            <option value="all">Full Registry</option>
+                            <option value="pending">Awaiting Audit</option>
+                            <option value="active">Active Catalog</option>
+                            <option value="rejected">Flagged</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
             <div className="bg-[#0D0D0F]/40 backdrop-blur-xl rounded-3xl border border-[#D4AF37]/10 overflow-visible">
                 <DataTable
                     columns={columns}
-                    data={products}
+                    data={filteredProducts}
                     searchKey="name"
                 />
             </div>
