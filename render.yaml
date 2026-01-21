@@ -14,6 +14,9 @@ services:
     region: singapore
     plan: free
     branch: main
+    buildFilter:
+      paths:
+        - apps/portal/**
     envVars:
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
@@ -21,6 +24,12 @@ services:
         sync: false
       - key: NODE_ENV
         value: production
+    docker:
+      buildArgs:
+        - key: NEXT_PUBLIC_SUPABASE_URL
+          value: ${NEXT_PUBLIC_SUPABASE_URL}
+        - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+          value: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
 
   # ============================================
   # Storefront App (Public Website)
@@ -33,6 +42,9 @@ services:
     region: singapore
     plan: free
     branch: main
+    buildFilter:
+      paths:
+        - apps/storefront/**
     envVars:
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
@@ -40,3 +52,9 @@ services:
         sync: false
       - key: NODE_ENV
         value: production
+    docker:
+      buildArgs:
+        - key: NEXT_PUBLIC_SUPABASE_URL
+          value: ${NEXT_PUBLIC_SUPABASE_URL}
+        - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+          value: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
