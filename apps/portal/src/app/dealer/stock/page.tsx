@@ -10,7 +10,6 @@ import {
     Filter,
     Boxes,
     Calendar,
-    ArrowDownWide,
     ChevronRight,
     SearchX
 } from "lucide-react";
