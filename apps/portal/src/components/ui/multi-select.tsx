@@ -87,6 +87,7 @@ export function MultiSelect({
                                 {options.map((option) => (
                                     <CommandItem
                                         key={option.value}
+                                        value={option.label}
                                         onSelect={() => {
                                             onChange(
                                                 selected.includes(option.value)
@@ -94,10 +95,6 @@ export function MultiSelect({
                                                     : [...selected, option.value]
                                             );
                                             setInputValue("");
-                                        }}
-                                        onMouseDown={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
                                         }}
                                         className="relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-[#D4AF37]/10 focus:text-[#D4AF37] data-[selected=true]:bg-[#D4AF37]/10 text-white"
                                     >
