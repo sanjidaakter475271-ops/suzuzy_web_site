@@ -396,10 +396,6 @@ export default function NewProductPage() {
                                                     <CommandItem
                                                         key={brand.id}
                                                         value={brand.name}
-                                                        onMouseDown={(e) => {
-                                                            e.preventDefault();
-                                                            e.stopPropagation();
-                                                        }}
                                                         onSelect={() => {
                                                             setFormData(p => ({ ...p, brand_id: brand.id, brand_name: brand.name }));
                                                             const catName = categories.find(c => c.id === formData.category_id)?.name || '';

@@ -18,6 +18,7 @@ export function BarcodeScanner({ onScan, trigger }: BarcodeScannerProps) {
     // We only enable the scanner when the dialog is open to save resources
     const { ref } = useZxing({
         paused: !isOpen,
+        constraints: { video: { facingMode: 'environment' } },
         onDecodeResult(result) {
             const code = result.getText();
             if (code) {
