@@ -21,18 +21,24 @@ import {
     UserPlus,
     Megaphone,
     Bell,
-    ReceiptText
+    ReceiptText,
+    ChevronDown,
+    ChevronRight,
+    LogOut
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "@/hooks/useUser";
 import { ROLE_LEVELS, getRoleLevel } from "@/lib/supabase/roles";
 import { supabase } from "@/lib/supabase";
+import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 interface NavItem {
     name: string;
     href: string;
     icon: React.ElementType;
     danger?: boolean;
+    subItems?: { name: string; href: string }[];
 }
 
 const SUPER_ADMIN_NAV: NavItem[] = [
@@ -61,7 +67,16 @@ const ADMIN_NAV: NavItem[] = [
 
 const DEALER_NAV: NavItem[] = [
     { name: "Dashboard", href: "/dealer/dashboard", icon: BarChart3 },
-    { name: "My Products", href: "/dealer/products", icon: Briefcase },
+    {
+        name: "My Products",
+        href: "/dealer/products",
+        icon: Briefcase,
+        subItems: [
+            { name: "All Products", href: "/dealer/products" },
+            { name: "Add New Product", href: "/dealer/products/new" },
+            { name: "Categories", href: "/dealer/products/categories" },
+        ]
+    },
     { name: "Inventory Hub", href: "/dealer/stock", icon: Package },
     { name: "Vendors", href: "/dealer/vendors", icon: Store },
     { name: "Purchase Orders", href: "/dealer/purchase", icon: ShoppingCart },
@@ -77,9 +92,18 @@ const DEALER_NAV: NavItem[] = [
     { name: "Store Settings", href: "/dealer/settings", icon: Settings },
 ];
 
-export default function SidebarNav() {
+interface SidebarNavProps {
+    mode?: "desktop" | "mobile";
+}
+
+export default function SidebarNav({ mode = "desktop" }: SidebarNavProps) {
     const pathname = usePathname();
     const { profile } = useUser();
+    const [isHovered, setIsHovered] = useState(false);
+    const [expandedItem, setExpandedItem] = useState<string | null>(null);
+
+    // Sidebar is expanded if in mobile mode OR if hovered in desktop mode
+    const isExpanded = mode === "mobile" || isHovered;
 
     const getNavItems = () => {
         if (!profile) return [];
@@ -96,77 +120,203 @@ export default function SidebarNav() {
     const navItems = getNavItems();
 
     return (
-        <div className="py-8 px-4 flex flex-col h-full overflow-y-auto custom-scrollbar">
-            <div className="px-4 mb-12">
-                <Link href="/" className="group flex flex-col">
-                    <span className="font-display text-2xl font-black italic tracking-tighter text-[#F8F8F8] group-hover:text-[#D4AF37] transition-all">
-                        ROYAL<span className="text-[#D4AF37] font-light">CONSORTIUM</span>
-                    </span>
-                    <span className="text-[9px] font-bold text-[#D4AF37]/50 tracking-[0.4em] uppercase -mt-1 ml-1">
-                        Terminal v1.0
-                    </span>
-                </Link>
-            </div>
+        <motion.div
+            className={cn(
+                "flex flex-col h-full bg-[#0D0D0F] border-r border-[#D4AF37]/10 transition-all duration-300 ease-in-out z-50",
+                mode === "desktop" ? "sticky top-0 h-screen flex-shrink-0" : "w-full"
+            )}
+            initial={mode === "desktop" ? { width: 80 } : undefined}
+            animate={mode === "desktop" ? { width: isExpanded ? 288 : 80 } : undefined}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            onMouseEnter={() => mode === "desktop" && setIsHovered(true)}
+            onMouseLeave={() => {
+                if (mode === "desktop") {
+                    setIsHovered(false);
+                    setExpandedItem(null); // Close submenus when sidebar collapses
+                }
+            }}
+        >
+            <div className={cn("py-8 px-4 flex flex-col h-full overflow-y-auto custom-scrollbar", isExpanded ? "items-stretch" : "items-center")}>
 
-            <nav className="flex-1 space-y-1">
-                {navItems.map((item) => {
-                    const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-                    const Icon = item.icon;
-
-                    return (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group relative ${isActive
-                                ? "bg-[#D4AF37]/10 text-[#D4AF37]"
-                                : "text-[#A1A1AA] hover:text-[#F8F8F8] hover:bg-white/5"
-                                }`}
-                        >
-                            {isActive && (
-                                <motion.div
-                                    layoutId="active-indicator"
-                                    className="absolute left-0 w-1 h-6 bg-[#D4AF37] rounded-full"
+                {/* Logo Section */}
+                <div className={cn("mb-12 transition-all duration-300", isExpanded ? "px-4" : "px-0")}>
+                    <Link href="/" className="group flex flex-col items-center md:items-start">
+                        {isExpanded ? (
+                            <>
+                                <motion.span
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
-                                />
-                            )}
-                            <Icon className={`w-4 h-4 ${item.danger ? "text-[#DC2626]" : (isActive ? "text-[#D4AF37]" : "group-hover:text-[#D4AF37]")
-                                }`} />
-                            <span className={`text-[11px] font-bold uppercase tracking-wider ${item.danger ? "text-[#DC2626]/80" : ""}`}>
-                                {item.name}
+                                    className="font-display text-2xl font-black italic tracking-tighter text-[#F8F8F8] group-hover:text-[#D4AF37] transition-all whitespace-nowrap"
+                                >
+                                    ROYAL<span className="text-[#D4AF37] font-light">CONSORTIUM</span>
+                                </motion.span>
+                                <motion.span
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="text-[9px] font-bold text-[#D4AF37]/50 tracking-[0.4em] uppercase -mt-1 ml-1"
+                                >
+                                    Terminal v1.0
+                                </motion.span>
+                            </>
+                        ) : (
+                            <span className="font-display text-xl font-black italic tracking-tighter text-[#D4AF37]">
+                                RC
                             </span>
-                        </Link>
-                    );
-                })}
-            </nav>
-
-            <div className="mt-8 px-4 py-6 border-t border-[#D4AF37]/10 bg-[#1A1A1C]/30 rounded-2xl">
-                <div className="flex items-center justify-between mb-4">
-                    <p className="text-[9px] text-[#A1A1AA] uppercase tracking-widest font-black">Operator</p>
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                        )}
+                    </Link>
                 </div>
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#DC2626] flex items-center justify-center text-[#0D0D0F] font-black text-[10px]">
-                        {profile?.full_name?.[0]?.toUpperCase() || "O"}
-                    </div>
-                    <div className="flex-1 overflow-hidden">
-                        <p className="text-[11px] font-black text-[#F8F8F8] truncate">{profile?.full_name}</p>
-                        <p className="text-[9px] text-[#D4AF37] font-bold uppercase tracking-tighter truncate opacity-70">
-                            {profile?.role?.replace('_', ' ')}
-                        </p>
-                    </div>
+
+                <nav className="flex-1 space-y-2 w-full">
+                    {navItems.map((item) => {
+                        const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                        const Icon = item.icon;
+                        const hasSubItems = item.subItems && item.subItems.length > 0;
+                        const isSubMenuOpen = expandedItem === item.name;
+
+                        return (
+                            <div key={item.name} className="w-full">
+                                <div
+                                    className="relative"
+                                    onMouseEnter={() => hasSubItems && isExpanded && setExpandedItem(item.name)}
+                                >
+                                    <Link
+                                        href={hasSubItems ? "#" : item.href}
+                                        onClick={(e) => {
+                                            if (hasSubItems) {
+                                                e.preventDefault();
+                                                if (isExpanded) {
+                                                    setExpandedItem(isSubMenuOpen ? null : item.name);
+                                                }
+                                            }
+                                        }}
+                                        className={cn(
+                                            "flex items-center gap-4 px-3 py-3 rounded-lg transition-all duration-300 group relative w-full",
+                                            isActive ? "bg-[#D4AF37]/10 text-[#D4AF37]" : "text-[#A1A1AA] hover:text-[#F8F8F8] hover:bg-white/5",
+                                            !isExpanded && "justify-center"
+                                        )}
+                                    >
+                                        {isActive && (
+                                            <motion.div
+                                                layoutId="active-indicator"
+                                                className="absolute left-0 w-1 h-6 bg-[#D4AF37] rounded-full"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                            />
+                                        )}
+
+                                        <Icon className={cn("w-5 h-5 flex-shrink-0 transition-colors", item.danger ? "text-[#DC2626]" : (isActive ? "text-[#D4AF37]" : "group-hover:text-[#D4AF37]"))} />
+
+                                        {isExpanded && (
+                                            <motion.span
+                                                initial={{ opacity: 0, x: -10 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                exit={{ opacity: 0, x: -10 }}
+                                                className={cn(
+                                                    "font-bold uppercase tracking-wider flex-1 truncate",
+                                                    mode === "mobile" ? "text-sm" : "text-[11px]",
+                                                    item.danger ? "text-[#DC2626]/80" : ""
+                                                )}
+                                            >
+                                                {item.name}
+                                            </motion.span>
+                                        )}
+
+                                        {isExpanded && hasSubItems && (
+                                            <motion.div
+                                                animate={{ rotate: isSubMenuOpen ? 180 : 0 }}
+                                                transition={{ duration: 0.2 }}
+                                            >
+                                                <ChevronDown className={cn(
+                                                    "text-[#A1A1AA] group-hover:text-[#F8F8F8]",
+                                                    mode === "mobile" ? "w-5 h-5" : "w-3 h-3"
+                                                )} />
+                                            </motion.div>
+                                        )}
+                                    </Link>
+                                </div>
+
+                                {/* Legacy Submenu (Inline) */}
+                                <AnimatePresence>
+                                    {isExpanded && hasSubItems && isSubMenuOpen && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="overflow-hidden ml-10 space-y-1 mt-1 border-l border-[#D4AF37]/10 pl-2"
+                                        >
+                                            {item.subItems!.map((subItem) => {
+                                                const isSubActive = pathname === subItem.href;
+                                                return (
+                                                    <Link
+                                                        key={subItem.href}
+                                                        href={subItem.href}
+                                                        className={cn(
+                                                            "block py-2 px-3 font-medium uppercase tracking-wider rounded-md transition-colors",
+                                                            mode === "mobile" ? "text-xs" : "text-[10px]",
+                                                            isSubActive ? "text-[#D4AF37] bg-[#D4AF37]/5" : "text-[#A1A1AA] hover:text-[#F8F8F8] hover:bg-white/5"
+                                                        )}
+                                                    >
+                                                        {subItem.name}
+                                                    </Link>
+                                                );
+                                            })}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        );
+                    })}
+                </nav>
+
+                {/* User Profile Section */}
+                <div className={cn("mt-auto pt-6 border-t border-[#D4AF37]/10 transition-all", isExpanded ? "w-full" : "w-auto")}>
+                    {isExpanded ? (
+                        <div className="bg-[#1A1A1C]/30 rounded-2xl p-4">
+                            <div className="flex items-center justify-between mb-4">
+                                <p className="text-[9px] text-[#A1A1AA] uppercase tracking-widest font-black">Operator</p>
+                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#DC2626] flex items-center justify-center text-[#0D0D0F] font-black text-[10px] flex-shrink-0">
+                                    {profile?.full_name?.[0]?.toUpperCase() || "O"}
+                                </div>
+                                <div className="flex-1 overflow-hidden">
+                                    <p className="text-[11px] font-black text-[#F8F8F8] truncate">{profile?.full_name}</p>
+                                    <p className="text-[9px] text-[#D4AF37] font-bold uppercase tracking-tighter truncate opacity-70">
+                                        {profile?.role?.replace('_', ' ')}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex justify-center">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#DC2626] flex items-center justify-center text-[#0D0D0F] font-black text-[10px]">
+                                {profile?.full_name?.[0]?.toUpperCase() || "O"}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Logout Button */}
+                <div className={cn("mt-2 transition-all", isExpanded ? "px-0 pb-4" : "flex justify-center pb-4")}>
                     <button
                         onClick={async () => {
                             await supabase.auth.signOut();
                             window.location.href = '/login';
                         }}
-                        className="p-2 hover:bg-white/5 rounded-lg text-[#A1A1AA] hover:text-[#DC2626] transition-colors group"
-                        title="Emergency Logout"
+                        className={cn(
+                            "flex items-center gap-3 rounded-lg text-[#DC2626]/80 hover:text-[#DC2626] hover:bg-[#DC2626]/10 transition-all group",
+                            isExpanded ? "w-full px-4 py-3" : "p-3 justify-center"
+                        )}
+                        title={!isExpanded ? "Connect Out" : undefined}
                     >
-                        <ShieldAlert className="w-4 h-4 transition-transform group-hover:scale-110" />
+                        <LogOut className="w-4 h-4" />
+                        {isExpanded && (
+                            <span className="text-[11px] font-bold uppercase tracking-wider">Connect Out</span>
+                        )}
                     </button>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 }

@@ -4,6 +4,7 @@ import { AdminGuard } from "@/components/guards/auth-guards";
 import SidebarNav from "../super-admin/_components/sidebar-nav";
 import { CommandMenu } from "@/components/dashboard/CommandMenu";
 import { Search } from "lucide-react";
+import { MobileNav } from "@/components/dashboard/MobileNav";
 
 export default function AdminLayout({
     children,
@@ -16,15 +17,16 @@ export default function AdminLayout({
                 <CommandMenu />
 
                 {/* Sidebar - Using the same visual language */}
-                <div className="w-64 border-r border-[#D4AF37]/10 bg-[#0D0D0F]">
+                <div className="hidden md:block border-r border-[#D4AF37]/10 bg-[#0D0D0F]">
                     <SidebarNav />
                 </div>
 
                 {/* Main Content */}
                 <div className="flex-1 flex flex-col">
                     {/* Header */}
-                    <header className="h-16 border-b border-[#D4AF37]/10 flex items-center justify-between px-8 bg-[#0D0D0F]/80 backdrop-blur-md sticky top-0 z-10">
-                        <div className="flex items-center gap-8">
+                    <header className="h-16 border-b border-[#D4AF37]/10 flex items-center justify-between px-4 md:px-8 bg-[#0D0D0F]/80 backdrop-blur-md sticky top-0 z-10">
+                        <div className="flex items-center gap-4 md:gap-8">
+                            <MobileNav />
                             <h1 className="font-display text-sm uppercase tracking-widest text-[#D4AF37] whitespace-nowrap">
                                 Admin Console
                             </h1>
@@ -51,7 +53,7 @@ export default function AdminLayout({
                         </div>
                     </header>
 
-                    <main className="flex-1 p-8">
+                    <main className="flex-1 p-4 md:p-8">
                         {children}
                     </main>
                 </div>

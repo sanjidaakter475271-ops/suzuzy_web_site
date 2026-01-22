@@ -10,7 +10,7 @@ export default function SuperAdminLayout({
         <SuperAdminGuard>
             <div className="flex min-h-screen bg-[#0D0D0F] text-[#F8F8F8]">
                 {/* Sidebar */}
-                <div className="w-64 border-r border-[#D4AF37]/10 bg-[#0D0D0F]">
+                <div className="border-r border-[#D4AF37]/10 bg-[#0D0D0F]">
                     <SidebarNav />
                 </div>
 

@@ -82,7 +82,7 @@ export default function POSPage() {
             const { data, error } = await supabase
                 .from("product_variants")
                 .select(`
-                    id, sku, barcode, stock_quantity, price,
+                    id, product_id, sku, barcode, stock_quantity, price,
                     products (name)
                 `)
                 .eq("products.dealer_id", profile?.dealer_id)
@@ -151,41 +151,18 @@ export default function POSPage() {
         try {
             setCheckoutLoading(true);
 
-            // 1. Create Sale
-            const { data: sale, error: saleErr } = await supabase
-                .from("sales")
-                .insert([{
-                    dealer_id: profile.dealer_id,
-                    customer_id: selectedCustomer?.id || null,
-                    subtotal: subtotal,
-                    tax_amount: tax,
-                    grand_total: total,
-                    payment_status: 'paid',
-                    status: 'completed',
-                    payment_method: 'cash'
-                }])
-                .select()
-                .single();
+            // Call the atomic transaction RPC
+            const { data: saleId, error: rpcErr } = await supabase.rpc('create_sale_transaction', {
+                p_dealer_id: profile.dealer_id,
+                p_customer_id: selectedCustomer?.id || null,
+                p_subtotal: subtotal,
+                p_tax_amount: tax,
+                p_grand_total: total,
+                p_payment_method: 'cash',
+                p_items: cart // cart items contain id, product_id, price, quantity, etc.
+            });
 
-            if (saleErr) throw saleErr;
-
-            // 2. Create Sale Items & Update Inventory (Simple version for MVP)
-            // Note: Production would use DB functions to handle FIFO batch subtraction
-            for (const item of cart) {
-                await supabase.from("sale_items").insert([{
-                    sale_id: sale.id,
-                    variant_id: item.id,
-                    quantity: item.quantity,
-                    unit_price: item.price,
-                    total_price: item.price * item.quantity
-                }]);
-
-                // Update stock count (Trigger usually handles this, but we update variants for safety)
-                await supabase.rpc('decrement_variant_stock', {
-                    v_id: item.id,
-                    qty: item.quantity
-                });
-            }
+            if (rpcErr) throw rpcErr;
 
             alert("Checkout Successful! Receipt generated.");
             setCart([]);

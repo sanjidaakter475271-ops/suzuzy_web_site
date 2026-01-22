@@ -86,8 +86,10 @@ export default function DynamicReportPage({ params }: { params: Promise<{ type: 
                     await fetchProductPerformance(dealerId as string);
                     break;
                 case 'expense-analysis':
+                    await fetchExpenseAnalysis(dealerId as string);
+                    break;
                 case 'payment-collection':
-                    setReportData({ error: "Feature implementation in progress." });
+                    await fetchPaymentCollection(dealerId as string);
                     break;
                 default:
                     setReportData({ error: "Report protocol not found." });
@@ -203,7 +205,7 @@ export default function DynamicReportPage({ params }: { params: Promise<{ type: 
             .from("sale_items")
             .select(`
                 quantity,
-                total,
+                total:total_amount,
                 product_variants (
                     sku,
                     products (name)
@@ -239,6 +241,74 @@ export default function DynamicReportPage({ params }: { params: Promise<{ type: 
                 totalRevenue: sorted.reduce((acc, i) => acc + i.revenue, 0)
             },
             table: sorted
+        });
+    };
+
+    const fetchExpenseAnalysis = async (dealerId: string) => {
+        const { data, error } = await supabase
+            .from("expenses")
+            .select(`
+                amount,
+                expense_date,
+                expense_categories (name)
+            `)
+            .eq("dealer_id", dealerId)
+            .gte("expense_date", dateRange.start)
+            .lte("expense_date", dateRange.end);
+
+        if (error) throw error;
+
+        const catMap = new Map();
+        data?.forEach((e: any) => {
+            const catName = e.expense_categories?.name || 'Miscellaneous';
+            catMap.set(catName, (catMap.get(catName) || 0) + Number(e.amount));
+        });
+
+        const chartData = Array.from(catMap.entries()).map(([name, value]) => ({ name, value }));
+        const total = data?.reduce((acc, e) => acc + (Number(e.amount) || 0), 0) || 0;
+
+        setReportData({
+            title: "Operational Overhead Analysis",
+            chartType: 'pie',
+            chartData,
+            summary: {
+                total,
+                count: data?.length || 0,
+                avg: (data?.length || 0) > 0 ? total / data!.length : 0,
+                topCategory: chartData.sort((a, b) => b.value - a.value)[0]?.name || 'N/A'
+            }
+        });
+    };
+
+    const fetchPaymentCollection = async (dealerId: string) => {
+        const { data, error } = await supabase
+            .from("sales")
+            .select("grand_total, payment_method")
+            .eq("dealer_id", dealerId)
+            .gte("sale_date", dateRange.start)
+            .lte("sale_date", dateRange.end);
+
+        if (error) throw error;
+
+        const methodMap = new Map();
+        data?.forEach((s: any) => {
+            const method = s.payment_method || 'Unknown';
+            methodMap.set(method, (methodMap.get(method) || 0) + Number(s.grand_total));
+        });
+
+        const chartData = Array.from(methodMap.entries()).map(([name, value]) => ({ name: name.toUpperCase(), value }));
+        const total = data?.reduce((acc, s) => acc + (Number(s.grand_total) || 0), 0) || 0;
+
+        setReportData({
+            title: "Capital Inflow Analytics",
+            chartType: 'pie',
+            chartData,
+            summary: {
+                total,
+                count: data?.length || 0,
+                cash: methodMap.get('cash') || 0,
+                digital: total - (methodMap.get('cash') || 0)
+            }
         });
     };
 
@@ -314,12 +384,28 @@ export default function DynamicReportPage({ params }: { params: Promise<{ type: 
                         <SummaryCard label="Categories Tracked" value={reportData.chartData.length} icon={PieIcon} />
                     </>
                 )}
-                {type === 'product-performance' && (
+                {type === 'product_performance' && (
                     <>
                         <SummaryCard label="Top Performing Asset" value={reportData.summary.topProduct} icon={Star} color="text-[#D4AF37]" />
                         <SummaryCard label="Units Moved" value={reportData.summary.totalQty} icon={Package} />
                         <SummaryCard label="Combined Revenue" value={`৳${reportData.summary.totalRevenue.toLocaleString()}`} icon={TrendingUp} />
                         <SummaryCard label="Performance Index" value="TOP 10" icon={TrendingUp} />
+                    </>
+                )}
+                {type === 'expense-analysis' && (
+                    <>
+                        <SummaryCard label="Total Expenditure" value={`৳${reportData.summary.total.toLocaleString()}`} icon={DollarSign} color="text-red-500" />
+                        <SummaryCard label="Audit Count" value={reportData.summary.count} icon={FileText} />
+                        <SummaryCard label="Average Voucher" value={`৳${reportData.summary.avg.toFixed(0)}`} icon={TrendingUp} />
+                        <SummaryCard label="Primary Cost Driver" value={reportData.summary.topCategory} icon={AlertCircle} color="text-[#D4AF37]" />
+                    </>
+                )}
+                {type === 'payment-collection' && (
+                    <>
+                        <SummaryCard label="Aggregate Collection" value={`৳${reportData.summary.total.toLocaleString()}`} icon={DollarSign} color="text-green-500" />
+                        <SummaryCard label="Transaction Count" value={reportData.summary.count} icon={FileText} />
+                        <SummaryCard label="Cash Pool" value={`৳${reportData.summary.cash.toLocaleString()}`} icon={DollarSign} />
+                        <SummaryCard label="Digital Gateway" value={`৳${reportData.summary.digital.toLocaleString()}`} icon={TrendingUp} color="text-[#D4AF37]" />
                     </>
                 )}
             </div>

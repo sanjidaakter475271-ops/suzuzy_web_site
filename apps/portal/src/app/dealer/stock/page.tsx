@@ -33,8 +33,9 @@ interface StockItem {
     price: number;
     products: {
         name: string;
-        image_url: string;
+        product_images: { image_url: string }[];
         categories: { name: string };
+        sub_categories: { name: string };
         brands: { name: string };
     };
 }
@@ -79,10 +80,11 @@ export default function StockOverviewPage() {
                     stock_quantity,
                     low_stock_threshold,
                     price,
-                    products (
+                    products!inner (
                         name,
-                        image_url,
-                        categories (name),
+                        product_images(image_url),
+                        categories:categories!products_category_id_fkey (name),
+                        sub_categories:categories!products_sub_category_id_fkey (name),
                         brands (name)
                     )
                 `)
@@ -115,8 +117,11 @@ export default function StockOverviewPage() {
             if (batchErr) throw batchErr;
             setExpiringBatches(batchData as any || []);
 
-        } catch (error) {
-            console.error("Error fetching stock data:", error);
+        } catch (error: any) {
+            console.error("Error fetching stock data FULL:", JSON.stringify(error, null, 2));
+            console.error("Error object:", error);
+            if (error?.message) console.error("Error Message:", error.message);
+            if (error?.details) console.error("Error Details:", error.details);
         } finally {
             setLoading(false);
         }
@@ -322,18 +327,26 @@ export default function StockOverviewPage() {
                                         <td className="px-8 py-6">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-12 h-12 rounded-xl bg-white/5 overflow-hidden border border-white/5 flex items-center justify-center relative group-hover:border-[#D4AF37]/30 transition-all">
-                                                    {item.products.image_url ? (
-                                                        <img src={item.products.image_url} alt="" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                                                    {item.products.product_images?.[0]?.image_url ? (
+                                                        <img src={item.products.product_images[0].image_url} alt="" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
                                                     ) : (
                                                         <Package className="w-5 h-5 text-white/10 group-hover:text-[#D4AF37] transition-colors" />
                                                     )}
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="text-sm font-black text-[#F8F8F8] truncate">{item.products.name}</p>
-                                                    <div className="flex items-center gap-3 mt-1">
+                                                    <div className="flex flex-wrap items-center gap-2 mt-1">
                                                         <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">{item.sku}</span>
                                                         <span className="w-1 h-1 rounded-full bg-white/5" />
                                                         <span className="text-[9px] font-bold text-[#D4AF37]/60 uppercase tracking-widest">{item.products.brands.name}</span>
+                                                        <span className="w-1 h-1 rounded-full bg-white/5" />
+                                                        <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">{item.products.categories.name}</span>
+                                                        {item.products.sub_categories?.name && (
+                                                            <>
+                                                                <span className="w-1 h-1 rounded-full bg-white/5" />
+                                                                <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">{item.products.sub_categories.name}</span>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>

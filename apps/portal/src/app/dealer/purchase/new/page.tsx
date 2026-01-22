@@ -135,51 +135,35 @@ export default function NewPurchaseOrderPage() {
     const grandTotal = subtotal + Number(formData.tax_amount) + Number(formData.shipping_cost);
 
     const handleSubmit = async () => {
-        if (!profile?.dealer_id || !formData.vendor_id || items.length === 0) return;
+        if (!profile?.dealer_id || !formData.vendor_id || items.length === 0) {
+            alert("Please select a vendor and add at least one item.");
+            return;
+        }
 
         try {
             setLoading(true);
 
-            // 1. Create PO
-            const { data: po, error: poErr } = await supabase
-                .from("purchase_orders")
-                .insert([{
-                    dealer_id: profile.dealer_id,
-                    vendor_id: formData.vendor_id,
-                    order_date: formData.order_date,
-                    expected_delivery_date: formData.expected_delivery_date || null,
-                    status: 'pending',
-                    subtotal,
-                    tax_amount: formData.tax_amount,
-                    shipping_cost: formData.shipping_cost,
-                    grand_total: grandTotal,
-                    notes: formData.notes
-                }])
-                .select()
-                .single();
+            // Call the atomic transaction RPC
+            const { data: poId, error: rpcErr } = await supabase.rpc('create_purchase_order_transaction', {
+                p_dealer_id: profile.dealer_id,
+                p_vendor_id: formData.vendor_id,
+                p_order_date: formData.order_date,
+                p_expected_delivery_date: formData.expected_delivery_date || null,
+                p_payment_terms: formData.payment_terms,
+                p_subtotal: subtotal,
+                p_tax_amount: formData.tax_amount,
+                p_shipping_cost: formData.shipping_cost,
+                p_grand_total: grandTotal,
+                p_notes: formData.notes,
+                p_items: items // items array contains variant_id, product_id, quantity, unit_cost, total
+            });
 
-            if (poErr) throw poErr;
-
-            // 2. Create PO Items
-            const poItems = items.map(item => ({
-                purchase_order_id: po.id,
-                product_id: item.product_id,
-                variant_id: item.variant_id,
-                ordered_quantity: item.quantity,
-                unit_cost_price: item.unit_cost,
-                total_cost: item.total
-            }));
-
-            const { error: itemsErr } = await supabase
-                .from("purchase_order_items")
-                .insert(poItems);
-
-            if (itemsErr) throw itemsErr;
+            if (rpcErr) throw rpcErr;
 
             router.push("/dealer/purchase");
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error creating PO:", error);
-            alert("Failed to finalize procurement. Check logs.");
+            alert(`Failed to finalize procurement: ${error.message || 'Unknown error'}`);
         } finally {
             setLoading(false);
         }

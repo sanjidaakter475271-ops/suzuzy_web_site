@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Playfair_Display, DM_Sans, Hind_Siliguri } from "next/font/google";
+import { Playfair_Display, DM_Sans, Hind_Siliguri, Roboto } from "next/font/google";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -18,6 +18,12 @@ const hindSiliguri = Hind_Siliguri({
   weight: ["300", "400", "500", "600", "700"],
 });
 
+const roboto = Roboto({
+  weight: ["100", "300", "400", "500", "700", "900"],
+  subsets: ["latin"],
+  variable: "--font-roboto",
+});
+
 export const metadata: Metadata = {
   title: "RoyalConsortium Portal | Admin & Dealer Management",
   description: "Secure management portal for RoyalConsortium dealers and staff.",
@@ -32,7 +38,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth dark" suppressHydrationWarning>
-      <body className={`${playfair.variable} ${dmSans.variable} ${hindSiliguri.variable} font-sans antialiased bg-[#0D0D0F] text-[#F8F8F8]`}>
+      <body className={`${playfair.variable} ${dmSans.variable} ${hindSiliguri.variable} ${roboto.variable} font-sans antialiased bg-[#0D0D0F] text-[#F8F8F8]`}>
         {children}
         <Toaster richColors position="top-right" theme="dark" />
       </body>

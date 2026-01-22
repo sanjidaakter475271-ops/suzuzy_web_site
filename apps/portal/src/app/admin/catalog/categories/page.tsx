@@ -31,6 +31,7 @@ interface Category {
     name: string;
     slug: string;
     description: string;
+    parent_id?: string;
     created_at: string;
 }
 
@@ -41,7 +42,7 @@ export default function CategoryManagement() {
     // Modal & Form State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [formData, setFormData] = useState({ name: '', description: '' });
+    const [formData, setFormData] = useState({ name: '', description: '', parent_id: '' });
 
     // Delete Alert State
     const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -70,13 +71,17 @@ export default function CategoryManagement() {
 
     const openAddModal = () => {
         setEditingId(null);
-        setFormData({ name: '', description: '' });
+        setFormData({ name: '', description: '', parent_id: '' });
         setIsModalOpen(true);
     };
 
     const openEditModal = (category: Category) => {
         setEditingId(category.id);
-        setFormData({ name: category.name, description: category.description });
+        setFormData({
+            name: category.name,
+            description: category.description,
+            parent_id: category.parent_id || ''
+        });
         setIsModalOpen(true);
     };
 
@@ -84,21 +89,25 @@ export default function CategoryManagement() {
         if (!formData.name) return toast.error("Category name required");
 
         const slug = formData.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        const payload = {
+            name: formData.name,
+            description: formData.description,
+            parent_id: formData.parent_id || null,
+            slug
+        };
 
         try {
             if (editingId) {
-                // Update
                 const { error } = await supabase
                     .from('categories')
-                    .update({ ...formData, slug })
+                    .update(payload)
                     .eq('id', editingId);
                 if (error) throw error;
                 toast.success("Node updated successfully");
             } else {
-                // Insert
                 const { error } = await supabase
                     .from('categories')
-                    .insert([{ ...formData, slug }]);
+                    .insert([payload]);
                 if (error) throw error;
                 toast.success("Category added to catalog");
             }
@@ -126,7 +135,7 @@ export default function CategoryManagement() {
             fetchCategories();
         } catch (error) {
             console.error("Error deleting category:", error);
-            toast.error("Deletion rejected by system");
+            toast.error("Deletion rejected - ensure no sub-categories exist");
         }
     };
 
@@ -134,17 +143,29 @@ export default function CategoryManagement() {
         {
             accessorKey: "name",
             header: "Classification",
-            cell: ({ row }) => (
-                <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center text-[#D4AF37] group-hover:border-[#D4AF37]/30 transition-all">
-                        <Boxes className="w-5 h-5 opacity-40 group-hover:opacity-100 transition-opacity" />
+            cell: ({ row }) => {
+                const hasParent = !!row.original.parent_id;
+                const parentName = categories.find(c => c.id === row.original.parent_id)?.name;
+
+                return (
+                    <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-2xl bg-white/${hasParent ? '[0.01]' : '[0.03]'} border border-white/5 flex items-center justify-center text-[#D4AF37] group-hover:border-[#D4AF37]/30 transition-all ${hasParent ? 'ml-6 scale-90' : ''}`}>
+                            {hasParent ? <ChevronRight className="w-3 h-3 opacity-40" /> : <Boxes className="w-5 h-5 opacity-40 group-hover:opacity-100 transition-opacity" />}
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <p className="font-bold text-[#F8F8F8] tracking-tight group-hover:text-[#D4AF37] transition-colors">{row.original.name}</p>
+                                {hasParent && (
+                                    <span className="text-[8px] font-black uppercase tracking-tighter text-white/20 bg-white/5 px-2 py-0.5 rounded-full border border-white/5">
+                                        Sub of {parentName}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-[9px] text-[#A1A1AA] font-mono tracking-widest uppercase opacity-40">SYD: {row.original.slug}</p>
+                        </div>
                     </div>
-                    <div>
-                        <p className="font-bold text-[#F8F8F8] tracking-tight group-hover:text-[#D4AF37] transition-colors">{row.original.name}</p>
-                        <p className="text-[9px] text-[#A1A1AA] font-mono tracking-widest uppercase">SYD: {row.original.slug}</p>
-                    </div>
-                </div>
-            )
+                );
+            }
         },
         {
             accessorKey: "description",
@@ -177,6 +198,8 @@ export default function CategoryManagement() {
             )
         }
     ];
+
+    const parentCategories = categories.filter(c => !c.parent_id && c.id !== editingId);
 
     return (
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
@@ -221,21 +244,21 @@ export default function CategoryManagement() {
                                 <span className="text-xl font-display font-black text-white italic">{categories.length} Nodes</span>
                             </div>
                             <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                                <span className="text-[10px] text-white/40 uppercase font-bold">Health Status</span>
-                                <span className="text-[10px] text-green-500 font-black uppercase tracking-widest bg-green-500/10 px-3 py-1 rounded-full">Optimal</span>
+                                <span className="text-[10px] text-white/40 uppercase font-bold">Tier 1 Groups</span>
+                                <span className="text-sm font-display font-black text-[#D4AF37] italic">{categories.filter(c => !c.parent_id).length} Roots</span>
                             </div>
                             <p className="text-[10px] text-white/20 italic font-medium leading-relaxed">
-                                Modifications to this registry will trigger global cache invalidation across all consumer storefronts.
+                                Categorization impacts product search efficiency and SEO indexing. Group wisely.
                             </p>
                         </div>
                     </GlassCard>
 
                     <GlassCard className="p-8 border-white/5 bg-[#1A1A1C]/10 flex flex-col items-center text-center gap-4 group cursor-help">
                         <div className="w-12 h-12 rounded-full border border-dashed border-white/10 flex items-center justify-center text-white/10 group-hover:border-[#D4AF37]/30 group-hover:text-[#D4AF37] transition-all">
-                            <Database className="w-5 h-5" />
+                            <LayoutGrid className="w-5 h-5" />
                         </div>
                         <p className="text-[9px] text-white/30 font-black uppercase tracking-widest leading-relaxed">
-                            Need help architecting your taxonomy? Check the documentation.
+                            Hierarchy logic is enforced at the database level to prevent circular dependencies.
                         </p>
                     </GlassCard>
                 </div>
@@ -270,7 +293,7 @@ export default function CategoryManagement() {
                                 </Button>
                             </div>
 
-                            <div className="space-y-8">
+                            <div className="space-y-6">
                                 <div className="space-y-3">
                                     <label className="text-[10px] uppercase font-black tracking-widest text-[#D4AF37]/70 italic">Classification Title</label>
                                     <Input
@@ -280,6 +303,23 @@ export default function CategoryManagement() {
                                         className="bg-white/[0.03] border-white/10 focus:border-[#D4AF37]/50 h-16 rounded-2xl text-white font-bold px-6 outline-none transition-all placeholder:text-white/10"
                                     />
                                 </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[10px] uppercase font-black tracking-widest text-[#D4AF37]/70 italic">Parent Hierarchy</label>
+                                    <select
+                                        value={formData.parent_id}
+                                        onChange={(e) => setFormData({ ...formData, parent_id: e.target.value })}
+                                        className="w-full bg-white/[0.03] border border-white/10 rounded-2xl h-16 px-6 text-white text-sm focus:outline-none focus:border-[#D4AF37]/50 transition-all font-bold appearance-none"
+                                    >
+                                        <option value="" className="bg-[#0D0D0F]">Root (Top Level)</option>
+                                        {parentCategories.map(cat => (
+                                            <option key={cat.id} value={cat.id} className="bg-[#0D0D0F]">
+                                                {cat.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
                                 <div className="space-y-3">
                                     <label className="text-[10px] uppercase font-black tracking-widest text-[#D4AF37]/70 italic">Functional Overview</label>
                                     <textarea

@@ -11,6 +11,7 @@ import {
     Filter,
     MoreVertical,
     ExternalLink,
+    Eye,
     AlertCircle,
     Loader2,
     FileUp,
@@ -23,6 +24,19 @@ import { GradientButton } from "@/components/ui/premium/GradientButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
 import { formatCurrency } from "@/lib/utils";
@@ -68,7 +82,10 @@ export default function ProductsPage() {
 
         try {
             const [prodRes, catRes] = await Promise.all([
-                supabase.from('products').select('*, categories(name), product_images(image_url), product_variants(id, sku, has_duplicate_barcode, stock_quantity)').eq('dealer_id', profile.dealer_id).order('created_at', { ascending: false }),
+                supabase.from('products')
+                    .select('*, categories:category_id(name), product_images(image_url), product_variants(id, sku, has_duplicate_barcode, stock_quantity)')
+                    .eq('dealer_id', profile.dealer_id)
+                    .order('created_at', { ascending: false }),
                 supabase.from('categories').select('id, name').eq('is_active', true).order('name')
             ]);
 
@@ -245,37 +262,40 @@ export default function ProductsPage() {
                     />
                 </div>
                 <div className="flex flex-wrap gap-4">
-                    <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="h-14 px-6 bg-white/[0.03] border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40 outline-none focus:border-[#D4AF37]/30 transition-all appearance-none cursor-pointer hover:bg-white/5"
-                    >
-                        <option value="all">All Status</option>
-                        <option value="active">Active</option>
-                        <option value="pending">Pending</option>
-                        <option value="draft">Draft</option>
-                        <option value="rejected">Rejected</option>
-                        <option value="archived">Archived</option>
-                    </select>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-[180px] h-14 bg-white/[0.03] border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40 focus:border-[#D4AF37]/30">
+                            <SelectValue placeholder="All Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="draft">Draft</SelectItem>
+                            <SelectItem value="rejected">Rejected</SelectItem>
+                            <SelectItem value="archived">Archived</SelectItem>
+                        </SelectContent>
+                    </Select>
 
-                    <select
-                        value={stockFilter}
-                        onChange={(e) => setStockFilter(e.target.value)}
-                        className="h-14 px-6 bg-white/[0.03] border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40 outline-none focus:border-[#D4AF37]/30 transition-all appearance-none cursor-pointer hover:bg-white/5"
-                    >
-                        <option value="all">All Stock</option>
-                        <option value="low">Low Stock</option>
-                        <option value="out">Out of Stock</option>
-                    </select>
+                    <Select value={stockFilter} onValueChange={setStockFilter}>
+                        <SelectTrigger className="w-[180px] h-14 bg-white/[0.03] border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40 focus:border-[#D4AF37]/30">
+                            <SelectValue placeholder="All Stock" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Stock</SelectItem>
+                            <SelectItem value="low">Low Stock</SelectItem>
+                            <SelectItem value="out">Out of Stock</SelectItem>
+                        </SelectContent>
+                    </Select>
 
-                    <select
-                        value={categoryFilter}
-                        onChange={(e) => setCategoryFilter(e.target.value)}
-                        className="h-14 px-6 bg-white/[0.03] border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40 outline-none focus:border-[#D4AF37]/30 transition-all appearance-none cursor-pointer hover:bg-white/5"
-                    >
-                        <option value="all">All Categories</option>
-                        {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                    </select>
+                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                        <SelectTrigger className="w-[180px] h-14 bg-white/[0.03] border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40 focus:border-[#D4AF37]/30">
+                            <SelectValue placeholder="All Categories" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Categories</SelectItem>
+                            {categories.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
 
                     <Button
                         variant="outline"
@@ -294,221 +314,172 @@ export default function ProductsPage() {
                         initial={{ y: 100, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 100, opacity: 0 }}
-                        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 w-full max-w-2xl"
+                        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 w-full max-w-2xl px-4"
                     >
                         <GlassCard className="p-4 border-[#D4AF37]/20 bg-[#0D0D0F]/90 backdrop-blur-2xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] flex items-center justify-between gap-6">
                             <div className="flex items-center gap-4 pl-4">
                                 <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center text-[#D4AF37] font-display font-black italic">
                                     {selectedIds.length}
                                 </div>
-                                <div className="flex flex-col">
+                                <div className="flex flex-col hidden sm:flex">
                                     <span className="text-[10px] font-black text-white uppercase tracking-widest leading-none">Assets Selected</span>
                                     <span className="text-[9px] text-white/30 font-bold uppercase tracking-tighter mt-1 italic">Registry Synchronization Active</span>
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-2">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    disabled={isBulkUpdating}
-                                    onClick={() => handleBulkStatus('active')}
-                                    className="h-12 px-6 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-green-500/10 hover:text-green-500 text-[10px] font-black uppercase tracking-widest transition-all"
-                                >
-                                    Activate
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    disabled={isBulkUpdating}
-                                    onClick={() => handleBulkStatus('draft')}
-                                    className="h-12 px-6 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/5 text-[10px] font-black uppercase tracking-widest transition-all"
-                                >
-                                    Draft
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    disabled={isBulkUpdating}
-                                    onClick={handleBulkDelete}
-                                    className="h-12 px-6 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-red-500/10 hover:text-red-500 text-[10px] font-black uppercase tracking-widest transition-all"
-                                >
-                                    Purge
-                                </Button>
+                                <Button variant="ghost" size="sm" disabled={isBulkUpdating} onClick={() => handleBulkStatus('active')} className="h-12 px-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-green-500/10 hover:text-green-500 text-[10px] font-black uppercase tracking-widest transition-all">Activate</Button>
+                                <Button variant="ghost" size="sm" disabled={isBulkUpdating} onClick={() => handleBulkStatus('draft')} className="h-12 px-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/5 text-[10px] font-black uppercase tracking-widest transition-all">Draft</Button>
+                                <Button variant="ghost" size="sm" disabled={isBulkUpdating} onClick={handleBulkDelete} className="h-12 px-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-red-500/10 hover:text-red-500 text-[10px] font-black uppercase tracking-widest transition-all">Purge</Button>
                                 <div className="w-[1px] h-8 bg-white/5 mx-2" />
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setSelectedIds([])}
-                                    className="h-12 w-12 rounded-xl text-white/20 hover:text-white"
-                                >
-                                    <X className="w-4 h-4" />
-                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => setSelectedIds([])} className="h-12 w-12 rounded-xl text-white/20 hover:text-white"><X className="w-4 h-4" /></Button>
                             </div>
                         </GlassCard>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Editorial Table */}
+            {/* Editorial Grid (Responsive Replacement for Table) */}
             <GlassCard className="border-[#D4AF37]/5 bg-[#0D0D0F]/40 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-white/5 bg-white/[0.01]">
-                                <th className="p-6 w-16">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedIds.length === filteredProducts.length && filteredProducts.length > 0}
-                                        onChange={toggleSelectAll}
-                                        className="w-4 h-4 rounded border-white/10 bg-white/5 accent-[#D4AF37] cursor-pointer"
-                                    />
-                                </th>
-                                <th className="p-6 text-[10px] font-black text-[#D4AF37]/50 uppercase tracking-[0.3em] font-display">Product Details</th>
-                                <th className="p-6 text-[10px] font-black text-[#D4AF37]/50 uppercase tracking-[0.3em] font-display">Logistics</th>
-                                <th className="p-6 text-[10px] font-black text-[#D4AF37]/50 uppercase tracking-[0.3em] font-display">Finance</th>
-                                <th className="p-6 text-[10px] font-black text-[#D4AF37]/50 uppercase tracking-[0.3em] font-display">Status</th>
-                                <th className="p-6 text-right"></th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/[0.03]">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={6} className="p-20 text-center">
-                                        <Loader2 className="w-8 h-8 text-[#D4AF37] animate-spin mx-auto mb-4" />
-                                        <p className="text-[10px] uppercase font-black tracking-widest text-white/20 italic">Synchronizing Fleet Intelligence...</p>
-                                    </td>
-                                </tr>
-                            ) : filteredProducts.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="p-20 text-center">
-                                        <Package className="w-12 h-12 text-white/5 mx-auto mb-4" />
-                                        <p className="text-[10px] uppercase font-black tracking-widest text-white/20 italic">No assets found in current deployment scope</p>
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredProducts.map((product, idx) => (
-                                    <motion.tr
-                                        key={product.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: idx * 0.05 }}
-                                        className={`group hover:bg-white/[0.02] transition-colors ${selectedIds.includes(product.id) ? 'bg-[#D4AF37]/5 border-l-2 border-[#D4AF37]' : ''}`}
-                                    >
-                                        <td className="p-6">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedIds.includes(product.id)}
-                                                onChange={() => toggleSelection(product.id)}
-                                                className="w-4 h-4 rounded border-white/10 bg-white/5 accent-[#D4AF37] cursor-pointer"
-                                            />
-                                        </td>
-                                        <td className="p-6 min-w-[300px]">
-                                            <div className="flex items-center gap-5">
-                                                <div className="w-16 h-16 rounded-xl bg-white/[0.03] overflow-hidden border border-white/5 flex-shrink-0 relative group-hover:border-[#D4AF37]/20 transition-colors">
-                                                    {product.product_images?.[0]?.image_url ? (
-                                                        <img
-                                                            src={product.product_images[0].image_url}
-                                                            alt={product.name}
-                                                            className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-[#D4AF37]/20 italic font-black text-[10px] uppercase">
-                                                            No Asset
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="flex flex-col gap-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-white font-bold text-sm group-hover:text-[#D4AF37] transition-colors tracking-tight line-clamp-1">{product.name}</span>
-                                                        {product.product_variants?.some(v => v.has_duplicate_barcode) && (
-                                                            <Badge variant="destructive" className="bg-red-500 text-white text-[8px] px-1.5 py-0 rounded-md animate-pulse">
-                                                                Duplicate Barcode
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                    <span className="text-[10px] text-white/30 font-mono tracking-wider">{product.sku || product.product_variants?.[0]?.sku || 'PENDING-SKU'}</span>
-                                                </div>
+                {/* Desktop Headers */}
+                <div className="hidden md:grid grid-cols-[auto_2fr_1fr_1fr_1fr_auto] gap-4 p-6 border-b border-white/5 bg-white/[0.01]">
+                    <div className="w-4 flex items-center justify-center">
+                        <input type="checkbox" checked={selectedIds.length === filteredProducts.length && filteredProducts.length > 0} onChange={toggleSelectAll} className="w-4 h-4 rounded border-white/10 bg-white/5 accent-[#D4AF37] cursor-pointer" />
+                    </div>
+                    <div className="text-[10px] font-black text-[#D4AF37]/50 uppercase tracking-[0.3em] font-display">Product Details</div>
+                    <div className="text-[10px] font-black text-[#D4AF37]/50 uppercase tracking-[0.3em] font-display">Logistics</div>
+                    <div className="text-[10px] font-black text-[#D4AF37]/50 uppercase tracking-[0.3em] font-display">Finance</div>
+                    <div className="text-[10px] font-black text-[#D4AF37]/50 uppercase tracking-[0.3em] font-display">Status</div>
+                    <div className="text-right text-[10px] font-black text-[#D4AF37]/50 uppercase tracking-[0.3em] font-display">Actions</div>
+                </div>
+
+                <div className="divide-y divide-white/[0.03]">
+                    {loading ? (
+                        <div className="p-20 text-center">
+                            <Loader2 className="w-8 h-8 text-[#D4AF37] animate-spin mx-auto mb-4" />
+                            <p className="text-[10px] uppercase font-black tracking-widest text-white/20 italic">Synchronizing Fleet Intelligence...</p>
+                        </div>
+                    ) : filteredProducts.length === 0 ? (
+                        <div className="p-20 text-center">
+                            <Package className="w-12 h-12 text-white/5 mx-auto mb-4" />
+                            <p className="text-[10px] uppercase font-black tracking-widest text-white/20 italic">No assets found in current deployment scope</p>
+                        </div>
+                    ) : (
+                        filteredProducts.map((product, idx) => (
+                            <motion.div
+                                key={product.id}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: idx * 0.05 }}
+                                className={`group relative hover:bg-white/[0.02] transition-colors ${selectedIds.includes(product.id) ? 'bg-[#D4AF37]/5 border-l-2 border-[#D4AF37]' : ''}`}
+                            >
+                                {/* Mobile Row (Single Line) */}
+                                <div className="md:hidden flex items-center p-4 gap-4 active:bg-white/5 transition-colors">
+                                    <div className="w-14 h-14 rounded-xl bg-white/[0.03] overflow-hidden border border-white/5 flex-shrink-0">
+                                        {product.product_images?.[0]?.image_url ? (
+                                            <img src={product.product_images[0].image_url} alt={product.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-[#D4AF37]/20 italic font-black text-[10px]">NA</div>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
+                                        <div className="flex flex-col min-w-0 gap-1">
+                                            <span className="text-white font-bold text-base truncate">{product.name}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs text-white/50 font-mono tracking-wider truncate">{product.sku}</span>
+                                                <Badge variant="outline" className={`px-2 py-0.5 text-[10px] h-5 border-0 ${product.status === 'active' ? 'bg-green-500/20 text-green-500' : 'bg-white/10 text-white/40'}`}>
+                                                    {product.status}
+                                                </Badge>
                                             </div>
-                                        </td>
-                                        <td className="p-6">
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-[10px] text-white/50 font-black uppercase tracking-widest italic">{product.categories?.name || 'Unclassified'}</span>
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${(product.stock_quantity ?? 0) > 10 ? 'bg-green-500' : (product.stock_quantity ?? 0) > 0 ? 'bg-orange-500' : 'bg-red-500'} shadow-[0_0_8px_rgba(0,0,0,0.5)]`} />
-                                                    <span className={`text-[10px] font-bold tracking-tight ${(product.stock_quantity ?? 0) > 0 ? 'text-white/80' : 'text-red-500/80 uppercase italic'}`}>
-                                                        {(product.stock_quantity ?? 0) > 0 ? `${product.stock_quantity} Units Available` : 'Stock Depleted'}
-                                                    </span>
-                                                </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex flex-col items-end flex-shrink-0 gap-0.5">
+                                                <span className="text-[#D4AF37] font-display font-bold text-sm">{formatCurrency(product.base_price)}</span>
+                                                <span className={`text-[10px] font-medium ${product.stock_quantity > 0 ? 'text-white/40' : 'text-red-500'}`}>
+                                                    {product.stock_quantity}
+                                                </span>
                                             </div>
-                                        </td>
-                                        <td className="p-6">
-                                            <div className="flex flex-col">
-                                                <span className="text-[#D4AF37] font-display font-black text-lg italic tracking-tighter">{formatCurrency(product.base_price)}</span>
-                                                <span className="text-[9px] text-white/20 uppercase font-bold tracking-widest italic">Asset Valuation</span>
-                                            </div>
-                                        </td>
-                                        <td className="p-6">
-                                            <div className="flex flex-col items-start gap-1.5">
-                                                <div
-                                                    onClick={() => (product.status === 'active' || product.status === 'draft') && toggleStatus(product.id, product.status)}
-                                                    className="cursor-pointer"
-                                                >
-                                                    <Badge
-                                                        variant="outline"
-                                                        className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] italic transition-all active:scale-95 ${product.status === 'active'
-                                                            ? 'bg-green-500/5 border-green-500/20 text-green-500/80 hover:bg-green-500/10'
-                                                            : product.status === 'pending'
-                                                                ? 'bg-amber-500/5 border-amber-500/20 text-amber-500/80 cursor-default'
-                                                                : product.status === 'rejected'
-                                                                    ? 'bg-red-500/5 border-red-500/20 text-red-500/80 cursor-default'
-                                                                    : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'
-                                                            }`}
+
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-10 w-10 text-white/40">
+                                                        <MoreVertical className="h-5 w-5" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-48 bg-[#0D0D0F] border-[#D4AF37]/10">
+                                                    <DropdownMenuItem asChild className="focus:bg-[#D4AF37]/10 focus:text-[#D4AF37] cursor-pointer">
+                                                        <Link href={`/dealer/products/${product.id}`} className="flex items-center gap-2 py-3 px-4">
+                                                            <Eye className="w-4 h-4" />
+                                                            <span className="text-xs font-bold uppercase tracking-widest">View Details</span>
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem asChild className="focus:bg-[#D4AF37]/10 focus:text-[#D4AF37] cursor-pointer">
+                                                        <Link href={`/dealer/products/${product.id}/edit`} className="flex items-center gap-2 py-3 px-4">
+                                                            <Edit className="w-4 h-4" />
+                                                            <span className="text-xs font-bold uppercase tracking-widest">Edit Asset</span>
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                    <div className="h-[1px] bg-white/5 my-1" />
+                                                    <DropdownMenuItem
+                                                        onClick={() => deleteProduct(product.id)}
+                                                        className="focus:bg-red-500/10 focus:text-red-500 text-red-500/80 cursor-pointer flex items-center gap-2 py-3 px-4"
                                                     >
-                                                        {product.status}
-                                                    </Badge>
-                                                </div>
-                                                {product.status === 'rejected' && product.rejection_reason && (
-                                                    <div className="flex items-center gap-1 text-red-500/40 hover:text-red-500 transition-colors cursor-help" title={product.rejection_reason}>
-                                                        <AlertCircle className="w-3 h-3" />
-                                                        <span className="text-[9px] font-bold uppercase tracking-tighter">View Reason</span>
-                                                    </div>
-                                                )}
+                                                        <Trash className="w-4 h-4" />
+                                                        <span className="text-xs font-bold uppercase tracking-widest">Archive Asset</span>
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Desktop Grid Row */}
+                                <div className="hidden md:grid grid-cols-[auto_2fr_1fr_1fr_1fr_auto] gap-4 p-6 items-center">
+                                    <div className="w-4 flex items-center justify-center">
+                                        <input type="checkbox" checked={selectedIds.includes(product.id)} onChange={() => toggleSelection(product.id)} className="w-4 h-4 rounded border-white/10 bg-white/5 accent-[#D4AF37] cursor-pointer" />
+                                    </div>
+                                    <div className="flex items-center gap-5 overflow-hidden">
+                                        <div className="w-16 h-16 rounded-xl bg-white/[0.03] overflow-hidden border border-white/5 flex-shrink-0">
+                                            {product.product_images?.[0]?.image_url ? (
+                                                <img src={product.product_images[0].image_url} alt={product.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-[#D4AF37]/20 italic font-black text-[10px] uppercase">No Asset</div>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col gap-1 min-w-0">
+                                            <span className="text-white font-bold text-sm group-hover:text-[#D4AF37] transition-colors truncate">{product.name}</span>
+                                            <span className="text-[10px] text-white/30 font-mono tracking-wider">{product.sku || 'PENDING-SKU'}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-[10px] text-white/50 font-black uppercase tracking-widest">{product.categories?.name || 'Unclassified'}</span>
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-1.5 h-1.5 rounded-full ${product.stock_quantity > 10 ? 'bg-green-500' : product.stock_quantity > 0 ? 'bg-orange-500' : 'bg-red-500'}`} />
+                                                <span className="text-[10px] font-bold text-white/80">{product.stock_quantity} Units</span>
                                             </div>
-                                        </td>
-                                        <td className="p-6 text-right">
-                                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-500">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    asChild
-                                                    className="h-10 w-10 border border-white/5 bg-white/[0.02] hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] rounded-xl"
-                                                >
-                                                    <Link href={`/dealer/products/${product.id}`}>
-                                                        <Edit className="h-4 w-4" />
-                                                    </Link>
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => deleteProduct(product.id)}
-                                                    className="h-10 w-10 border border-white/5 bg-white/[0.02] hover:bg-red-500/10 hover:text-red-500 rounded-xl"
-                                                >
-                                                    <Trash className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" className="h-10 w-10 border border-white/5 bg-white/[0.02] hover:bg-blue-500/10 hover:text-blue-500 rounded-xl">
-                                                    <ExternalLink className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                            <Button variant="ghost" size="icon" className="h-10 w-10 text-white/10 group-hover:hidden transition-all">
-                                                <MoreVertical className="h-4 w-4" />
-                                            </Button>
-                                        </td>
-                                    </motion.tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span className="text-[#D4AF37] font-display font-black text-lg italic tracking-tighter">{formatCurrency(product.base_price)}</span>
+                                    </div>
+                                    <div onClick={() => toggleStatus(product.id, product.status)} className="cursor-pointer">
+                                        <Badge variant="outline" className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] w-fit ${product.status === 'active' ? 'bg-green-500/5 text-green-500/80 border-green-500/20' : 'bg-white/5 text-white/40 border-white/10'}`}>
+                                            {product.status}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="ghost" size="icon" asChild className="h-10 w-10 border border-white/5 hover:text-[#D4AF37] rounded-xl">
+                                            <Link href={`/dealer/products/${product.id}`}><Edit className="h-4 w-4" /></Link>
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => deleteProduct(product.id)} className="h-10 w-10 border border-white/5 hover:text-red-500 rounded-xl">
+                                            <Trash className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))
+                    )}
                 </div>
             </GlassCard>
 
