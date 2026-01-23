@@ -124,7 +124,11 @@ export const RoleGuard = ({
                 // Redirect based on actual role to avoid being stuck
                 if (userLevel === 1) {
                     router.push('/super-admin/dashboard');
-                } else if (userLevel <= 5) {
+                } else if (userLevel <= 2) {
+                    router.push('/admin/dashboard');
+                } else if (userLevel === 3) {
+                    router.push('/sales-admin/dashboard');
+                } else if (userLevel <= 6) {
                     router.push('/admin/dashboard');
                 } else if (userLevel <= 12) {
                     router.push('/dealer/dashboard');
@@ -150,6 +154,10 @@ export const SuperAdminGuard = ({ children }: { children: React.ReactNode }) => 
 
 export const AdminGuard = ({ children }: { children: React.ReactNode }) => (
     <RoleGuard allowedRoles={PORTAL_CONFIG.ADMIN.allowedRoles}>{children}</RoleGuard>
+);
+
+export const SalesAdminGuard = ({ children }: { children: React.ReactNode }) => (
+    <RoleGuard allowedRoles={PORTAL_CONFIG.SALES_ADMIN.allowedRoles}>{children}</RoleGuard>
 );
 
 export const DealerGuard = ({ children }: { children: React.ReactNode }) => {

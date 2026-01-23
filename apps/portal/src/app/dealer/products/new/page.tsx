@@ -11,8 +11,6 @@ import {
     Image as ImageIcon,
     Trash2,
     LayoutGrid,
-    ChevronDown,
-    Search,
     Scan
 } from 'lucide-react';
 import {
@@ -22,19 +20,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command"
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
 import { GlassCard } from '@/components/ui/premium/GlassCard';
 import { MetallicText } from '@/components/ui/premium/MetallicText';
 import { GradientButton } from '@/components/ui/premium/GradientButton';
@@ -48,7 +33,6 @@ import { formatCurrency, cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { BarcodeScanner } from '@/components/common/BarcodeScanner';
-import { MultiSelect } from '@/components/ui/multi-select';
 
 interface Category {
     id: string;
@@ -84,6 +68,10 @@ export default function NewProductPage() {
     const [bikeModels, setBikeModels] = useState<BikeModel[]>([]);
     const [brands, setBrands] = useState<Brand[]>([]);
 
+    // UI State for Brand Creation
+    const [openBrand, setOpenBrand] = useState(false);
+    const [brandSearch, setBrandSearch] = useState("");
+
     // Form state
     const [formData, setFormData] = useState({
         name: '',
@@ -97,9 +85,7 @@ export default function NewProductPage() {
         cost_price: '',
     });
 
-    // Combobox state
-    const [openBrand, setOpenBrand] = useState(false);
-    const [brandSearch, setBrandSearch] = useState("");
+
 
     const generateSku = (categoryName: string, brandName: string) => {
         if (!categoryName && !brandName) return;
@@ -354,69 +340,35 @@ export default function NewProductPage() {
 
                     {/* Brand & SKU Row */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Brand Combobox */}
+                        {/* Brand Select */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-white/60">ব্র্যান্ড</label>
-                            <Popover open={openBrand} onOpenChange={setOpenBrand}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        aria-expanded={openBrand}
-                                        className="h-12 w-full justify-between bg-white/[0.03] border-white/10 text-white hover:bg-white/5 hover:text-white"
-                                    >
-                                        {formData.brand_name ? formData.brand_name : "ব্র্যান্ড সিলেক্ট করুন..."}
-                                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-[#0D0D0F] border-[#D4AF37]/20">
-                                    <Command>
-                                        <CommandInput
-                                            placeholder="Search brand..."
-                                            value={brandSearch}
-                                            onValueChange={setBrandSearch}
-                                            className="text-white"
-                                        />
-                                        <CommandList>
-                                            <CommandEmpty>
-                                                <div className="p-2 text-center">
-                                                    <p className="text-xs text-white/40 mb-2">ব্র্যান্ড পাওয়া যায়নি</p>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="secondary"
-                                                        className="w-full h-8 text-xs bg-[#D4AF37]/10 text-[#D4AF37] hover:bg-[#D4AF37]/20"
-                                                        onClick={() => createNewBrand(brandSearch)}
-                                                    >
-                                                        <Plus className="w-3 h-3 mr-1" /> তৈরি করুন "{brandSearch}"
-                                                    </Button>
-                                                </div>
-                                            </CommandEmpty>
-                                            <CommandGroup>
-                                                {brands.map((brand) => (
-                                                    <CommandItem
-                                                        key={brand.id}
-                                                        value={brand.name}
-                                                        onSelect={() => {
-                                                            setFormData(p => ({ ...p, brand_id: brand.id, brand_name: brand.name }));
-                                                            const catName = categories.find(c => c.id === formData.category_id)?.name || '';
-                                                            generateSku(catName, brand.name);
-                                                            setOpenBrand(false);
-                                                        }}
-                                                        className="relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-[#D4AF37]/10 focus:text-[#D4AF37] data-[selected=true]:bg-[#D4AF37]/10 text-white"
-                                                    >
-                                                        <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-                                                            {formData.brand_id === brand.id && (
-                                                                <Check className="h-4 w-4" />
-                                                            )}
-                                                        </span>
-                                                        {brand.name}
-                                                    </CommandItem>
-                                                ))}
-                                            </CommandGroup>
-                                        </CommandList>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
+                            <Select
+                                value={formData.brand_id}
+                                onValueChange={(value) => {
+                                    const brand = brands.find(b => b.id === value);
+                                    if (brand) {
+                                        setFormData(p => ({ ...p, brand_id: brand.id, brand_name: brand.name }));
+                                        const catName = categories.find(c => c.id === formData.category_id)?.name || '';
+                                        generateSku(catName, brand.name);
+                                    }
+                                }}
+                            >
+                                <SelectTrigger className="w-full h-12 bg-white/[0.03] border-white/10 rounded-xl px-4 text-white focus:ring-[#D4AF37]/50 focus:border-[#D4AF37]/50">
+                                    <SelectValue placeholder="-- ব্র্যান্ড সিলেক্ট করুন --" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#1a1a1f] border-[#D4AF37]/20 text-white">
+                                    {brands.map(brand => (
+                                        <SelectItem
+                                            key={brand.id}
+                                            value={brand.id}
+                                            className="cursor-pointer focus:bg-[#D4AF37]/10 focus:text-[#D4AF37] text-white"
+                                        >
+                                            {brand.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         {/* Internal SKU (Auto Generated) */}
@@ -638,15 +590,30 @@ export default function NewProductPage() {
                         <span className="w-6 h-6 rounded-full bg-[#D4AF37] text-black flex items-center justify-center text-xs font-black">5</span>
                         বাইক সামঞ্জস্য (ঐচ্ছিক)
                     </h2>
-                    <div className="relative">
-                        <MultiSelect
-                            options={bikeModels.map(m => ({ value: m.id, label: m.name }))}
-                            selected={selectedModels}
-                            onChange={setSelectedModels}
-                            placeholder="বাইক মডেল সিলেক্ট করুন..."
-                            className="bg-white/[0.03] border-white/10"
-                        />
+                    <div className="flex flex-wrap gap-2">
+                        {bikeModels.map(model => {
+                            const isSelected = selectedModels.includes(model.id);
+                            return (
+                                <button
+                                    key={model.id}
+                                    type="button"
+                                    onClick={() => toggleModel(model.id)}
+                                    className={cn(
+                                        "px-4 py-2 rounded-lg text-sm font-medium border transition-all",
+                                        isSelected
+                                            ? "bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37]"
+                                            : "bg-white/[0.03] border-white/10 text-white/60 hover:border-[#D4AF37]/50 hover:text-white"
+                                    )}
+                                >
+                                    {isSelected && <Check className="inline w-3 h-3 mr-1" />}
+                                    {model.name}
+                                </button>
+                            );
+                        })}
                     </div>
+                    {selectedModels.length > 0 && (
+                        <p className="mt-3 text-xs text-[#D4AF37]">{selectedModels.length} টি বাইক মডেল সিলেক্ট করা হয়েছে</p>
+                    )}
                 </GlassCard>
             </div >
 

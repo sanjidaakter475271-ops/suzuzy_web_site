@@ -6,9 +6,10 @@ export const ROLE_LEVELS = {
     // Platform Staff (L1-L5)
     SUPER_ADMIN: 1,
     ADMIN: 2,
-    SUPPORT: 3,
-    ACCOUNTANT: 4,
-    VIEWER: 5,
+    SALES_ADMIN: 3,
+    SUPPORT: 4,
+    ACCOUNTANT: 5,
+    VIEWER: 6,
 
     // Dealer Staff (L10-L12)
     DEALER_OWNER: 10,
@@ -19,12 +20,13 @@ export const ROLE_LEVELS = {
     CUSTOMER: 99,
 } as const;
 
-export type RoleName = 'super_admin' | 'admin' | 'support' | 'accountant' | 'viewer' | 'dealer_owner' | 'dealer_manager' | 'dealer_staff' | 'customer';
+export type RoleName = 'super_admin' | 'admin' | 'sales_admin' | 'support' | 'accountant' | 'viewer' | 'dealer_owner' | 'dealer_manager' | 'dealer_staff' | 'customer';
 
 export const getRoleLevel = (roleName: string): number => {
     const roles: Record<string, number> = {
         super_admin: ROLE_LEVELS.SUPER_ADMIN,
         admin: ROLE_LEVELS.ADMIN,
+        sales_admin: ROLE_LEVELS.SALES_ADMIN,
         support: ROLE_LEVELS.SUPPORT,
         accountant: ROLE_LEVELS.ACCOUNTANT,
         viewer: ROLE_LEVELS.VIEWER,
@@ -37,6 +39,6 @@ export const getRoleLevel = (roleName: string): number => {
     return roles[roleName] || 99;
 };
 
-export const isPlatformStaff = (roleLevel: number) => roleLevel >= 1 && roleLevel <= 5;
+export const isPlatformStaff = (roleLevel: number) => roleLevel >= 1 && roleLevel <= 6;
 export const isDealerStaff = (roleLevel: number) => roleLevel >= 10 && roleLevel <= 12;
 export const isSuperAdmin = (roleLevel: number) => roleLevel === 1;

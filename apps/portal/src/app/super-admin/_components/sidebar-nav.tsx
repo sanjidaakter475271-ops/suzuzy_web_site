@@ -24,7 +24,12 @@ import {
     ReceiptText,
     ChevronDown,
     ChevronRight,
-    LogOut
+    LogOut,
+    Activity,
+    Zap,
+    TrendingUp,
+    Calendar,
+    Calculator
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "@/hooks/useUser";
@@ -63,6 +68,17 @@ const ADMIN_NAV: NavItem[] = [
     { name: "Categories", href: "/admin/catalog/categories", icon: Tags },
     { name: "Brands", href: "/admin/catalog/brands", icon: Compass },
     { name: "Settings", href: "/admin/settings", icon: Settings },
+];
+
+const SALES_ADMIN_NAV: NavItem[] = [
+    { name: "Sales Dashboard", href: "/sales-admin/dashboard", icon: BarChart3 },
+    { name: "Live Monitor", href: "/sales-admin/live", icon: Activity },
+    { name: "Quick POS", href: "/sales-admin/pos", icon: Zap },
+    { name: "Transactions", href: "/sales-admin/transactions", icon: ReceiptText },
+    { name: "Revenue", href: "/sales-admin/revenue", icon: TrendingUp },
+    { name: "Daily Reports", href: "/sales-admin/reports/daily", icon: Calendar },
+    { name: "Calculator", href: "/sales-admin/calculator", icon: Calculator },
+    { name: "Analytics", href: "/sales-admin/analytics", icon: PieChart },
 ];
 
 const DEALER_NAV: NavItem[] = [
@@ -111,6 +127,7 @@ export default function SidebarNav({ mode = "desktop" }: SidebarNavProps) {
         const roleLevel = getRoleLevel(profile.role);
 
         if (roleLevel === ROLE_LEVELS.SUPER_ADMIN) return SUPER_ADMIN_NAV;
+        if (roleLevel === ROLE_LEVELS.SALES_ADMIN) return SALES_ADMIN_NAV;
         if (roleLevel <= ROLE_LEVELS.VIEWER) return ADMIN_NAV;
         if (roleLevel <= ROLE_LEVELS.DEALER_STAFF) return DEALER_NAV;
 

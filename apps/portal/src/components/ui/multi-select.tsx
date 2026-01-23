@@ -96,6 +96,14 @@ export function MultiSelect({
                                             );
                                             setInputValue("");
                                         }}
+                                        onClick={() => {
+                                            onChange(
+                                                selected.includes(option.value)
+                                                    ? selected.filter((item) => item !== option.value)
+                                                    : [...selected, option.value]
+                                            );
+                                            setInputValue("");
+                                        }}
                                         className="relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-[#D4AF37]/10 focus:text-[#D4AF37] data-[selected=true]:bg-[#D4AF37]/10 text-white"
                                     >
                                         <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">

@@ -10,7 +10,12 @@ export const PORTAL_CONFIG = {
         path: "/admin",
         minLevel: ROLE_LEVELS.ADMIN,
         maxLevel: ROLE_LEVELS.VIEWER,
-        allowedRoles: ["super_admin", "admin", "support", "accountant", "viewer"],
+        allowedRoles: ["super_admin", "admin", "sales_admin", "support", "accountant", "viewer"],
+    },
+    SALES_ADMIN: {
+        path: "/sales-admin",
+        minLevel: ROLE_LEVELS.SALES_ADMIN,
+        allowedRoles: ["super_admin", "sales_admin"],
     },
     DEALER: {
         path: "/dealer",
