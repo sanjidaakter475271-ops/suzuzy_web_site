@@ -31,8 +31,8 @@ export const auth = betterAuth({
         }
     },
     // Ensure we use the correct secret from env
-    secret: process.env.BETTER_AUTH_SECRET,
-    baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL,
+    secret: process.env.BETTER_AUTH_SECRET || "placeholder-secret-for-build-only",
+    baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
     plugins: [
         admin()
     ]

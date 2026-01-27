@@ -24,12 +24,14 @@ services:
         sync: false
       - key: NODE_ENV
         value: production
-    docker:
-      buildArgs:
-        - key: NEXT_PUBLIC_SUPABASE_URL
-          value: ${NEXT_PUBLIC_SUPABASE_URL}
-        - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
-          value: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: BETTER_AUTH_SECRET
+        sync: false
+      - key: BETTER_AUTH_URL
+        sync: false
 
   # ============================================
   # Storefront App (Public Website)
@@ -52,9 +54,3 @@ services:
         sync: false
       - key: NODE_ENV
         value: production
-    docker:
-      buildArgs:
-        - key: NEXT_PUBLIC_SUPABASE_URL
-          value: ${NEXT_PUBLIC_SUPABASE_URL}
-        - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
-          value: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
