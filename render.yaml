@@ -22,6 +22,11 @@ services:
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
         sync: false
+      - key: NEXT_PUBLIC_REALTIME_URL
+        fromService:
+          name: royal-suzuky-realtime
+          type: web
+          property: host
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
@@ -32,6 +37,29 @@ services:
         sync: false
       - key: BETTER_AUTH_URL
         sync: false
+
+  # ============================================
+  # Realtime Server (Socket.io)
+  # ============================================
+  - type: web
+    name: royal-suzuky-realtime
+    runtime: docker
+    dockerfilePath: ./apps/realtime/Dockerfile
+    dockerContext: ./apps/realtime
+    region: singapore
+    plan: free
+    branch: main
+    buildFilter:
+      paths:
+        - apps/realtime/**
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        fromService:
+          name: royal-suzuky-portal
+          type: web
+          property: host
 
   # ============================================
   # Storefront App (Public Website)
@@ -54,3 +82,4 @@ services:
         sync: false
       - key: NODE_ENV
         value: production
+

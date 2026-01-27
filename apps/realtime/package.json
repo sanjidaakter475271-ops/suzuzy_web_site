@@ -1,0 +1,17 @@
+{
+    "name": "royal-suzuky-realtime",
+    "version": "1.0.0",
+    "description": "Realtime Socket.io server for Royal Suzuky",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "node server.js"
+    },
+    "dependencies": {
+        "socket.io": "^4.7.2",
+        "cors": "^2.8.5"
+    },
+    "engines": {
+        "node": ">=18"
+    }
+}
