@@ -14,11 +14,7 @@ const dbUrl = process.env.DIRECT_URL || "postgresql://postgres:Nazmul%402%40%40%
 
 // 2. Setup manual Prisma for this script
 const prisma = new PrismaClient({
-    datasources: {
-        db: {
-            url: dbUrl,
-        },
-    },
+    datasourceUrl: dbUrl,
 });
 
 const email = "superadmin@gmail.com";
