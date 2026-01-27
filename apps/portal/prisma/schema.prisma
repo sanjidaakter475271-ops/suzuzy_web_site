@@ -2205,6 +2205,9 @@ model User {
   role          String?
   roleId        String?   @db.Uuid
   dealerId      String?   @db.Uuid
+  banned        Boolean?  @default(false)
+  banReason     String?
+  banExpires    DateTime?
   accounts      Account[]
   sessions      Session[]
 
