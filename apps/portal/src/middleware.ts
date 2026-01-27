@@ -14,10 +14,17 @@ interface SessionResponse {
 }
 
 export default async function authMiddleware(request: NextRequest) {
+    // In production (Docker), we want to call the local server via HTTP to avoid SSL issues
+    // because the container runs on HTTP but likely receives HTTPS headers from Render's proxy.
+    // This mismatch causes ERR_SSL_WRONG_VERSION_NUMBER when fetching "https://..." internally.
+    const baseURL = process.env.NODE_ENV === "production"
+        ? `http://localhost:${process.env.PORT || 3000}`
+        : request.nextUrl.origin;
+
     const { data: session } = await betterFetch<SessionResponse>(
         "/api/auth/get-session",
         {
-            baseURL: request.nextUrl.origin,
+            baseURL,
             headers: {
                 cookie: request.headers.get("cookie") || "",
             },
