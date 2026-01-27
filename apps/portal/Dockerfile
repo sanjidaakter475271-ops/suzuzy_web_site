@@ -62,7 +62,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/server ./server
 COPY --from=builder --chown=nextjs:nodejs /app/server-unified.js ./server-unified.js
+COPY --from=builder --chown=nextjs:nodejs /app/prod-entrypoint.js ./prod-entrypoint.js
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+
+# CRITICAL: Next.js standalone doesn't always include external modules like socket.io 
+# if they are used by custom scripts outside the Next.js build graph.
+# We ensure they are available by copying them from the builder.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/socket.io ./node_modules/socket.io
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/socket.io-client ./node_modules/socket.io-client
 
 USER nextjs
 
@@ -71,5 +78,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Run unified Next.js and Socket.io server on port 3000
+# Use the unified script that handles both Next.js and Socket.io
 CMD ["node", "server-unified.js"]

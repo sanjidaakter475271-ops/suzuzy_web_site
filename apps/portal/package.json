@@ -5,12 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "dev:unified": "node server-unified.js",
-    "dev:all": "concurrently \"next dev\" \"tsx server/socket.ts\"",
+    "dev:all": "concurrently \"next dev\" \"node server/socket.js\"",
     "build": "next build",
     "start": "next start",
-    "start:all": "concurrently \"node server.js\" \"tsx server/socket.ts\"",
+    "start:all": "concurrently \"node server.js\" \"node server/socket.js\"",
     "lint": "eslint",
-    "socket:dev": "tsx server/socket.ts"
+    "socket:dev": "node server/socket.js"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.3.0",
