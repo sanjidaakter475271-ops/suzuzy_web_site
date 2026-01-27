@@ -11,6 +11,7 @@ WORKDIR /app
 COPY package.json ./
 
 # Install dependencies
+RUN apk add --no-cache openssl libc6-compat
 RUN npm install --frozen-lockfile || npm install
 
 # ============================================
@@ -34,8 +35,13 @@ ENV NEXT_PUBLIC_REALTIME_URL=$NEXT_PUBLIC_REALTIME_URL
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Install builder dependencies
+RUN apk add --no-cache openssl libc6-compat
+
 # Set Next.js telemetry off
 ENV NEXT_TELEMETRY_DISABLED=1
+# Dummy URL for build-time generation only (Prisma 7 Config requires it)
+ENV DATABASE_URL="postgresql://dummy:5432/mydb"
 
 # Build the application
 RUN npx prisma generate
@@ -49,6 +55,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Install runtime dependencies
+RUN apk add --no-cache openssl libc6-compat
 
 # Create a non-root user for security
 RUN addgroup --system --gid 1001 nodejs
