@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:unified": "node server-unified.js",
     "dev:all": "concurrently \"next dev\" \"tsx server/socket.ts\"",
     "build": "next build",
     "start": "next start",
