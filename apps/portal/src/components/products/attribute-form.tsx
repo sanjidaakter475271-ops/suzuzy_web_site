@@ -40,8 +40,8 @@ const CATEGORY_ATTRIBUTES: CategoryConfig = {
 interface AttributeFormProps {
     categoryId: string;
     categoryName: string;
-    values: Record<string, any>;
-    onChange: (id: string, value: any) => void;
+    values: Record<string, string | number>;
+    onChange: (id: string, value: string) => void;
 }
 
 export function AttributeForm({ categoryId, categoryName, values, onChange }: AttributeFormProps) {

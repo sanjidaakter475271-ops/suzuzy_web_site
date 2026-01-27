@@ -1,56 +1,43 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from './useAuth';
+import { useAuth } from "./useAuth";
 
 export interface UserProfile {
     id: string;
+    email: string;
+    name: string | null;
     full_name: string | null;
-    phone: string | null;
-    role: string; // Keep as string for flexibility, type checking done via helper
+    role: string;
+    roleId?: string | null;
+    dealerId?: string | null;
     dealer_id?: string | null;
-    created_at: string;
-    updated_at: string;
-    roles?: {
-        level: number;
-        name: string;
-    } | null;
-    onboarding_completed?: boolean;
+    image?: string | null;
 }
 
+/**
+ * useUser hook: Returns the logged-in user profile from Better Auth session.
+ */
 export function useUser() {
-    const { user, loading: authLoading } = useAuth();
-    const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { user, session, loading, error, signOut } = useAuth();
 
-    useEffect(() => {
-        async function fetchProfile() {
-            if (!user) {
-                setProfile(null);
-                setLoading(false);
-                return;
-            }
+    const profile: UserProfile | null = user ? {
+        id: user.id,
+        email: user.email,
+        name: user.name || null,
+        full_name: user.name || null,
+        role: user.role || 'customer',
+        roleId: user.roleId,
+        dealerId: user.dealerId,
+        dealer_id: user.dealerId,
+        image: user.image
+    } : null;
 
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*, roles(level, name)')
-                .eq('id', user.id)
-                .maybeSingle();
-
-            if (error) {
-                setError(error.message);
-            } else if (data) {
-                setProfile(data as UserProfile);
-            }
-            setLoading(false);
-        }
-
-        if (!authLoading) {
-            fetchProfile();
-        }
-    }, [user, authLoading]);
-
-    return { profile, loading: loading || authLoading, error, user };
+    return {
+        profile,
+        user,
+        session,
+        loading,
+        error,
+        signOut
+    };
 }

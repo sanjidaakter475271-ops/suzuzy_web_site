@@ -33,8 +33,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "@/hooks/useUser";
-import { ROLE_LEVELS, getRoleLevel } from "@/lib/supabase/roles";
-import { supabase } from "@/lib/supabase";
+import { ROLE_LEVELS, getRoleLevel } from "@/middlewares/checkRole";
+import { authClient } from "@/lib/auth/client";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
@@ -79,6 +79,12 @@ const SALES_ADMIN_NAV: NavItem[] = [
     { name: "Daily Reports", href: "/sales-admin/reports/daily", icon: Calendar },
     { name: "Calculator", href: "/sales-admin/calculator", icon: Calculator },
     { name: "Analytics", href: "/sales-admin/analytics", icon: PieChart },
+];
+
+const SERVICE_ADMIN_NAV: NavItem[] = [
+    { name: "Dashboard", href: "/service-admin", icon: LayoutGrid },
+    { name: "Team Members", href: "/service-admin/members", icon: UserPlus },
+    { name: "Settings", href: "/service-admin/settings", icon: Settings },
 ];
 
 const DEALER_NAV: NavItem[] = [
@@ -126,10 +132,21 @@ export default function SidebarNav({ mode = "desktop" }: SidebarNavProps) {
 
         const roleLevel = getRoleLevel(profile.role);
 
-        if (roleLevel === ROLE_LEVELS.SUPER_ADMIN) return SUPER_ADMIN_NAV;
-        if (roleLevel === ROLE_LEVELS.SALES_ADMIN) return SALES_ADMIN_NAV;
-        if (roleLevel <= ROLE_LEVELS.VIEWER) return ADMIN_NAV;
-        if (roleLevel <= ROLE_LEVELS.DEALER_STAFF) return DEALER_NAV;
+        if (roleLevel === ROLE_LEVELS.super_admin) return SUPER_ADMIN_NAV;
+
+        // Sales Admin (Levels 4 & 5)
+        if (roleLevel === ROLE_LEVELS.showroom_sales_admin || roleLevel === ROLE_LEVELS.service_sales_admin) return SALES_ADMIN_NAV;
+
+        // Service Admin (Level 3)
+        if (roleLevel === ROLE_LEVELS.service_admin) return SERVICE_ADMIN_NAV;
+
+        // General Admins (Levels 2-7) - excluding super_admin (1)
+        // showroom_admin(2), service_admin(3), support(6), accountant(7)
+        if (roleLevel <= 7 && roleLevel !== 1) return ADMIN_NAV;
+
+        // Dealers (Levels 10-15)
+        // dealer_owner(10) to sub_dealer(15)
+        if (roleLevel >= 10 && roleLevel <= 15) return DEALER_NAV;
 
         return [];
     };
@@ -318,7 +335,7 @@ export default function SidebarNav({ mode = "desktop" }: SidebarNavProps) {
                 <div className={cn("mt-2 transition-all", isExpanded ? "px-0 pb-4" : "flex justify-center pb-4")}>
                     <button
                         onClick={async () => {
-                            await supabase.auth.signOut();
+                            await authClient.signOut();
                             window.location.href = '/login';
                         }}
                         className={cn(

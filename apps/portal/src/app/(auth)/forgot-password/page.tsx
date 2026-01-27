@@ -8,7 +8,7 @@ import { GlassCard } from '@/components/ui/premium/GlassCard';
 import { MetallicText } from '@/components/ui/premium/MetallicText';
 import { GradientButton } from '@/components/ui/premium/GradientButton';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/lib/supabase';
+import { authClient } from '@/lib/auth/client';
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('');
@@ -21,8 +21,9 @@ export default function ForgotPasswordPage() {
         setIsLoading(true);
         setError(null);
 
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/reset-password`,
+        const { error } = await (authClient as any).forgetPassword({
+            email,
+            redirectTo: "/reset-password",
         });
 
         if (error) {

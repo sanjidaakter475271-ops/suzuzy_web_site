@@ -4,8 +4,7 @@ import { useState } from 'react';
 import { useZxing } from 'react-zxing';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Scan, X, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Scan } from 'lucide-react';
 
 interface BarcodeScannerProps {
     onScan: (code: string) => void;
@@ -30,9 +29,8 @@ export function BarcodeScanner({ onScan, trigger }: BarcodeScannerProps) {
                 setIsOpen(false);
             }
         },
-        onError(error) {
+        onError() {
             // Ignore minor scanning errors, log only critical ones if needed
-            // console.error(error);
         },
     });
 

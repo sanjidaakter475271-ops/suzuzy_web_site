@@ -10,9 +10,6 @@ import {
     Mail,
     Phone,
     Shield,
-    UserCircle,
-    CheckCircle2,
-    XCircle,
     UserMinus,
     UserCheck,
     Loader2,
@@ -31,9 +28,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import {
+    getUsers,
+    updateUserStatusAction,
+    resetUserPasswordAction,
+    deleteUserAction,
+    updateUserRoleAction
+} from "@/actions/super-admin";
 
 interface Profile {
     id: string;
@@ -45,6 +48,13 @@ interface Profile {
     onboarding_completed: boolean;
     temp_password?: string;
     created_at: string;
+}
+
+interface ActionResponse {
+    success: boolean;
+    error?: string;
+    data?: unknown;
+    newPassword?: string;
 }
 
 export default function UsersManagementPage() {
@@ -64,16 +74,13 @@ export default function UsersManagementPage() {
     const fetchUsers = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            setUsers((data as Profile[]) || []);
-        } catch (error) {
+            const result = await getUsers();
+            if (!result.success) throw new Error(result.error);
+            setUsers((result.data as Profile[]) || []);
+        } catch (error: unknown) {
             console.error("Error fetching users:", error);
-            toast.error("Cloud synchronization failed");
+            const message = error instanceof Error ? error.message : "Registry synchronization failed";
+            toast.error(message);
         } finally {
             setLoading(false);
         }
@@ -94,29 +101,14 @@ export default function UsersManagementPage() {
 
     useEffect(() => {
         fetchUsers();
-
-        const subscription = supabase
-            .channel('profiles-admin')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-                fetchUsers();
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(subscription);
-        };
     }, []);
 
     const updateUserStatus = async (id: string, status: Profile['status']) => {
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({ status })
-                .eq('id', id);
+            const result = await updateUserStatusAction(id, status);
+            if (!result.success) throw new Error(result.error);
 
-            if (error) throw error;
-
-            // Optimistic Update: Immediately update status in the list
+            // Optimistic Update
             setUsers(currentUsers =>
                 currentUsers.map(u =>
                     u.id === id ? { ...u, status } : u
@@ -124,9 +116,10 @@ export default function UsersManagementPage() {
             );
 
             toast.success(`User status updated to ${status.toUpperCase()}`);
-        } catch (error) {
+        } catch (error: unknown) {
             console.error("Error updating user status:", error);
-            toast.error("Status transition failed");
+            const message = error instanceof Error ? error.message : "Status transition failed";
+            toast.error(message);
         }
     };
 
@@ -135,17 +128,15 @@ export default function UsersManagementPage() {
         if (!confirm) return;
 
         try {
-            const { data, error } = await supabase.functions.invoke('manage-user-lifecycle', {
-                body: { action: 'reset_password', target_user_id: userId }
-            });
+            const result = await resetUserPasswordAction(userId) as ActionResponse;
+            if (!result.success) throw new Error(result.error);
 
-            if (error) throw error;
-
-            toast.success("Security reset successful. Temp password: " + data.new_password);
-            fetchUsers(); // Refresh list to show new temp password
-        } catch (error: any) {
+            toast.success("Security reset successful. Temp password: " + result.newPassword);
+            fetchUsers();
+        } catch (error: unknown) {
             console.error("Reset failed:", error);
-            toast.error("Security reset protocol failed");
+            const message = error instanceof Error ? error.message : "Security reset protocol failed";
+            toast.error(message);
         }
     };
 
@@ -154,17 +145,35 @@ export default function UsersManagementPage() {
         if (!confirm) return;
 
         try {
-            const { error } = await supabase.functions.invoke('manage-user-lifecycle', {
-                body: { action: 'delete', target_user_id: userId }
-            });
-
-            if (error) throw error;
+            const result = await deleteUserAction(userId);
+            if (!result.success) throw new Error(result.error);
 
             setUsers(current => current.filter(u => u.id !== userId));
             toast.success("Account permanently removed from system");
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Deletion failed:", error);
-            toast.error("Account eradication failed");
+            const message = error instanceof Error ? error.message : "Account eradication failed";
+            toast.error(message);
+        }
+    };
+
+    const updateRole = async (userId: string, newRole: string) => {
+        try {
+            const result = await updateUserRoleAction(userId, newRole);
+            if (!result.success) throw new Error(result.error);
+
+            // Optimistic Update
+            setUsers(currentUsers =>
+                currentUsers.map(u =>
+                    u.id === userId ? { ...u, role: newRole } : u
+                )
+            );
+
+            toast.success("Personnel authorization level updated");
+        } catch (error: unknown) {
+            console.error("Error updating role:", error);
+            const message = error instanceof Error ? error.message : "Authorization upgrade failed";
+            toast.error(message);
         }
     };
 
@@ -239,7 +248,8 @@ export default function UsersManagementPage() {
                         ) : (
                             <div className="flex items-center gap-2 text-[10px] text-green-500/50 italic">
                                 <Shield className="w-3 h-3" />
-                                <span>Secured by User</span>
+                                <span className="sr-only">Secured by User</span>
+                                <span>Secured</span>
                             </div>
                         )}
                     </div>
@@ -354,31 +364,6 @@ export default function UsersManagementPage() {
             </div>
         );
     }
-
-    const updateRole = async (userId: string, newRole: string) => {
-        try {
-            const { error } = await supabase.rpc('update_user_role_v2', {
-                target_user_id: userId,
-                new_role: newRole
-            });
-
-            if (error) throw error;
-
-            // Optimistic Update: Immediately update the user in the list to avoid full page refresh
-            setUsers(currentUsers =>
-                currentUsers.map(u =>
-                    u.id === userId ? { ...u, role: newRole } : u
-                )
-            );
-
-            toast.success("Personnel authorization level updated");
-            // No need for fetchUsers() if we update state locally, but keeping it for secondary sync
-            // fetchUsers(); 
-        } catch (error: any) {
-            console.error("Error updating role:", error);
-            toast.error("Authorization upgrade failed");
-        }
-    };
 
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">

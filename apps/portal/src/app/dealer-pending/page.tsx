@@ -61,7 +61,7 @@ export default function DealerPendingPage() {
                             </div>
 
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                                <Link href="http://localhost:3000" className="w-full sm:w-auto">
+                                <Link href="/" className="w-full sm:w-auto">
                                     <Button variant="outline" className="w-full h-12 rounded-xl border-white/10 text-white hover:border-white/20 px-8 flex items-center gap-2">
                                         <ArrowLeft className="w-4 h-4" /> Return to Marketplace
                                     </Button>

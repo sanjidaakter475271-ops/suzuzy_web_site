@@ -59,6 +59,8 @@ RUN chown nextjs:nodejs .next
 # Copy production build
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/server ./server
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
 USER nextjs
 
@@ -67,4 +69,6 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+# Run both Next.js and Socket.io server
+# Using & to run in background. We use sh -c to allow the & operator.
+CMD ["sh", "-c", "node server.js & npx tsx server/socket.ts"]

@@ -14,47 +14,38 @@ import {
     AlertCircle
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+import { getSuperAdminStats } from "@/actions/super-admin";
+
+import { useSocketTrigger } from "@/hooks/useSocketTrigger";
+
 export default function SuperAdminDashboard() {
+    // Listen for socket signals to trigger instant updates
+    useSocketTrigger(['dashboard:refresh']);
+
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
         totalRevenue: 0,
         activeDealers: 0,
         pendingApprovals: 0,
         totalProducts: 0,
-        revenueChange: 12.5, // Mock for now until we have history
+        revenueChange: 12.5,
     });
 
     useEffect(() => {
-        async function fetchStats() {
+        async function loadStats() {
             setLoading(true);
             try {
-                // Fetch real stats from Supabase
-                const [
-                    { data: revenueData },
-                    { count: dealerCount },
-                    { count: pendingCount },
-                    { count: productCount }
-                ] = await Promise.all([
-                    supabase.from('orders').select('grand_total').eq('payment_status', 'paid').returns<{ grand_total: number | null }[]>(),
-                    supabase.from('dealers').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-                    supabase.from('sub_orders').select('*', { count: 'exact', head: true }),
-                    supabase.from('products').select('*', { count: 'exact', head: true })
-                ]);
-
-                const totalRevenue = revenueData?.reduce((acc: number, curr: { grand_total: number | null }) => acc + (curr.grand_total || 0), 0) || 0;
-
-                setStats({
-                    totalRevenue,
-                    activeDealers: dealerCount || 0,
-                    pendingApprovals: pendingCount || 0,
-                    totalProducts: productCount || 0,
-                    revenueChange: 12.5,
-                });
+                const result = await getSuperAdminStats();
+                if (result.success && result.data) {
+                    setStats(prev => ({
+                        ...prev,
+                        ...result.data
+                    }));
+                }
             } catch (error) {
                 console.error("Error fetching dashboard stats:", error);
             } finally {
@@ -62,23 +53,7 @@ export default function SuperAdminDashboard() {
             }
         }
 
-        fetchStats();
-
-        // Subscribe to changes for real-time updates
-        const dealerSubscription = supabase
-            .channel('dealer-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'dealers' }, () => fetchStats())
-            .subscribe();
-
-        const orderSubscription = supabase
-            .channel('order-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchStats())
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(dealerSubscription);
-            supabase.removeChannel(orderSubscription);
-        };
+        loadStats();
     }, []);
 
     const containerVariants = {

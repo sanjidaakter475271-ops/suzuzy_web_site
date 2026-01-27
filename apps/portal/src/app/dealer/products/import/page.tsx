@@ -26,6 +26,7 @@ import { useUser } from '@/hooks/useUser';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
+import { importProductsAction } from '@/actions/products';
 
 interface Category {
     id: string;
@@ -79,45 +80,45 @@ export default function ImportProductsPage() {
 
         setIsUploading(true);
         try {
-            const base64 = await fileToBase64(file);
-            const pureBase64 = base64.split(',')[1];
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const rows = XLSX.utils.sheet_to_json(worksheet);
 
-            const { data, error } = await supabase.functions.invoke('import-products-excel', {
-                body: {
-                    dealerId: profile.dealer_id,
-                    fileData: pureBase64,
+                const result = await importProductsAction({
+                    dealerId: profile.dealer_id || '',
+                    rows: rows as Record<string, string | number>[],
                     defaultCategoryId: defaultCategoryId
+                });
+
+                if (!result.success) {
+                    toast.error((result as any).error || "Import failed");
+                    setIsUploading(false);
+                    return;
                 }
-            });
 
-            if (error) throw error;
+                setStats({
+                    successful: result.successful || 0,
+                    failed: result.failed || 0
+                });
 
-            setStats({
-                successful: data.successful,
-                failed: data.failed
-            });
-
-            if (data.failed === 0) {
-                toast.success(`Successfully imported ${data.successful} records`);
-            } else {
-                toast.warning(`Import complete: ${data.successful} succeeded, ${data.failed} failed`);
-            }
+                if (result.failed === 0) {
+                    toast.success(`Successfully imported ${result.successful} records`);
+                } else {
+                    toast.warning(`Import complete: ${result.successful} succeeded, ${result.failed} failed`);
+                }
+                setIsUploading(false);
+            };
+            reader.readAsArrayBuffer(file);
 
         } catch (error: any) {
             console.error("Import failed:", error);
             toast.error(error.message || "Failed to process the registry file");
-        } finally {
             setIsUploading(false);
         }
-    };
-
-    const fileToBase64 = (file: File): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = error => reject(error);
-        });
     };
 
     return (
@@ -312,7 +313,7 @@ export default function ImportProductsPage() {
                                     className="w-full h-14 text-xs font-black uppercase italic tracking-[0.2em] shadow-[0_10px_30px_rgba(212,175,55,0.15)]"
                                 >
                                     {isUploading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ChevronRight className="w-4 h-4 mr-2" />}
-                                    Execute Sycnronization
+                                    Execute Synchronization
                                 </GradientButton>
                             )}
                         </div>

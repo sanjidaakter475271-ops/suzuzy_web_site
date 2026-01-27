@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2, Layers, Check } from "lucide-react";
+import { Plus, Trash2, Layers } from "lucide-react";
 import { GlassCard } from "@/components/ui/premium/GlassCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -47,10 +47,10 @@ export function VariantGenerator({ baseSku, basePrice, onUpdate }: VariantGenera
         if (options.every(o => o.values.length === 0)) return;
 
         // Cartesian product of option values
-        let combo: any[] = [{}];
+        let combo: Record<string, string>[] = [{}];
         options.forEach(opt => {
             if (opt.values.length === 0) return;
-            const nextCombo: any[] = [];
+            const nextCombo: Record<string, string>[] = [];
             combo.forEach(c => {
                 opt.values.forEach(v => {
                     nextCombo.push({ ...c, [opt.type.toLowerCase()]: v });
@@ -75,9 +75,14 @@ export function VariantGenerator({ baseSku, basePrice, onUpdate }: VariantGenera
         onUpdate(newVariants);
     };
 
-    const updateVariant = (idx: number, field: keyof Variant, value: any) => {
+    const updateVariant = (idx: number, field: Exclude<keyof Variant, 'attributes' | 'barcode'>, value: string | number) => {
         const newVars = [...variants];
-        (newVars[idx] as any)[field] = value;
+        const variant = newVars[idx];
+        if (field === 'price' || field === 'stock' || field === 'threshold') {
+            (variant as unknown as Record<string, number>)[field] = Number(value);
+        } else {
+            (variant as unknown as Record<string, string | number>)[field] = value;
+        }
         setVariants(newVars);
         onUpdate(newVars);
     };

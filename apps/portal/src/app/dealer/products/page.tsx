@@ -37,10 +37,10 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { supabase } from "@/lib/supabase";
-import { useUser } from "@/hooks/useUser";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
+import { useUser } from "@/hooks/useUser";
+import { getDealerProducts, getCategories, deleteProductAction, updateProductStatusAction, bulkUpdateProductStatusAction, bulkDeleteProductsAction } from "@/actions/products";
 
 interface Product {
     id: string;
@@ -66,7 +66,7 @@ interface Product {
 }
 
 export default function ProductsPage() {
-    const { profile } = useUser();
+    const { profile, loading: profileLoading } = useUser();
     const [loading, setLoading] = useState(true);
     const [products, setProducts] = useState<Product[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
@@ -78,75 +78,58 @@ export default function ProductsPage() {
     const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
     const fetchInitialData = async () => {
-        if (!profile?.dealer_id) return;
-
         try {
             const [prodRes, catRes] = await Promise.all([
-                supabase.from('products')
-                    .select('*, categories:category_id(name), product_images(image_url), product_variants(id, sku, has_duplicate_barcode, stock_quantity)')
-                    .eq('dealer_id', profile.dealer_id)
-                    .order('created_at', { ascending: false }),
-                supabase.from('categories').select('id, name').eq('is_active', true).order('name')
+                getDealerProducts(),
+                getCategories()
             ]);
 
-            if (prodRes.data) setProducts((prodRes.data as unknown as Product[]) || []);
-            if (catRes.data) setCategories(catRes.data);
+            if (prodRes.success && prodRes.data) {
+                setProducts(prodRes.data as unknown as Product[]);
+            }
+            if (catRes.success && catRes.data) {
+                setCategories(catRes.data);
+            }
         } catch (error) {
             console.error("Error fetching data:", error);
-            if (profile?.dealer_id) toast.error("Catalogue synchronization failed");
+            toast.error("Catalogue synchronization failed");
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchInitialData();
-
-        const channel = supabase.channel(`dealer-products-${profile?.dealer_id}`)
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'products',
-                filter: `dealer_id=eq.${profile?.dealer_id}`
-            }, () => fetchInitialData())
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [profile?.dealer_id]);
+        if (profile) {
+            fetchInitialData();
+        }
+    }, [profile]);
 
     const deleteProduct = async (id: string) => {
         if (!confirm("Permanently archive this asset from the registry?")) return;
 
         try {
-            const { error } = await supabase
-                .from('products')
-                .delete()
-                .eq('id', id);
+            const result = await deleteProductAction(id);
 
-            if (error) throw error;
+            if (!result.success) throw new Error(result.error);
             toast.success("Asset archived");
             fetchInitialData();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error deleting product:", error);
-            toast.error("Authorization failed for asset purging");
+            toast.error(error.message || "Authorization failed for asset purging");
         }
     };
 
     const toggleStatus = async (productId: string, currentStatus: string) => {
         const newStatus = currentStatus === 'active' ? 'draft' : 'active';
         try {
-            const { error } = await supabase
-                .from('products')
-                .update({ status: newStatus })
-                .eq('id', productId);
+            const result = await updateProductStatusAction(productId, newStatus);
 
-            if (error) throw error;
+            if (!result.success) throw new Error(result.error);
             toast.success(`Asset status updated to ${newStatus}`);
-        } catch (error) {
+            fetchInitialData();
+        } catch (error: any) {
             console.error("Failed to toggle status:", error);
-            toast.error("Status synchronization failed");
+            toast.error(error.message || "Status synchronization failed");
         }
     };
 
@@ -154,18 +137,15 @@ export default function ProductsPage() {
         if (selectedIds.length === 0) return;
         setIsBulkUpdating(true);
         try {
-            const { error } = await supabase
-                .from('products')
-                .update({ status: newStatus })
-                .in('id', selectedIds);
+            const result = await bulkUpdateProductStatusAction(selectedIds, newStatus);
 
-            if (error) throw error;
+            if (!result.success) throw new Error(result.error);
             toast.success(`Registry updated: ${selectedIds.length} assets set to ${newStatus}`);
             setSelectedIds([]);
             fetchInitialData();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Bulk status error:", error);
-            toast.error("Registry batch update failed");
+            toast.error(error.message || "Registry batch update failed");
         } finally {
             setIsBulkUpdating(false);
         }
@@ -177,18 +157,15 @@ export default function ProductsPage() {
 
         setIsBulkUpdating(true);
         try {
-            const { error } = await supabase
-                .from('products')
-                .delete()
-                .in('id', selectedIds);
+            const result = await bulkDeleteProductsAction(selectedIds);
 
-            if (error) throw error;
+            if (!result.success) throw new Error(result.error);
             toast.success(`${selectedIds.length} assets purged from registry`);
             setSelectedIds([]);
             fetchInitialData();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Bulk delete error:", error);
-            toast.error("Registry purge failed");
+            toast.error(error.message || "Registry purge failed");
         } finally {
             setIsBulkUpdating(false);
         }

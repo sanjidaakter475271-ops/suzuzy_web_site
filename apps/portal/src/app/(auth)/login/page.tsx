@@ -3,144 +3,97 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, ArrowRight, ShieldCheck, ChevronRight } from 'lucide-react';
-import Link from 'next/link';
+// import { login } from '@/lib/auth/auth-actions';
+import { authClient } from '@/lib/auth/client';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { useUser } from '@/hooks/useUser';
+import { ROLE_LEVELS } from '@/middlewares/checkRole';
+import Link from 'next/link';
 import { GlassCard } from '@/components/ui/premium/GlassCard';
 import { MetallicText } from '@/components/ui/premium/MetallicText';
 import { GradientButton } from '@/components/ui/premium/GradientButton';
 import { Input } from '@/components/ui/input';
-import { getRoleLevel } from '@/lib/supabase/roles';
 
 export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [existingSession, setExistingSession] = useState(false);
     const router = useRouter();
+    const { profile, loading: authLoading } = useUser();
+
+    // Disable form if we're submitting, checking auth, or already authenticated (redirecting)
+    const isFormDisabled = isLoading || authLoading || !!profile;
 
     useEffect(() => {
-        const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                // Check if profile exists (handling shadow sessions)
-                const { data: profile, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('role, onboarding_completed')
-                    .eq('id', session.user.id)
-                    .maybeSingle();
+        if (profile) {
+            const level = ROLE_LEVELS[profile.role] || 99;
 
-                // Only log actual database errors, not "no rows" case
-                if (profileError && profileError.code !== 'PGRST116') {
-                    console.error('Database error checking profile:', profileError.message);
-                }
-
-                if (profile) {
-                    console.log('Profile found:', profile);
-
-                    // Check onboarding status
-                    if (profile.onboarding_completed === false) {
-                        router.push('/onboarding');
-                        return;
-                    }
-
-                    const role = profile.role;
-                    const level = getRoleLevel(role);
-
-                    if (level === 1) { // super_admin
-                        router.push('/super-admin/dashboard');
-                    } else if (level <= 5) { // admin roles
-                        router.push('/admin/dashboard');
-                    } else if (level <= 12) { // dealer roles
-                        router.push('/dealer/dashboard');
-                    } else {
-                        // If they are just a customer (level 99), let them stay on the login page
-                        // so they can see the 'existingSession' notice and log out/switch.
-                        console.log('User is customer level, staying on login');
-                        setExistingSession(true);
-                    }
-                } else {
-                    // Shadow session: user exists in auth but no profile in DB
-                    console.log('No profile found for session user');
-                    setExistingSession(true);
-                }
-            } else {
-                console.log('No session found');
+            if (level === 1) {
+                router.push('/super-admin/dashboard');
+            } else if (level >= 4 && level <= 5) {
+                router.push('/sales-admin/dashboard');
+            } else if (level <= 7) {
+                router.push('/admin/dashboard');
+            } else if (level <= 15) {
+                router.push('/dealer/dashboard');
             }
-        };
-        checkSession();
-    }, [router]);
-
-    const handleSignOut = async () => {
-        await supabase.auth.signOut();
-        setExistingSession(false);
-        setFormData({ email: '', password: '' });
-        setError(null);
-    };
+        }
+    }, [profile, router]);
 
     const [formData, setFormData] = useState({
         email: '',
         password: '',
     });
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
-        console.log('Attempting login for:', formData.email);
 
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
-            email: formData.email,
-            password: formData.password,
-        });
+        const formData = new FormData(e.currentTarget);
+        const email = formData.get("email") as string;
+        const password = formData.get("password") as string;
 
-        if (signInError) {
-            console.error('Login error:', signInError);
-            setError(signInError.message);
+        try {
+            const { data, error } = await authClient.signIn.email({
+                email,
+                password,
+            });
+
+            if (error) {
+                setError(error.message || "Failed to sign in");
+                setIsLoading(false);
+                return;
+            }
+
+            // Login successful, redirect based on role
+            const role = (data?.user as any)?.role || "customer";
+
+            let redirectPath = "/dashboard";
+            if (role === "super_admin") {
+                redirectPath = "/super-admin/dashboard";
+            } else if (["showroom_sales_admin", "service_sales_admin"].includes(role)) {
+                redirectPath = "/sales-admin/dashboard";
+            } else if (["showroom_admin", "service_admin", "support", "accountant"].includes(role)) {
+                redirectPath = "/admin/dashboard";
+            } else if (["dealer_owner", "dealer_manager", "dealer_staff", "sub_dealer"].includes(role)) {
+                redirectPath = "/dealer/dashboard";
+            }
+
+            console.log(`Login success. Redirecting to ${redirectPath} for role ${role}`);
+            router.push(redirectPath);
+            // Don't set isLoading(false) to keep button in loading state during redirect
+
+        } catch (err: any) {
+            console.error("Login error:", err);
+            setError("An unexpected error occurred");
             setIsLoading(false);
-            return;
         }
+    };
 
-        if (data.user) {
-            console.log('Login successful, fetching profile for:', data.user.id);
-            const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('role, onboarding_completed')
-                .eq('id', data.user.id)
-                .maybeSingle();
-
-            // Only log actual database errors, not "no rows" case
-            if (profileError && profileError.code !== 'PGRST116') {
-                console.error('Database error fetching profile:', profileError.message);
-            }
-
-            if (profile) {
-                console.log('Profile fetched:', profile);
-
-                // Check onboarding status
-                if (profile.onboarding_completed === false) {
-                    router.push('/onboarding');
-                    return;
-                }
-
-                const role = profile.role;
-                const level = getRoleLevel(role);
-
-                if (level === 1) { // super_admin
-                    router.push('/super-admin/dashboard');
-                } else if (level <= 5) { // admin roles
-                    router.push('/admin/dashboard');
-                } else if (level <= 12) { // dealer roles
-                    router.push('/dealer/dashboard');
-                } else {
-                    // If they just logged in as a customer, they shouldn't go to any portal dashboard.
-                    // Redirect them to storefront (root of everything) or just show the session warning.
-                    console.warn('Login successful but role is customer (no portal access)');
-                    setExistingSession(true);
-                    setIsLoading(false);
-                }
-            }
-        }
+    const handleSignOut = async () => {
+        await authClient.signOut();
+        router.refresh();
     };
 
     return (
@@ -153,17 +106,16 @@ export default function LoginPage() {
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
 
             <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
                 transition={{ duration: 0.8 }}
                 className="w-full max-w-5xl grid lg:grid-cols-2 gap-12 relative z-10"
             >
                 {/* Brand Side */}
                 <div className="hidden lg:flex flex-col justify-center">
                     <motion.div
-                        initial={{ x: -20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ delay: 0.2 }}
+                        initial={{ x: -20 }}
+                        animate={{ x: 0 }}
                         className="flex items-center gap-3 mb-12"
                     >
                         <div className="p-3 bg-white/5 border border-white/10 rounded-2xl shadow-xl">
@@ -183,9 +135,6 @@ export default function LoginPage() {
                         </p>
 
                         <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.5 }}
                             className="flex items-center gap-4 group cursor-pointer"
                         >
                             <div className="h-px w-12 bg-[#D4AF37] transition-all group-hover:w-20" />
@@ -217,34 +166,19 @@ export default function LoginPage() {
                         </AnimatePresence>
 
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            {existingSession && (
-                                <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 text-amber-500 text-sm font-medium rounded-2xl flex flex-col gap-3">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
-                                        <p>Limited access detected. This account may not have a completed profile.</p>
-                                    </div>
-                                    <p className="text-white/60 text-xs">If you want to use a different account or retry your registration, please sign out first.</p>
-                                    <button
-                                        type="button"
-                                        onClick={handleSignOut}
-                                        className="w-fit text-[#D4AF37] hover:text-[#D4AF37]/80 font-bold underline transition-colors"
-                                    >
-                                        Sign out and Continue
-                                    </button>
-                                </div>
-                            )}
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-[#D4AF37] uppercase tracking-widest ml-1">Email Address</label>
                                 <div className="relative group">
                                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-[#D4AF37] transition-colors" />
                                     <Input
                                         type="email"
+                                        name="email"
                                         placeholder="Enter your email"
                                         className="pl-12 h-14 bg-white/5 border-white/10 focus:border-[#D4AF37]/50 focus:bg-white/10 transition-all rounded-2xl text-white placeholder:text-white/20"
                                         required
                                         value={formData.email}
                                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        disabled={existingSession}
+                                        disabled={isFormDisabled}
                                     />
                                 </div>
                             </div>
@@ -258,18 +192,19 @@ export default function LoginPage() {
                                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-[#D4AF37] transition-colors" />
                                     <Input
                                         type={showPassword ? "text" : "password"}
+                                        name="password"
                                         placeholder="••••••••"
                                         className="pl-12 pr-12 h-14 bg-white/5 border-white/10 focus:border-[#D4AF37]/50 focus:bg-white/10 transition-all rounded-2xl text-white placeholder:text-white/20"
                                         required
                                         value={formData.password}
                                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        disabled={existingSession}
+                                        disabled={isFormDisabled}
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
                                         className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors"
-                                        disabled={existingSession}
+                                        disabled={isFormDisabled}
                                     >
                                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                     </button>
@@ -279,7 +214,7 @@ export default function LoginPage() {
                             <GradientButton
                                 type="submit"
                                 className="w-full h-14 text-lg"
-                                disabled={isLoading || existingSession}
+                                disabled={isFormDisabled}
                             >
                                 {isLoading ? "Authenticating..." : (
                                     <>

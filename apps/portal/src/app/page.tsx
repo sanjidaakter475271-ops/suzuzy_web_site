@@ -1,37 +1,42 @@
-import { createClient } from '@/lib/supabase/server';
+import { auth } from "@/lib/auth/config";
+import { headers } from "next/headers";
 import { redirect } from 'next/navigation';
 import { getRoleLevel } from '@/lib/supabase/roles';
 
+/**
+ * Root Page Redirection Logic
+ * Standardized on Better Auth session detection.
+ */
 export default async function RootPage() {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const session = await auth.api.getSession({
+        headers: await headers()
+    });
 
-    if (!user) {
+    if (!session?.user) {
         redirect('/login');
     }
 
-    // Role-based redirection logic for authenticated users
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('role, roles(level)')
-        .eq('id', user.id)
-        .maybeSingle();
+    const role = (session.user as any).role || "customer";
+    const level = getRoleLevel(role);
 
-    if (profile) {
-        const level = getRoleLevel(profile.role);
-
-        if (level === 1) {
-            redirect('/super-admin/dashboard');
-        } else if (level <= 5) {
-            redirect('/admin/dashboard');
-        } else if (level <= 12) {
-            redirect('/dealer/dashboard');
+    // Platform Authority Redirection
+    if (level === 1) {
+        redirect('/super-admin/dashboard');
+    } else if (level >= 3 && level <= 5) {
+        // Sales Admin or specialized staff
+        if (role.toLowerCase().includes('sales')) {
+            redirect('/sales-admin/dashboard');
         } else {
-            // Customers should go to unauthorized page which has "Login Again" button + countdown
-            redirect('/unauthorized');
+            redirect('/admin/dashboard');
         }
+    } else if (level <= 6) {
+        // Other admin staff
+        redirect('/admin/dashboard');
+    } else if (level >= 10 && level <= 12) {
+        // Dealer network
+        redirect('/dealer/dashboard');
+    } else {
+        // Customers or unauthorized
+        redirect('/unauthorized');
     }
-
-    // Fallback redirect
-    redirect('/login');
 }

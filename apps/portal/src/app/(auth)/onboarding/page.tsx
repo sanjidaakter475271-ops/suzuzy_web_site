@@ -16,7 +16,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/lib/supabase";
+import { authClient } from "@/lib/auth/client";
+import { completeOnboardingAction } from "@/actions/auth";
 import { toast } from "sonner";
 import { GlassCard } from "@/components/ui/premium/GlassCard";
 
@@ -26,19 +27,16 @@ export default function OnboardingPage() {
     const [loading, setLoading] = useState(false);
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [user, setUser] = useState<any>(null);
+
+    // Better Auth hook
+    const { data: session, isPending: authLoading } = authClient.useSession();
+    const user = session?.user;
 
     useEffect(() => {
-        const checkUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                router.push("/login");
-                return;
-            }
-            setUser(user);
-        };
-        checkUser();
-    }, [router]);
+        if (!authLoading && !user) {
+            router.push("/login");
+        }
+    }, [user, authLoading, router]);
 
     const handlePasswordUpdate = async () => {
         if (password !== confirmPassword) {
@@ -53,24 +51,14 @@ export default function OnboardingPage() {
 
         setLoading(true);
         try {
-            // 1. Update Password in Auth
-            const { error: authError } = await supabase.auth.updateUser({
-                password: password
-            });
-            if (authError) throw authError;
-
-            // 2. Mark onboarding as completed in Profiles
-            // This also clears the temp_password for security
-            const { error: profileError } = await supabase.rpc('complete_user_onboarding', {
-                target_user_id: user.id
-            });
-            if (profileError) throw profileError;
+            const result = await completeOnboardingAction(password);
 
             setStep(3); // Victory step
             toast.success("Security Credentials Updated Successfully");
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Onboarding error:", error);
-            toast.error(error.message || "Credential update failed");
+            const message = error instanceof Error ? error.message : "Credential update failed";
+            toast.error(message);
         } finally {
             setLoading(false);
         }

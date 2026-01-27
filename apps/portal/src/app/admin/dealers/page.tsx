@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -41,22 +40,20 @@ interface Dealer {
     city?: string;
 }
 
+import { getPendingDealers, updateDealerStatus } from "@/actions/admin";
+
 export default function AdminDealerModeration() {
     const [loading, setLoading] = useState(true);
     const [dealers, setDealers] = useState<Dealer[]>([]);
     const [selectedDealer, setSelectedDealer] = useState<Dealer | null>(null);
 
-    const fetchPendingDealers = async () => {
+    const loadData = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('dealers')
-                .select('*, profiles:owner_user_id(full_name)')
-                .eq('status', 'pending')
-                .order('created_at', { ascending: true });
-
-            if (error) throw error;
-            setDealers(data || []);
+            const result = await getPendingDealers();
+            if (result.success && result.data) {
+                setDealers(result.data as any[]);
+            }
         } catch (error) {
             console.error("Error fetching pending dealers:", error);
             toast.error("Failed to load waitlist");
@@ -66,30 +63,20 @@ export default function AdminDealerModeration() {
     };
 
     useEffect(() => {
-        fetchPendingDealers();
-
-        const sub = supabase.channel('dealer-moderation')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'dealers' }, () => fetchPendingDealers())
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(sub);
-        };
+        loadData();
     }, []);
 
     const updateStatus = async (id: string, status: Dealer['status']) => {
         try {
-            const { error } = await supabase
-                .from('dealers')
-                .update({ status })
-                .eq('id', id);
+            const result = await updateDealerStatus(id, status as any);
 
-            if (error) throw error;
+            if (!result.success) throw new Error(result.error);
             toast.success(`Dealer application ${status}`);
             if (selectedDealer?.id === id) setSelectedDealer(null);
-        } catch (error) {
+            loadData();
+        } catch (error: any) {
             console.error("Error updating dealer status:", error);
-            toast.error(`Decision failed for ${status}`);
+            toast.error(error.message || `Decision failed for ${status}`);
         }
     };
 

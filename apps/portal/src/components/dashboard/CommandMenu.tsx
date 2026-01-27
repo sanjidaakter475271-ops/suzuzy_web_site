@@ -15,9 +15,9 @@ import {
     Activity
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { searchProtocol } from "@/actions/search";
 
 interface SearchResult {
     id: string;
@@ -56,41 +56,10 @@ export function CommandMenu() {
         }
         setLoading(true);
         try {
-            const [
-                { data: orders },
-                { data: dealers },
-                { data: products }
-            ] = await Promise.all([
-                supabase.from('orders').select('id, order_number, shipping_name').ilike('order_number', `%${searchQuery}%`).limit(3),
-                supabase.from('dealers').select('id, business_name, email').ilike('business_name', `%${searchQuery}%`).limit(3),
-                supabase.from('products').select('id, name, sku').ilike('name', `%${searchQuery}%`).limit(3)
-            ]);
-
-            const combined: SearchResult[] = [
-                ...(orders?.map(o => ({
-                    id: o.id,
-                    type: 'order' as const,
-                    title: `Order #${o.order_number}`,
-                    subtitle: o.shipping_name,
-                    url: `/admin/orders/${o.id}`
-                })) || []),
-                ...(dealers?.map(d => ({
-                    id: d.id,
-                    type: 'dealer' as const,
-                    title: d.business_name,
-                    subtitle: d.email,
-                    url: `/admin/dealers/${d.id}`
-                })) || []),
-                ...(products?.map(p => ({
-                    id: p.id,
-                    type: 'product' as const,
-                    title: p.name,
-                    subtitle: p.sku,
-                    url: `/admin/catalog` // Placeholder URL
-                })) || [])
-            ];
-
-            setResults(combined);
+            const result = await searchProtocol(searchQuery);
+            if (result.success) {
+                setResults((result.data as SearchResult[]) || []);
+            }
             setSelectedIndex(0);
         } catch (error) {
             console.error("Search failed:", error);

@@ -19,7 +19,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
@@ -43,31 +42,20 @@ interface GlobalOrder {
     }[];
 }
 
+import { getAllOrdersAdmin } from "@/actions/admin";
+
 export default function AdminOrdersPage() {
     const [loading, setLoading] = useState(true);
     const [orders, setOrders] = useState<GlobalOrder[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
 
-    const fetchOrders = async () => {
+    const loadOrders = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('orders')
-                .select(`
-                    *,
-                    sub_orders (
-                        id,
-                        dealer_id,
-                        status,
-                        dealers (
-                            business_name
-                        )
-                    )
-                `)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            setOrders((data as unknown) as GlobalOrder[] || []);
+            const result = await getAllOrdersAdmin();
+            if (result.success && result.data) {
+                setOrders(result.data as any[]);
+            }
         } catch (error) {
             console.error("Error fetching orders:", error);
             toast.error("Order stream synchronization failed");
@@ -77,16 +65,7 @@ export default function AdminOrdersPage() {
     };
 
     useEffect(() => {
-        fetchOrders();
-
-        const subscription = supabase
-            .channel('admin-orders')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchOrders())
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(subscription);
-        };
+        loadOrders();
     }, []);
 
     const filteredOrders = orders.filter(o =>

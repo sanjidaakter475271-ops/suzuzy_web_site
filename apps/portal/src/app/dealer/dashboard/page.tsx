@@ -6,7 +6,6 @@ import { AreaChart } from "@/components/charts/area-chart";
 import { BarChart } from "@/components/charts/bar-chart";
 import { LiveOperationsFeed } from "@/components/dashboard/live-operations-feed";
 import { DollarSign, ShoppingBag, Package, TrendingUp, Loader2, Activity, Zap } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -34,6 +33,8 @@ interface OrderItem {
     };
 }
 
+import { getDealerDashboardData } from "@/actions/dashboard";
+
 export default function DealerDashboard() {
     const { profile } = useUser();
     const [loading, setLoading] = useState(true);
@@ -48,55 +49,34 @@ export default function DealerDashboard() {
     const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
     const [recentOrders, setRecentOrders] = useState<OrderItem[]>([]);
 
-    async function fetchDashboardData() {
-        if (!profile?.dealer_id) {
-            setLoading(false);
-            return;
-        }
-
+    async function fetchDashboard() {
         setIsSyncing(true);
         try {
-            const [
-                { data: revData },
-                { count: activeCount },
-                { count: prodCount },
-                { data: lowStockData },
-                { data: topProdData },
-                { data: ordersData }
-            ] = await Promise.all([
-                supabase.from('sub_orders').select('dealer_amount, created_at').eq('dealer_id', profile.dealer_id).eq('status', 'delivered'),
-                supabase.from('sub_orders').select('*', { count: 'exact', head: true }).eq('dealer_id', profile.dealer_id).in('status', ['pending', 'processing']),
-                supabase.from('products').select('*', { count: 'exact', head: true }).eq('dealer_id', profile.dealer_id),
-                supabase.from('products').select('*').eq('dealer_id', profile.dealer_id).lt('stock_quantity', 5),
-                supabase.from('products').select('name, total_sold').eq('dealer_id', profile.dealer_id).order('total_sold', { ascending: false }).limit(5),
-                supabase.from('sub_orders')
-                    .select('id, created_at, status, dealer_amount, orders:order_id(order_number, shipping_name)')
-                    .eq('dealer_id', profile.dealer_id)
-                    .order('created_at', { ascending: false })
-                    .limit(5)
-            ]);
+            const result = await getDealerDashboardData();
+            if (result.success && result.data) {
+                const { deliveredOrders, activeCount, prodCount, lowStockCount, topProducts: topP, recentOrders: recent } = result.data;
 
-            // Process revenue chart data (simple group by date)
-            const revMap = new Map();
-            revData?.forEach(r => {
-                const date = new Date(r.created_at).toLocaleDateString();
-                revMap.set(date, (revMap.get(date) || 0) + Number(r.dealer_amount));
-            });
-            const processedRev = Array.from(revMap).map(([date, value]) => ({ date, value })).slice(-7);
+                // Process revenue chart data (simple group by date)
+                const revMap = new Map();
+                deliveredOrders.forEach((r: any) => {
+                    const date = new Date(r.created_at).toLocaleDateString();
+                    revMap.set(date, (revMap.get(date) || 0) + Number(r.dealer_amount));
+                });
+                const processedRev = Array.from(revMap).map(([date, value]) => ({ date, value })).slice(-7);
 
-            setStats({
-                revenue: revData?.reduce((acc, curr) => acc + Number(curr.dealer_amount), 0) || 0,
-                activeOrders: activeCount || 0,
-                totalProducts: prodCount || 0,
-                lowStock: lowStockData?.length || 0
-            });
+                setStats({
+                    revenue: deliveredOrders.reduce((acc: number, curr: any) => acc + Number(curr.dealer_amount), 0),
+                    activeOrders: activeCount,
+                    totalProducts: prodCount,
+                    lowStock: lowStockCount
+                });
 
-            setRevenueData(processedRev.length > 0 ? processedRev : [{ date: "No sales", value: 0 }]);
-            setTopProducts(topProdData?.map(p => ({ name: p.name, value: p.total_sold || 0 })) || []);
-            setRecentOrders(ordersData as any[] || []);
-
+                setRevenueData(processedRev.length > 0 ? processedRev : [{ date: "No sales", value: 0 }]);
+                setTopProducts(topP as TopProduct[]);
+                setRecentOrders(recent as any[]);
+            }
         } catch (error) {
-            console.error("Error fetching dashboard:", error);
+            console.error("Dashboard sync error:", error);
         } finally {
             setLoading(false);
             setTimeout(() => setIsSyncing(false), 1000);
@@ -104,31 +84,10 @@ export default function DealerDashboard() {
     }
 
     useEffect(() => {
-        if (profile?.dealer_id) {
-            fetchDashboardData();
-
-            // Real-time subscription
-            const subscription = supabase
-                .channel('dealer-dashboard-realtime')
-                .on(
-                    'postgres_changes',
-                    {
-                        event: '*',
-                        schema: 'public',
-                        table: 'sub_orders',
-                        filter: `dealer_id=eq.${profile.dealer_id}`
-                    },
-                    () => {
-                        fetchDashboardData();
-                    }
-                )
-                .subscribe();
-
-            return () => {
-                supabase.removeChannel(subscription);
-            };
+        if (profile) {
+            fetchDashboard();
         }
-    }, [profile?.dealer_id]);
+    }, [profile]);
 
     if (loading) {
         return (

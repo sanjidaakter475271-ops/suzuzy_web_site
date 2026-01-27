@@ -1,4 +1,4 @@
-import { ROLE_LEVELS } from "./supabase/roles";
+import { ROLE_LEVELS } from "@/middlewares/checkRole";
 
 export const PORTAL_CONFIG = {
     SUPER_ADMIN: {
@@ -10,12 +10,22 @@ export const PORTAL_CONFIG = {
         path: "/admin",
         minLevel: ROLE_LEVELS.ADMIN,
         maxLevel: ROLE_LEVELS.VIEWER,
-        allowedRoles: ["super_admin", "admin", "sales_admin", "support", "accountant", "viewer"],
+        allowedRoles: ["super_admin", "admin", "sales_admin", "service_admin", "service_sales_admin", "support", "accountant", "viewer"],
     },
     SALES_ADMIN: {
         path: "/sales-admin",
         minLevel: ROLE_LEVELS.SALES_ADMIN,
         allowedRoles: ["super_admin", "sales_admin"],
+    },
+    SERVICE_ADMIN: {
+        path: "/service-admin",
+        minLevel: ROLE_LEVELS.SERVICE_ADMIN,
+        allowedRoles: ["super_admin", "service_admin"],
+    },
+    SERVICE_STAFF: {
+        path: "/service-staff",
+        minLevel: ROLE_LEVELS.SERVICE_TECHNICIAN,
+        allowedRoles: ["super_admin", "service_admin", "service_technician"],
     },
     DEALER: {
         path: "/dealer",

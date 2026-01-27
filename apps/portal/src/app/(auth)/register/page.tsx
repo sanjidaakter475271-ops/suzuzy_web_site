@@ -9,7 +9,7 @@ import { MetallicText } from '@/components/ui/premium/MetallicText';
 import { GradientButton } from '@/components/ui/premium/GradientButton';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { signUp } from '@/lib/supabase/auth-actions';
+import { signUp } from '@/lib/auth/auth-actions';
 import { useRouter } from 'next/navigation';
 
 export default function RegisterPage() {

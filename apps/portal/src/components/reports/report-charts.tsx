@@ -7,7 +7,6 @@ import {
     Bar,
     XAxis,
     YAxis,
-    CartesianGrid,
     Tooltip,
     ResponsiveContainer,
     Cell,
@@ -17,7 +16,7 @@ import {
 
 const COLORS = ["#D4AF37", "#9A7B2C", "#6D561F", "#E5C158", "#B8962E"];
 
-export const ReportAreaChart = ({ data, xKey, yKey, color = "#D4AF37" }: { data: any[], xKey: string, yKey: string, color?: string }) => (
+export const ReportAreaChart = ({ data, xKey, yKey, color = "#D4AF37" }: { data: Record<string, unknown>[], xKey: string, yKey: string, color?: string }) => (
     <div className="h-[350px] w-full">
         <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -56,7 +55,7 @@ export const ReportAreaChart = ({ data, xKey, yKey, color = "#D4AF37" }: { data:
     </div>
 );
 
-export const ReportBarChart = ({ data, xKey, yKey, color = "#D4AF37" }: { data: any[], xKey: string, yKey: string, color?: string }) => (
+export const ReportBarChart = ({ data, xKey, yKey, color = "#D4AF37" }: { data: Record<string, unknown>[], xKey: string, yKey: string, color?: string }) => (
     <div className="h-[350px] w-full">
         <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>

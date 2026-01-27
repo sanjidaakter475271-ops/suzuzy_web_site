@@ -27,7 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/lib/supabase';
+import { getCatalogData, createBrand, createProduct } from '@/actions/catalog';
 import { useUser } from '@/hooks/useUser';
 import { formatCurrency, cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -103,15 +103,14 @@ export default function NewProductPage() {
 
     useEffect(() => {
         async function fetchInitialData() {
-            const [catRes, modelRes, brandRes] = await Promise.all([
-                supabase.from('categories').select('id, name, parent_id').eq('is_active', true).order('name'),
-                supabase.from('bike_models').select('id, name').order('name'),
-                supabase.from('brands').select('id, name').order('name')
-            ]);
-
-            if (catRes.data) setCategories(catRes.data);
-            if (modelRes.data) setBikeModels(modelRes.data);
-            if (brandRes.data) setBrands(brandRes.data);
+            const result = await getCatalogData();
+            if (result.success && result.data) {
+                setCategories(result.data.categories);
+                setBrands(result.data.brands);
+                setBikeModels(result.data.bikeModels);
+            } else {
+                toast.error("ডাটা লোড করতে সমস্যা হয়েছে");
+            }
         }
         fetchInitialData();
     }, []);
@@ -122,57 +121,49 @@ export default function NewProductPage() {
             return;
         }
 
-        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        const { data, error } = await supabase.from('brands').insert({
-            name,
-            slug,
-            dealer_id: profile.dealer_id, // Assuming brands might be dealer specific or global? 
-            // If global, this might fail if RLS prevents it. Assuming public or dealer-bound.
-        }).select().single();
+        const result = await createBrand(name, profile.dealer_id);
 
-        if (error) {
-            console.error("Brand creation error:", JSON.stringify(error, null, 2));
-            toast.error("ব্র্যান্ড তৈরি করা যায়নি: " + (error.message || "Unknown error"));
+        if (!result.success || !result.data) {
+            toast.error("ব্র্যান্ড তৈরি করা যায়নি: " + (result.error || "Unknown error"));
             return;
         }
 
-        if (data) {
-            setBrands(prev => [...prev, data]);
-            setFormData(prev => ({ ...prev, brand_id: data.id, brand_name: data.name }));
-            const catName = categories.find(c => c.id === formData.category_id)?.name || '';
-            generateSku(catName, data.name);
-            setOpenBrand(false);
-            setBrandSearch("");
-            toast.success(`ব্র্যান্ড '${name}' যোগ করা হয়েছে`);
-        }
+        const data = result.data;
+        setBrands(prev => [...prev, data]);
+        setFormData(prev => ({ ...prev, brand_id: data.id, brand_name: data.name }));
+        const catName = categories.find(c => c.id === formData.category_id)?.name || '';
+        generateSku(catName, data.name);
+        setOpenBrand(false);
+        setBrandSearch("");
+        toast.success(`ব্র্যান্ড '${name}' যোগ করা হয়েছে`);
     };
 
     const addVariant = () => {
         const newVariant: ProductVariant = {
-            id: Date.now().toString(),
+            id: Math.random().toString(36).substring(2, 9),
             size: '',
             sku: '',
-            barcode: '',
-            price: formData.base_price || '',
+            price: formData.base_price,
             stock: '0',
-            costPrice: formData.cost_price || ''
+            costPrice: formData.cost_price,
+            barcode: ''
         };
-        setVariants([...variants, newVariant]);
+        setVariants(prev => [...prev, newVariant]);
     };
 
     const removeVariant = (id: string) => {
-        setVariants(variants.filter(v => v.id !== id));
+        setVariants(prev => prev.filter(v => v.id !== id));
     };
 
     const updateVariant = (id: string, field: keyof ProductVariant, value: string) => {
-        setVariants(variants.map(v =>
-            v.id === id ? { ...v, [field]: value } : v
-        ));
+        setVariants(prev => prev.map(v => v.id === id ? { ...v, [field]: value } : v));
     };
 
-    const toggleModel = (id: string) => {
+    const toggleModel = (modelId: string) => {
         setSelectedModels(prev =>
-            prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
+            prev.includes(modelId)
+                ? prev.filter(id => id !== modelId)
+                : [...prev, modelId]
         );
     };
 
@@ -201,73 +192,30 @@ export default function NewProductPage() {
                 ? variants.reduce((acc, v) => acc + Number(v.stock || 0), 0)
                 : 0;
 
-            // 1. Insert Product
-            const { data: product, error: pError } = await supabase
-                .from('products')
-                .insert({
-                    dealer_id: profile.dealer_id,
-                    name: formData.name,
-                    slug: formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') + '-' + Date.now().toString().slice(-4),
-                    description: formData.description,
-                    sku: formData.sku, // Internal System ID
-                    barcode: formData.barcode, // Scannable Barcode
-                    base_price: Number(formData.base_price),
-                    stock_quantity: totalStock,
-                    category_id: formData.category_id,
-                    status: 'pending',
-                    brand: formData.brand_name, // Keeping string for backward compatibility
-                    brand_id: formData.brand_id || null, // Best practice
-                })
-                .select()
-                .single();
-
-            if (pError) throw pError;
-
-            // 2. Insert Variants if any
-            if (variants.length > 0) {
-                const variantMappings = variants.map(v => ({
-                    product_id: product.id,
+            const payload = {
+                ...formData,
+                stock_quantity: totalStock,
+                images,
+                selectedModels,
+                variants: variants.map(v => ({
                     sku: v.sku || `${formData.sku}-${v.size}`.toUpperCase(),
-                    manual_barcode: v.barcode, // If you added this column, otherwise standard barcode
-                    price: Number(v.price) || Number(formData.base_price),
-                    stock_quantity: Number(v.stock) || 0,
-                    attributes: { size: v.size },
-                    dealer_id: profile.dealer_id
-                }));
-                // Note: manual_barcode needs to exist in DB or mapped correctly. 
-                // Since I only added 'barcode' to 'products', I will assume variants use 'sku' for now or map standard columns.
-                // Assuming 'product_variants' doesn't have 'barcode' yet, skipping it or mapping to a supported field.
+                    price: v.price || formData.base_price,
+                    stock: v.stock || 0,
+                    size: v.size
+                }))
+            };
 
-                const { error: vError } = await supabase.from('product_variants').insert(variantMappings);
-                if (vError) throw vError;
-            }
+            const result = await createProduct(payload, profile.dealer_id);
 
-            // 3. Insert Model Mapping
-            if (selectedModels.length > 0) {
-                const modelMappings = selectedModels.map(mid => ({
-                    product_id: product.id,
-                    bike_model_id: mid
-                }));
-                const { error: mError } = await supabase.from('product_bike_models').insert(modelMappings);
-                if (mError) throw mError;
-            }
-
-            // 4. Insert Images
-            if (images.length > 0) {
-                const imageMappings = images.map((url, idx) => ({
-                    product_id: product.id,
-                    image_url: url,
-                    is_primary: idx === 0
-                }));
-                const { error: iError } = await supabase.from('product_images').insert(imageMappings);
-                if (iError) throw iError;
+            if (!result.success) {
+                throw new Error(result.error);
             }
 
             toast.success("প্রোডাক্ট সফলভাবে যোগ করা হয়েছে!");
             router.push('/dealer/products');
-        } catch (error) {
+        } catch (error: any) {
             console.error("Submission failed:", error);
-            toast.error("প্রোডাক্ট যোগ করা যায়নি। আবার চেষ্টা করুন।");
+            toast.error("ব্যর্থ হয়েছে: " + (error.message || "আবার চেষ্টা করুন"));
         } finally {
             setIsSubmitting(false);
         }

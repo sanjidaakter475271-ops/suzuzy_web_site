@@ -14,8 +14,12 @@ export function MobileNav() {
 
     // Close sheet on route change
     useEffect(() => {
-        setOpen(false);
-    }, [pathname]);
+        if (open) {
+            // Use setTimeout to avoid synchronous state update in effect warning
+            const timer = setTimeout(() => setOpen(false), 0);
+            return () => clearTimeout(timer);
+        }
+    }, [pathname, open]);
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>

@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
@@ -44,6 +43,8 @@ interface SubOrder {
 
 const TABS = ["All", "pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
 
+import { getDealerOrders } from "@/actions/orders";
+
 export default function OrdersPage() {
     const { profile } = useUser();
     const [loading, setLoading] = useState(true);
@@ -52,51 +53,25 @@ export default function OrdersPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [timeframe, setTimeframe] = useState("all");
 
-    const fetchOrders = async () => {
-        if (!profile?.dealer_id) return;
-
+    const fetchOrdersData = async () => {
         try {
-            const { data, error } = await supabase
-                .from('sub_orders')
-                .select(`
-                    *,
-                    orders:order_id (
-                        order_number,
-                        shipping_name
-                    ),
-                    order_items (
-                        id
-                    )
-                `)
-                .eq('dealer_id', profile.dealer_id)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            setOrders((data as unknown as SubOrder[]) || []);
+            const result = await getDealerOrders();
+            if (result.success && result.data) {
+                setOrders(result.data as unknown as SubOrder[]);
+            }
         } catch (error) {
             console.error("Error fetching orders:", error);
-            if (profile?.dealer_id) toast.error("Command failed to synchronize with server");
+            toast.error("Command failed to synchronize with server");
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchOrders();
-
-        const channel = supabase.channel(`dealer-orders-${profile?.dealer_id}`)
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'sub_orders',
-                filter: `dealer_id=eq.${profile?.dealer_id}`
-            }, () => fetchOrders())
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [profile?.dealer_id]);
+        if (profile) {
+            fetchOrdersData();
+        }
+    }, [profile]);
 
     const filteredOrders = orders.filter(o => {
         const matchesSearch =

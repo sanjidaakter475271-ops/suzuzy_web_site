@@ -7,7 +7,7 @@ import { GlassCard } from '@/components/ui/premium/GlassCard';
 import { MetallicText } from '@/components/ui/premium/MetallicText';
 import { GradientButton } from '@/components/ui/premium/GradientButton';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/lib/supabase';
+import { authClient } from '@/lib/auth/client';
 import { useRouter } from 'next/navigation';
 
 export default function ResetPasswordPage() {
@@ -28,12 +28,12 @@ export default function ResetPasswordPage() {
         setIsLoading(true);
         setError(null);
 
-        const { error } = await supabase.auth.updateUser({
-            password: password
+        const { error } = await authClient.resetPassword({
+            newPassword: password,
         });
 
         if (error) {
-            setError(error.message);
+            setError(error.message || "Failed to update security credentials");
             setIsLoading(false);
         } else {
             setSuccess(true);

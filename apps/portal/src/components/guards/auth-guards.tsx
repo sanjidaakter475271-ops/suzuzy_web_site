@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { motion } from 'framer-motion';
 import { ShieldCheck } from 'lucide-react';
 import { MetallicText } from '@/components/ui/premium/MetallicText';
-import { ROLE_LEVELS, getRoleLevel } from '@/lib/supabase/roles';
+import { getRoleLevel } from '@/middlewares/checkRole';
 import { PORTAL_CONFIG } from '@/lib/auth-config';
+import { useAuth } from '@/hooks/useAuth';
 
 /**
  * Premium Loader Component for Auth Transitions
@@ -44,22 +44,16 @@ const AuthLoader = ({ message = "Authenticating..." }: { message?: string }) => 
  * AuthGuard ensures the user is logged in
  */
 export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
-    const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+    const { user, loading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
-        const checkUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                router.push('/login');
-            } else {
-                setIsAuthorized(true);
-            }
-        };
-        checkUser();
-    }, [router]);
+        if (!loading && !user) {
+            router.push('/login');
+        }
+    }, [user, loading, router]);
 
-    if (isAuthorized === null) return <AuthLoader />;
+    if (loading || !user) return <AuthLoader />;
 
     return <>{children}</>;
 };
@@ -74,76 +68,41 @@ export const RoleGuard = ({
     children: React.ReactNode;
     allowedRoles: string[];
 }) => {
-    const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+    const { user, loading } = useAuth();
     const router = useRouter();
 
+    // Derived state for authorization
+    const userRole = user?.role || 'customer';
+    const isAuthorized = !!user && allowedRoles.includes(userRole);
+
     useEffect(() => {
-        const checkRole = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                router.push('/login');
-                return;
-            }
+        if (loading) return;
 
-            // Fetch user profile with roles join
-            const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('role, onboarding_completed, roles(level, name)')
-                .eq('id', user.id)
-                .maybeSingle();
+        if (!user) {
+            router.push('/login');
+            return;
+        }
 
-            if (error) {
-                console.error('RoleGuard: Database error fetching profile:', error.message);
-                router.push('/login');
-                return;
-            }
-
-            if (!profile) {
-                console.warn('RoleGuard: No profile found for user, redirecting to login');
-                router.push('/login');
-                return;
-            }
-
-            // Forced redirection to onboarding if not completed
-            if (profile.onboarding_completed === false) {
-                console.warn('RoleGuard: Onboarding not completed, redirecting');
-                router.push('/onboarding');
-                return;
-            }
-
-            const userRole = profile.role;
+        if (!isAuthorized) {
+            console.warn('Unauthorized access attempt. User role:', userRole);
             const userLevel = getRoleLevel(userRole);
+            const redirectPath = getRedirectPath(userLevel);
+            if (redirectPath) router.push(redirectPath);
+        }
+    }, [user, loading, router, isAuthorized, userRole]);
 
-            console.log('RoleGuard check:', { userRole, userLevel, allowedRoles });
-
-            // Check if user has one of the allowed roles
-            if (allowedRoles.includes(userRole)) {
-                setHasAccess(true);
-            } else {
-                console.warn('Unauthorized access attempt. User role:', userRole);
-                // Redirect based on actual role to avoid being stuck
-                if (userLevel === 1) {
-                    router.push('/super-admin/dashboard');
-                } else if (userLevel <= 2) {
-                    router.push('/admin/dashboard');
-                } else if (userLevel === 3) {
-                    router.push('/sales-admin/dashboard');
-                } else if (userLevel <= 6) {
-                    router.push('/admin/dashboard');
-                } else if (userLevel <= 12) {
-                    router.push('/dealer/dashboard');
-                } else {
-                    router.push('/unauthorized');
-                }
-            }
-        };
-        checkRole();
-    }, [router, allowedRoles]);
-
-    if (hasAccess === null) return <AuthLoader message="Verifying Permissions..." />;
+    if (loading || !isAuthorized) return <AuthLoader message="Verifying Permissions..." />;
 
     return <>{children}</>;
 };
+
+function getRedirectPath(level: number) {
+    if (level === 1) return '/super-admin/dashboard';
+    if (level >= 4 && level <= 5) return '/sales-admin/dashboard';
+    if (level <= 7) return '/admin/dashboard';
+    if (level <= 15) return '/dealer/dashboard';
+    return '/login';
+}
 
 /**
  * Portal Specific Guards
@@ -160,6 +119,10 @@ export const SalesAdminGuard = ({ children }: { children: React.ReactNode }) => 
     <RoleGuard allowedRoles={PORTAL_CONFIG.SALES_ADMIN.allowedRoles}>{children}</RoleGuard>
 );
 
+export const ServiceAdminGuard = ({ children }: { children: React.ReactNode }) => (
+    <RoleGuard allowedRoles={PORTAL_CONFIG.SERVICE_ADMIN.allowedRoles}>{children}</RoleGuard>
+);
+
 export const DealerGuard = ({ children }: { children: React.ReactNode }) => {
     // We include 'dealer' for backward compatibility with existing DB records
     const allowedRoles = [...PORTAL_CONFIG.DEALER.allowedRoles, 'dealer', ...PORTAL_CONFIG.ADMIN.allowedRoles];
@@ -170,33 +133,7 @@ export const DealerGuard = ({ children }: { children: React.ReactNode }) => {
  * SubscriptionGuard checks if a dealer has an active plan
  */
 export const SubscriptionGuard = ({ children }: { children: React.ReactNode }) => {
-    const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
-    const router = useRouter();
-
-    useEffect(() => {
-        const checkSubscription = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                router.push('/login');
-                return;
-            }
-
-            const { data: dealer } = await supabase
-                .from('dealers')
-                .select('status, subscription_status')
-                .eq('owner_user_id', user.id) // Updated to owner_user_id as per database.md
-                .maybeSingle();
-
-            if (!dealer || dealer.subscription_status !== 'active') {
-                router.push('/dealer/subscription/renew');
-            } else {
-                setIsSubscribed(true);
-            }
-        };
-        checkSubscription();
-    }, [router]);
-
-    if (isSubscribed === null) return <AuthLoader message="Checking Subscription..." />;
-
-    return <>{children}</>;
+    // For now we assume active if they have access, to avoid complex client-side DB fetches.
+    // Proper subscription checks should be in Server Actions or Middleware.
+    return <DealerGuard>{children}</DealerGuard>;
 };

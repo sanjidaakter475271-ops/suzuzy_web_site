@@ -36,13 +36,34 @@ interface Profile {
     created_at: string;
 }
 
+interface Order {
+    id: string;
+    order_number: string;
+    created_at: string;
+    total_amount: number;
+    status: string;
+}
+
+interface Payment {
+    id: string;
+    transaction_id?: string;
+    created_at: string;
+    amount: number;
+    status: string;
+}
+
+interface RoleData {
+    orders: Order[];
+    payments: Payment[];
+}
+
 export default function UserPortfolioPage() {
     const params = useParams();
     const id = params?.id as string;
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState<Profile | null>(null);
-    const [roleData, setRoleData] = useState<{ orders: any[], payments: any[] }>({ orders: [], payments: [] });
+    const [roleData, setRoleData] = useState<RoleData>({ orders: [], payments: [] });
 
     useEffect(() => {
         const fetchPortfolio = async () => {
@@ -60,22 +81,22 @@ export default function UserPortfolioPage() {
                 setProfile(profileData);
 
                 // 2. Fetch Role-Specific Intelligence
-                let data: any = { orders: [], payments: [] };
+                const data: RoleData = { orders: [], payments: [] };
                 if (profileData.role.includes('dealer')) {
                     const { data: orders } = await supabase.from('orders').select('*').eq('dealer_id', id).order('created_at', { ascending: false });
                     const { data: payments } = await supabase.from('payments').select('*').eq('dealer_id', id).order('created_at', { ascending: false });
-                    data.orders = orders || [];
-                    data.payments = payments || [];
+                    data.orders = (orders as Order[]) || [];
+                    data.payments = (payments as Payment[]) || [];
                 } else if (profileData.role === 'customer') {
                     const { data: orders } = await supabase.from('orders').select('*').eq('user_id', id).order('created_at', { ascending: false });
-                    data.orders = orders || [];
+                    data.orders = (orders as Order[]) || [];
                 } else if (profileData.role === 'accountant') {
                     const { data: payments } = await supabase.from('payments').select('*').limit(20).order('created_at', { ascending: false });
-                    data.payments = payments || [];
+                    data.payments = (payments as Payment[]) || [];
                 }
                 setRoleData(data);
 
-            } catch (error: any) {
+            } catch (error: unknown) {
                 console.error("Portfolio retrieval failed:", error);
                 toast.error("User profile encrypted or missing");
             } finally {
@@ -153,8 +174,8 @@ export default function UserPortfolioPage() {
                                 </div>
                             </div>
                             <Badge className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${profile.status === 'active'
-                                    ? 'bg-green-500/10 text-green-500 border-green-500/20 shadow-[0_0_20px_rgba(34,197,94,0.1)]'
-                                    : 'bg-red-500/10 text-red-500 border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.1)]'
+                                ? 'bg-green-500/10 text-green-500 border-green-500/20 shadow-[0_0_20px_rgba(34,197,94,0.1)]'
+                                : 'bg-red-500/10 text-red-500 border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.1)]'
                                 }`}>
                                 {profile.status}
                             </Badge>
@@ -194,8 +215,8 @@ export default function UserPortfolioPage() {
                                 <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 p-[1px]">
                                     <div
                                         className={`h-full transition-all duration-1500 rounded-full ${profile.onboarding_completed
-                                                ? 'w-full bg-gradient-to-r from-green-500/50 to-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]'
-                                                : 'w-1/3 bg-gradient-to-r from-amber-500/50 to-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]'
+                                            ? 'w-full bg-gradient-to-r from-green-500/50 to-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]'
+                                            : 'w-1/3 bg-gradient-to-r from-amber-500/50 to-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]'
                                             }`}
                                     />
                                 </div>
@@ -247,7 +268,7 @@ export default function UserPortfolioPage() {
                             <div>
                                 <p className="text-[10px] uppercase font-black text-white/40 tracking-widest">Account Value</p>
                                 <p className="text-2xl font-black text-[#F8F8F8] italic tracking-tighter">
-                                    ${roleData?.orders?.reduce((acc: number, curr: any) => acc + (curr.total_amount || 0), 0).toLocaleString() || '0'}
+                                    ${roleData?.orders?.reduce((acc: number, curr: Order) => acc + (curr.total_amount || 0), 0).toLocaleString() || '0'}
                                 </p>
                             </div>
                         </motion.div>
@@ -278,7 +299,7 @@ export default function UserPortfolioPage() {
                                             <ShoppingBag className="w-4 h-4 text-[#D4AF37]" />
                                             <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Recent Orders</span>
                                         </div>
-                                        {roleData.orders.map((order: any) => (
+                                        {roleData.orders.map((order: Order) => (
                                             <div key={order.id} className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between hover:bg-white/[0.05] transition-colors group">
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center text-[#D4AF37]">
@@ -306,7 +327,7 @@ export default function UserPortfolioPage() {
                                             <BarChart3 className="w-4 h-4 text-[#D4AF37]" />
                                             <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Financial Transactions</span>
                                         </div>
-                                        {roleData.payments.map((payment: any) => (
+                                        {roleData.payments.map((payment: Payment) => (
                                             <div key={payment.id} className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between hover:bg-white/[0.05] transition-colors group">
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500">

@@ -72,17 +72,24 @@ export default function NewPersonnelPage() {
 
             const selectedRole = roles.find(r => r.id === formData.role_id);
 
-            const { data, error } = await supabase.functions.invoke('create-admin-user-v2', {
-                body: {
+            const response = await fetch('/api/admin/create-user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
                     email: formData.email,
                     full_name: formData.full_name,
                     phone: formData.phone,
                     role_id: formData.role_id,
                     role: selectedRole?.name
-                }
+                })
             });
 
-            if (error) throw error;
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "System Authorization Refused");
+            }
 
             toast.success("Personnel Authorized & Protocol Initialized");
             router.push("/super-admin/users");
