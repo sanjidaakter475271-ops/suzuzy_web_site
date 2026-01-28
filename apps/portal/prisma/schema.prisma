@@ -1,7 +1,7 @@
 generator client {
   provider        = "prisma-client-js"
-  engineType      = "library"
   previewFeatures = ["multiSchema"]
+  engineType      = "library"
 }
 
 datasource db {
@@ -405,7 +405,6 @@ model users {
   oauth_consents              oauth_consents[]
   one_time_tokens             one_time_tokens[]
   sessions                    sessions[]
-  profiles                    profiles?
 
   @@index([instance_id])
   @@index([is_anonymous])
@@ -446,13 +445,15 @@ model banners {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model bike_models {
   id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                String                @db.VarChar(100)
+  name                String                @unique @db.VarChar(100)
   cc                  String?               @db.VarChar(10)
   engine_type         String?               @db.VarChar(100)
   brand               String?               @default("Suzuki") @db.VarChar(50)
   is_active           Boolean?              @default(true)
   created_at          DateTime?             @default(now()) @db.Timestamptz(6)
   updated_at          DateTime?             @default(now()) @db.Timestamptz(6)
+  code                String?               @unique @db.VarChar(50)
+  image_url           String?
   product_bike_models product_bike_models[]
   service_vehicles    service_vehicles[]
 
@@ -1476,30 +1477,32 @@ model products {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model profiles {
-  id                                                              String                 @id @db.Uuid
-  email                                                           String?                @unique @default("") @db.VarChar(255)
-  phone                                                           String?                @unique @db.VarChar(20)
-  first_name                                                      String?                @db.VarChar(100)
-  last_name                                                       String?                @db.VarChar(100)
-  role_id                                                         String?                @db.Uuid
-  dealer_id                                                       String?                @db.Uuid
-  status                                                          String?                @default("pending") @db.VarChar(20)
-  email_verified                                                  Boolean?               @default(false)
-  password_hash                                                   String?
-  phone_verified                                                  Boolean?               @default(false)
-  mfa_secret                                                      String?
-  mfa_enabled                                                     Boolean?               @default(false)
-  last_login_at                                                   DateTime?              @db.Timestamptz(6)
-  failed_login_attempts                                           Int?                   @default(0)
-  locked_until                                                    DateTime?              @db.Timestamptz(6)
-  password_changed_at                                             DateTime?              @db.Timestamptz(6)
-  created_at                                                      DateTime?              @default(now()) @db.Timestamptz(6)
-  updated_at                                                      DateTime?              @default(now()) @db.Timestamptz(6)
+  id                                                              String                  @id @db.Uuid
+  email                                                           String?                 @unique @default("") @db.VarChar(255)
+  phone                                                           String?                 @unique @db.VarChar(20)
+  first_name                                                      String?                 @db.VarChar(100)
+  last_name                                                       String?                 @db.VarChar(100)
+  role_id                                                         String?                 @db.Uuid
+  dealer_id                                                       String?                 @db.Uuid
+  status                                                          String?                 @default("pending") @db.VarChar(20)
+  email_verified                                                  Boolean?                @default(false)
+  mfa_enabled                                                     Boolean?                @default(false)
+  created_at                                                      DateTime?               @default(now()) @db.Timestamptz(6)
+  updated_at                                                      DateTime?               @default(now()) @db.Timestamptz(6)
   full_name                                                       String?
   role                                                            String?
-  onboarding_completed                                            Boolean?               @default(false)
+  onboarding_completed                                            Boolean?                @default(false)
   temp_password                                                   String?
+  password_hash                                                   String?
+  phone_verified                                                  Boolean?                @default(false)
+  mfa_secret                                                      String?
+  last_login_at                                                   DateTime?               @db.Timestamptz(6)
+  failed_login_attempts                                           Int?                    @default(0)
+  locked_until                                                    DateTime?               @db.Timestamptz(6)
+  password_changed_at                                             DateTime?               @db.Timestamptz(6)
   audit_logs                                                      audit_logs[]
+  auth_providers                                                  auth_providers[]
+  business_unit_users                                             business_unit_users[]
   carts                                                           carts[]
   customer_addresses                                              customer_addresses[]
   customer_ledger                                                 customer_ledger[]
@@ -1507,42 +1510,40 @@ model profiles {
   dealer_payouts                                                  dealer_payouts[]
   dealer_reviews                                                  dealer_reviews[]
   dealer_users                                                    dealer_users[]
-  dealers_dealers_owner_user_idToprofiles                         dealers[]              @relation("dealers_owner_user_idToprofiles")
-  expenses_expenses_approved_byToprofiles                         expenses[]             @relation("expenses_approved_byToprofiles")
-  expenses_expenses_created_byToprofiles                          expenses[]             @relation("expenses_created_byToprofiles")
+  dealers_dealers_owner_user_idToprofiles                         dealers[]               @relation("dealers_owner_user_idToprofiles")
+  expenses_expenses_approved_byToprofiles                         expenses[]              @relation("expenses_approved_byToprofiles")
+  expenses_expenses_created_byToprofiles                          expenses[]              @relation("expenses_created_byToprofiles")
   inventory_movements                                             inventory_movements[]
+  login_history                                                   login_history[]
   notifications                                                   notifications[]
   order_notes                                                     order_notes[]
   order_status_history                                            order_status_history[]
   orders                                                          orders[]
   otp_verifications                                               otp_verifications[]
   password_resets                                                 password_resets[]
-  payment_transactions_payment_transactions_customer_idToprofiles payment_transactions[] @relation("payment_transactions_customer_idToprofiles")
-  payment_transactions_payment_transactions_received_byToprofiles payment_transactions[] @relation("payment_transactions_received_byToprofiles")
+  payment_transactions_payment_transactions_customer_idToprofiles payment_transactions[]  @relation("payment_transactions_customer_idToprofiles")
+  payment_transactions_payment_transactions_received_byToprofiles payment_transactions[]  @relation("payment_transactions_received_byToprofiles")
   products                                                        products[]
-  dealers_profiles_dealer_idTodealers                             dealers?               @relation("profiles_dealer_idTodealers", fields: [dealer_id], references: [id], onUpdate: NoAction)
-  users                                                           users                  @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  roles                                                           roles?                 @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  purchase_orders_purchase_orders_created_byToprofiles            purchase_orders[]      @relation("purchase_orders_created_byToprofiles")
-  purchase_orders_purchase_orders_received_byToprofiles           purchase_orders[]      @relation("purchase_orders_received_byToprofiles")
+  dealers_profiles_dealer_idTodealers                             dealers?                @relation("profiles_dealer_idTodealers", fields: [dealer_id], references: [id], onUpdate: NoAction)
+  roles                                                           roles?                  @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  purchase_orders_purchase_orders_created_byToprofiles            purchase_orders[]       @relation("purchase_orders_created_byToprofiles")
+  purchase_orders_purchase_orders_received_byToprofiles           purchase_orders[]       @relation("purchase_orders_received_byToprofiles")
   push_subscriptions                                              push_subscriptions[]
+  refresh_tokens_public                                           refresh_tokens_public[]
   refunds                                                         refunds[]
   review_replies                                                  review_replies[]
   reviews                                                         reviews[]
-  sales_sales_customer_idToprofiles                               sales[]                @relation("sales_customer_idToprofiles")
-  sales_sales_sold_byToprofiles                                   sales[]                @relation("sales_sold_byToprofiles")
+  sales_sales_customer_idToprofiles                               sales[]                 @relation("sales_customer_idToprofiles")
+  sales_sales_sold_byToprofiles                                   sales[]                 @relation("sales_sold_byToprofiles")
   service_staff                                                   service_staff[]
   service_tickets                                                 service_tickets[]
   service_vehicles                                                service_vehicles[]
-  stock_adjustments_stock_adjustments_approved_byToprofiles       stock_adjustments[]    @relation("stock_adjustments_approved_byToprofiles")
-  stock_adjustments_stock_adjustments_performed_byToprofiles      stock_adjustments[]    @relation("stock_adjustments_performed_byToprofiles")
+  stock_adjustments_stock_adjustments_approved_byToprofiles       stock_adjustments[]     @relation("stock_adjustments_approved_byToprofiles")
+  stock_adjustments_stock_adjustments_performed_byToprofiles      stock_adjustments[]     @relation("stock_adjustments_performed_byToprofiles")
   support_tickets                                                 support_tickets[]
   ticket_messages                                                 ticket_messages[]
   transactions                                                    transactions[]
   user_sessions                                                   user_sessions[]
-  auth_providers                                                  auth_providers[]
-  refresh_tokens_public                                           refresh_tokens_public[]
-  login_history                                                   login_history[]
   wishlists                                                       wishlists[]
 
   @@index([dealer_id], map: "idx_profiles_dealer")
@@ -2085,22 +2086,24 @@ model transactions {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model user_sessions {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id       String?   @db.Uuid
-  token         String    @unique
-  refresh_token String?   @unique
-  device_id     String?
-  device_name   String?
-  ip_address    String?   @db.VarChar(45)
-  user_agent    String?
-  is_active     Boolean?  @default(true)
-  login_method  String?   @db.VarChar(50) @default("password")
-  last_active   DateTime? @default(now()) @db.Timestamptz(6)
-  expires_at    DateTime  @db.Timestamptz(6)
-  created_at    DateTime? @default(now()) @db.Timestamptz(6)
-  profiles      profiles? @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id               String?                 @db.Uuid
+  token                 String                  @unique
+  ip_address            String?                 @db.VarChar(45)
+  user_agent            String?
+  last_active           DateTime?               @default(now()) @db.Timestamptz(6)
+  expires_at            DateTime                @db.Timestamptz(6)
+  created_at            DateTime?               @default(now()) @db.Timestamptz(6)
+  refresh_token         String?                 @unique
+  device_id             String?
+  device_name           String?
+  is_active             Boolean?                @default(true)
+  login_method          String?                 @default("password") @db.VarChar(50)
   refresh_tokens_public refresh_tokens_public[]
+  profiles              profiles?               @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([user_id, is_active], map: "idx_user_sessions_active")
+  @@index([refresh_token], map: "idx_user_sessions_refresh")
   @@schema("public")
 }
 
@@ -2123,19 +2126,22 @@ model auth_providers {
 }
 
 model refresh_tokens_public {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id        String    @db.Uuid
-  token_hash     String    @unique
-  session_id     String?   @db.Uuid
-  family_id      String    @db.Uuid
-  expires_at     DateTime  @db.Timestamptz(6)
-  is_revoked     Boolean?  @default(false)
-  revoked_at     DateTime? @db.Timestamptz(6)
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String         @db.Uuid
+  token_hash     String         @unique
+  session_id     String?        @db.Uuid
+  family_id      String         @db.Uuid
+  expires_at     DateTime       @db.Timestamptz(6)
+  is_revoked     Boolean?       @default(false)
+  revoked_at     DateTime?      @db.Timestamptz(6)
   revoked_reason String?
-  created_at     DateTime? @default(now()) @db.Timestamptz(6)
-  profiles       profiles  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  created_at     DateTime?      @default(now()) @db.Timestamptz(6)
   user_sessions  user_sessions? @relation(fields: [session_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles       profiles       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([family_id], map: "idx_refresh_tokens_family")
+  @@index([token_hash], map: "idx_refresh_tokens_hash")
+  @@index([user_id], map: "idx_refresh_tokens_user")
   @@map("refresh_tokens")
   @@schema("public")
 }
@@ -2151,8 +2157,11 @@ model login_history {
   status         String    @db.VarChar(20)
   failure_reason String?
   created_at     DateTime? @default(now()) @db.Timestamptz(6)
-  profiles       profiles? @relation(fields: [user_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  profiles       profiles? @relation(fields: [user_id], references: [id], onUpdate: NoAction)
 
+  @@index([created_at(sort: Desc)], map: "idx_login_history_created")
+  @@index([email], map: "idx_login_history_email")
+  @@index([user_id], map: "idx_login_history_user")
   @@schema("public")
 }
 
@@ -2226,9 +2235,6 @@ model wishlists {
 
   @@schema("public")
 }
-
-
-
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -2350,6 +2356,90 @@ model service_vehicles {
   service_tickets      service_tickets[]
   profiles             profiles?         @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
   bike_models          bike_models?      @relation(fields: [model_id], references: [id], onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model business_unit_users {
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  business_unit_id String?         @db.Uuid
+  user_id          String?         @db.Uuid
+  is_primary       Boolean?        @default(true)
+  created_at       DateTime?       @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime?       @default(now()) @db.Timestamptz(6)
+  business_units   business_units? @relation(fields: [business_unit_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles         profiles?       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([business_unit_id, user_id])
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model business_units {
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String                @db.VarChar(255)
+  code                String                @unique @db.VarChar(50)
+  unit_type           String                @db.VarChar(50)
+  is_active           Boolean?              @default(true)
+  created_at          DateTime?             @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?             @default(now()) @db.Timestamptz(6)
+  business_unit_users business_unit_users[]
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model job_cards {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticket_id          String?   @db.Uuid
+  technician_id      String?   @db.Uuid
+  status             String?   @default("in_progress") @db.VarChar(50)
+  notes              String?
+  service_start_time DateTime? @default(now()) @db.Timestamptz(6)
+  service_end_time   DateTime? @db.Timestamptz(6)
+  created_at         DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model part_variants {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  part_id        String?   @db.Uuid
+  brand          String    @db.VarChar(100)
+  sku            String?   @unique @db.VarChar(100)
+  price          Decimal   @default(0) @db.Decimal(10, 2)
+  stock_quantity Int?      @default(0)
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model parts {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String    @db.VarChar(255)
+  category_id String?   @db.Uuid
+  code        String?   @unique @db.VarChar(50)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model parts_usage {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job_card_id String?   @db.Uuid
+  variant_id  String?   @db.Uuid
+  quantity    Int       @default(1)
+  unit_price  Decimal   @db.Decimal(10, 2)
+  total_price Decimal?  @default(dbgenerated("((quantity)::numeric * unit_price)")) @db.Decimal(10, 2)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
 
   @@schema("public")
 }

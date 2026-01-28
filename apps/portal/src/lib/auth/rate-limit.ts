@@ -1,6 +1,14 @@
 import Redis from "ioredis";
 
-const redis = process.env.REDIS_URL ? new Redis(process.env.REDIS_URL) : null;
+const redis = process.env.REDIS_URL
+    ? new Redis(process.env.REDIS_URL, {
+        maxRetriesPerRequest: 1,
+        connectTimeout: 2000,
+        lazyConnect: true,
+        enableOfflineQueue: false,
+    })
+    : null;
+
 
 /**
  * Check rate limit for a key (e.g. "login:user@example.com")

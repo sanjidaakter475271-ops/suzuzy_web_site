@@ -10,7 +10,8 @@ import {
     UserCircle,
     Loader2,
     ShieldCheck,
-    Lock
+    Lock,
+    Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,28 +34,42 @@ interface Role {
     level: number;
 }
 
+interface BusinessUnit {
+    id: string;
+    name: string;
+    code: string;
+    unit_type: string;
+}
+
 export default function NewPersonnelPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [roles, setRoles] = useState<Role[]>([]);
+    const [businessUnits, setBusinessUnits] = useState<BusinessUnit[]>([]);
     const [formData, setFormData] = useState({
         full_name: "",
         email: "",
         phone: "",
-        role_id: ""
+        role_id: "",
+        business_unit_id: ""
     });
 
     useEffect(() => {
-        const fetchRoles = async () => {
-            const { data } = await supabase
+        const fetchData = async () => {
+            const { data: rolesData } = await supabase
                 .from('roles')
                 .select('*')
                 .filter('role_type', 'eq', 'system')
                 .order('level', { ascending: true });
+            setRoles(rolesData || []);
 
-            setRoles(data || []);
+            const { data: unitsData } = await supabase
+                .from('business_units')
+                .select('*')
+                .order('name', { ascending: true });
+            setBusinessUnits(unitsData || []);
         };
-        fetchRoles();
+        fetchData();
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -82,7 +97,8 @@ export default function NewPersonnelPage() {
                     full_name: formData.full_name,
                     phone: formData.phone,
                     role_id: formData.role_id,
-                    role: selectedRole?.name
+                    role: selectedRole?.name,
+                    business_unit_id: formData.business_unit_id
                 })
             });
 
@@ -174,6 +190,28 @@ export default function NewPersonnelPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <Label className="text-[10px] uppercase font-black tracking-widest text-[#D4AF37] ml-1">Business Unit</Label>
+                            <Select
+                                onValueChange={(val: string) => setFormData({ ...formData, business_unit_id: val })}
+                                required
+                            >
+                                <SelectTrigger className="h-14 bg-white/5 border-white/10 focus:border-[#D4AF37]/50 focus:bg-white/10 transition-all rounded-2xl text-white">
+                                    <div className="flex items-center gap-3">
+                                        <Building2 className="w-4 h-4 text-[#D4AF37]/50" />
+                                        <SelectValue placeholder="Assign To Branch/Unit" />
+                                    </div>
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#1A1A1C] border-[#D4AF37]/20 text-white">
+                                    {businessUnits.map(unit => (
+                                        <SelectItem key={unit.id} value={unit.id} className="focus:bg-[#D4AF37]/10 focus:text-[#D4AF37]">
+                                            {unit.name} ({unit.code}) — {unit.unit_type}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         <div className="pt-6 border-t border-white/5">
