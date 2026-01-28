@@ -1,25 +1,22 @@
 "use server";
 
-import { auth } from "@/lib/auth/config";
+import { getCurrentUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma/client";
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { hashPassword } from "@/lib/auth/password";
 
 /**
  * Finalizes user onboarding by updating the profile in the database.
- * Replaces the Supabase 'complete_user_onboarding' RPC.
  */
 export async function completeOnboardingAction(newPassword?: string) {
     try {
-        const session = await auth.api.getSession({
-            headers: await headers()
-        });
+        const user = await getCurrentUser();
 
-        if (!session) {
+        if (!user) {
             return { success: false, error: "Unauthorized access attempt" };
         }
 
-        const userId = session.user.id;
+        const userId = user.userId;
 
         // Verify user is actually in onboarding mode
         const profile = await prisma.profiles.findUnique({
@@ -35,26 +32,20 @@ export async function completeOnboardingAction(newPassword?: string) {
             return { success: false, error: "Onboarding already completed" };
         }
 
+        const updateData: any = {
+            onboarding_completed: true,
+            temp_password: null
+        };
+
         // Update password if provided
         if (newPassword) {
-            // Use internal API to update password without current password requirement
-            // valid because we verified session and onboarding status
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (auth.api as any).admin.setUserPassword({
-                body: {
-                    userId: userId,
-                    password: newPassword
-                },
-                headers: await headers()
-            });
+            const hashedPassword = await hashPassword(newPassword);
+            updateData.password_hash = hashedPassword;
         }
 
         await prisma.profiles.update({
             where: { id: userId },
-            data: {
-                onboarding_completed: true,
-                temp_password: null
-            }
+            data: updateData
         });
 
         revalidatePath("/");

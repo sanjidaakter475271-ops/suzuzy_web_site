@@ -1,22 +1,19 @@
-import { auth } from "@/lib/auth/config";
-import { headers } from "next/headers";
+import { getCurrentUser } from "@/lib/auth/get-user";
 import { redirect } from 'next/navigation';
 import { getRoleLevel } from '@/lib/supabase/roles';
 
 /**
  * Root Page Redirection Logic
- * Standardized on Better Auth session detection.
+ * Standardized on custom session detection.
  */
 export default async function RootPage() {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
+    const user = await getCurrentUser();
 
-    if (!session?.user) {
+    if (!user) {
         redirect('/login');
     }
 
-    const role = (session.user as any).role || "customer";
+    const role = user.role || "customer";
     const level = getRoleLevel(role);
 
     // Platform Authority Redirection

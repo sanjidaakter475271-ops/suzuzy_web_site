@@ -1,19 +1,15 @@
 "use server";
 
-import { auth } from "@/lib/auth/config";
+import { getCurrentUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma/client";
-import { headers } from "next/headers";
 
 /**
  * getDealerDashboardData: Aggregates stats for the dealer dashboard
  */
 export async function getDealerDashboardData() {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
+    const user = await getCurrentUser();
 
-    if (!session) throw new Error("Unauthorized");
-    const user = session.user as any;
+    if (!user) throw new Error("Unauthorized");
     const dealerId = user.dealerId;
 
     if (!dealerId && user.role !== 'super_admin' && !user.role?.includes('admin')) {

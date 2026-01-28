@@ -45,50 +45,72 @@ export default function LoginPage() {
         password: '',
     });
 
+    const [mfaRequired, setMfaRequired] = useState(false);
+    const [mfaTicket, setMfaTicket] = useState<string | null>(null);
+    const [mfaToken, setMfaToken] = useState("");
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
 
-        const formData = new FormData(e.currentTarget);
-        const email = formData.get("email") as string;
-        const password = formData.get("password") as string;
-
         try {
-            const { data, error } = await authClient.signIn.email({
-                email,
-                password,
-            });
+            if (mfaRequired && mfaTicket) {
+                const { data, error } = await authClient.signIn.mfa({
+                    mfaTicket,
+                    token: mfaToken
+                });
 
-            if (error) {
-                setError(error.message || "Failed to sign in");
-                setIsLoading(false);
-                return;
+                if (error) {
+                    setError(error.message || "Invalid MFA token");
+                    setIsLoading(false);
+                    return;
+                }
+                handleLoginSuccess(data.user);
+            } else {
+                const { data, error } = await authClient.signIn.email({
+                    email: formData.email,
+                    password: formData.password,
+                    rememberMe: true
+                });
+
+                if (error) {
+                    setError(error.message || "Failed to sign in");
+                    setIsLoading(false);
+                    return;
+                }
+
+                if (data.mfaRequired) {
+                    setMfaRequired(true);
+                    setMfaTicket(data.mfaTicket);
+                    setIsLoading(false);
+                    return;
+                }
+
+                handleLoginSuccess(data.user);
             }
-
-            // Login successful, redirect based on role
-            const role = (data?.user as any)?.role || "customer";
-
-            let redirectPath = "/dashboard";
-            if (role === "super_admin") {
-                redirectPath = "/super-admin/dashboard";
-            } else if (["showroom_sales_admin", "service_sales_admin"].includes(role)) {
-                redirectPath = "/sales-admin/dashboard";
-            } else if (["showroom_admin", "service_admin", "support", "accountant"].includes(role)) {
-                redirectPath = "/admin/dashboard";
-            } else if (["dealer_owner", "dealer_manager", "dealer_staff", "sub_dealer"].includes(role)) {
-                redirectPath = "/dealer/dashboard";
-            }
-
-            console.log(`Login success. Redirecting to ${redirectPath} for role ${role}`);
-            router.push(redirectPath);
-            // Don't set isLoading(false) to keep button in loading state during redirect
-
         } catch (err: any) {
             console.error("Login error:", err);
             setError("An unexpected error occurred");
             setIsLoading(false);
         }
+    };
+
+    const handleLoginSuccess = (user: any) => {
+        const role = user.roles?.name || user.role || "customer";
+
+        let redirectPath = "/dashboard";
+        if (role === "super_admin") {
+            redirectPath = "/super-admin/dashboard";
+        } else if (["showroom_sales_admin", "service_sales_admin"].includes(role)) {
+            redirectPath = "/sales-admin/dashboard";
+        } else if (["showroom_admin", "service_admin", "support", "accountant"].includes(role)) {
+            redirectPath = "/admin/dashboard";
+        } else if (["dealer_owner", "dealer_manager", "dealer_staff", "sub_dealer"].includes(role)) {
+            redirectPath = "/dealer/dashboard";
+        }
+
+        router.push(redirectPath);
     };
 
     const handleSignOut = async () => {
@@ -166,50 +188,70 @@ export default function LoginPage() {
                         </AnimatePresence>
 
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-[#D4AF37] uppercase tracking-widest ml-1">Email Address</label>
-                                <div className="relative group">
-                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-[#D4AF37] transition-colors" />
-                                    <Input
-                                        type="email"
-                                        name="email"
-                                        placeholder="Enter your email"
-                                        className="pl-12 h-14 bg-white/5 border-white/10 focus:border-[#D4AF37]/50 focus:bg-white/10 transition-all rounded-2xl text-white placeholder:text-white/20"
-                                        required
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        disabled={isFormDisabled}
-                                    />
+                            {mfaRequired ? (
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-[#D4AF37] uppercase tracking-widest ml-1">MFA Token</label>
+                                    <div className="relative group">
+                                        <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-[#D4AF37] transition-colors" />
+                                        <Input
+                                            type="text"
+                                            placeholder="Enter 6-digit code"
+                                            className="pl-12 h-14 bg-white/5 border-white/10 focus:border-[#D4AF37]/50 focus:bg-white/10 transition-all rounded-2xl text-white placeholder:text-white/20"
+                                            required
+                                            value={mfaToken}
+                                            onChange={(e) => setMfaToken(e.target.value)}
+                                            maxLength={6}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-[#D4AF37] uppercase tracking-widest ml-1">Email Address</label>
+                                        <div className="relative group">
+                                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-[#D4AF37] transition-colors" />
+                                            <Input
+                                                type="email"
+                                                name="email"
+                                                placeholder="Enter your email"
+                                                className="pl-12 h-14 bg-white/5 border-white/10 focus:border-[#D4AF37]/50 focus:bg-white/10 transition-all rounded-2xl text-white placeholder:text-white/20"
+                                                required
+                                                value={formData.email}
+                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                disabled={isFormDisabled}
+                                            />
+                                        </div>
+                                    </div>
 
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-center ml-1">
-                                    <label className="text-sm font-bold text-[#D4AF37] uppercase tracking-widest">Password</label>
-                                    <Link href="/forgot-password" className="text-xs font-bold text-[#D4AF37]/60 hover:text-[#D4AF37] transition-colors">Forgot Password?</Link>
-                                </div>
-                                <div className="relative group">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-[#D4AF37] transition-colors" />
-                                    <Input
-                                        type={showPassword ? "text" : "password"}
-                                        name="password"
-                                        placeholder="••••••••"
-                                        className="pl-12 pr-12 h-14 bg-white/5 border-white/10 focus:border-[#D4AF37]/50 focus:bg-white/10 transition-all rounded-2xl text-white placeholder:text-white/20"
-                                        required
-                                        value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        disabled={isFormDisabled}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors"
-                                        disabled={isFormDisabled}
-                                    >
-                                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                    </button>
-                                </div>
-                            </div>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center ml-1">
+                                            <label className="text-sm font-bold text-[#D4AF37] uppercase tracking-widest">Password</label>
+                                            <Link href="/forgot-password" className="text-xs font-bold text-[#D4AF37]/60 hover:text-[#D4AF37] transition-colors">Forgot Password?</Link>
+                                        </div>
+                                        <div className="relative group">
+                                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-[#D4AF37] transition-colors" />
+                                            <Input
+                                                type={showPassword ? "text" : "password"}
+                                                name="password"
+                                                placeholder="••••••••"
+                                                className="pl-12 pr-12 h-14 bg-white/5 border-white/10 focus:border-[#D4AF37]/50 focus:bg-white/10 transition-all rounded-2xl text-white placeholder:text-white/20"
+                                                required
+                                                value={formData.password}
+                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                disabled={isFormDisabled}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors"
+                                                disabled={isFormDisabled}
+                                            >
+                                                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
 
                             <GradientButton
                                 type="submit"
@@ -218,11 +260,39 @@ export default function LoginPage() {
                             >
                                 {isLoading ? "Authenticating..." : (
                                     <>
-                                        Sign In Securely
+                                        {mfaRequired ? "Verify & Sign In" : "Sign In Securely"}
                                         <ArrowRight className="w-5 h-5" />
                                     </>
                                 )}
                             </GradientButton>
+
+                            {!mfaRequired && (
+                                <div className="relative py-4">
+                                    <div className="absolute inset-0 flex items-center">
+                                        <span className="w-full border-t border-white/10" />
+                                    </div>
+                                    <div className="relative flex justify-center text-xs uppercase">
+                                        <span className="bg-[#0D0D0F] px-2 text-white/20 font-bold tracking-[0.2em]">Or continue with</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {!mfaRequired && (
+                                <button
+                                    type="button"
+                                    onClick={() => authClient.signIn.google()}
+                                    className="w-full h-14 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-2xl flex items-center justify-center gap-3 transition-all font-bold"
+                                    disabled={isFormDisabled}
+                                >
+                                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
+                                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                                    </svg>
+                                    Google Account
+                                </button>
+                            )}
                         </form>
 
                         <div className="mt-10 flex flex-col gap-4 items-center">

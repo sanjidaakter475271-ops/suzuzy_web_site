@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Suzuki Service Pro</string>
+    <string name="title_activity_main">Suzuki Service Pro</string>
+    <string name="package_name">com.suzuki.servicepro</string>
+    <string name="custom_url_scheme">com.suzuki.servicepro</string>
+</resources>

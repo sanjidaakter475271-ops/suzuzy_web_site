@@ -1,8 +1,7 @@
 "use server";
 
-import { auth } from "@/lib/auth/config";
+import { getCurrentUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma/client";
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -10,12 +9,9 @@ import { revalidatePath } from "next/cache";
  * Restricted to super_admin and showroom_admin.
  */
 export async function getPendingDealers() {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
+    const user = await getCurrentUser();
 
-    if (!session) throw new Error("Unauthorized");
-    const user = session.user as any;
+    if (!user) throw new Error("Unauthorized");
 
     if (user.role !== 'super_admin' && user.role !== 'showroom_admin') {
         throw new Error("Insufficient privileges");
@@ -49,12 +45,9 @@ export async function getPendingDealers() {
  * updateDealerStatus: Approves or rejects a dealer application.
  */
 export async function updateDealerStatus(dealerId: string, status: 'active' | 'rejected') {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
+    const user = await getCurrentUser();
 
-    if (!session) throw new Error("Unauthorized");
-    const user = session.user as any;
+    if (!user) throw new Error("Unauthorized");
 
     if (user.role !== 'super_admin' && user.role !== 'showroom_admin') {
         throw new Error("Insufficient privileges");
@@ -77,12 +70,9 @@ export async function updateDealerStatus(dealerId: string, status: 'active' | 'r
  * getAllOrdersAdmin: Fetches all orders for the platform admin.
  */
 export async function getAllOrdersAdmin() {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
+    const user = await getCurrentUser();
 
-    if (!session) throw new Error("Unauthorized");
-    const user = session.user as any;
+    if (!user) throw new Error("Unauthorized");
 
     if (user.role !== 'super_admin' && !user.role?.includes('admin')) {
         throw new Error("Insufficient privileges");

@@ -1,8 +1,7 @@
 "use server";
 
-import { auth } from "@/lib/auth/config";
+import { getCurrentUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma/client";
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getRoleLevel } from "@/middlewares/checkRole";
 
@@ -20,14 +19,9 @@ interface SessionUser {
  * getSuperAdminStats: Aggregates global platform statistics.
  */
 export async function getSuperAdminStats() {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
+    const user = await getCurrentUser();
 
-    if (!session) throw new Error("Unauthorized");
-
-    // Authorization Check
-    const user = session.user as SessionUser;
+    if (!user) throw new Error("Unauthorized");
     const userRole = user.role || "customer";
     if (getRoleLevel(userRole) > 7) {
         return { success: false, error: "Insufficient privileges" };
@@ -72,12 +66,9 @@ export async function getSuperAdminStats() {
  * getUsers: Fetches all user profiles for the management terminal.
  */
 export async function getUsers() {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
+    const user = await getCurrentUser();
 
-    const user = session?.user as SessionUser | undefined;
-    if (!session || user?.role !== 'super_admin') {
+    if (!user || user?.role !== 'super_admin') {
         throw new Error("Unauthorized access to user registry");
     }
 
@@ -95,12 +86,9 @@ export async function getUsers() {
  * updateUserStatusAction: Updates a user's status (active/suspended).
  */
 export async function updateUserStatusAction(userId: string, status: string) {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
+    const user = await getCurrentUser();
 
-    const user = session?.user as SessionUser | undefined;
-    if (!session || user?.role !== 'super_admin') {
+    if (!user || user?.role !== 'super_admin') {
         throw new Error("Unauthorized status modification");
     }
 
@@ -120,29 +108,18 @@ export async function updateUserStatusAction(userId: string, status: string) {
  * resetUserPasswordAction: Forces a password reset for a user.
  */
 export async function resetUserPasswordAction(userId: string) {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
+    const user = await getCurrentUser();
 
-    const user = session?.user as SessionUser | undefined;
-    if (!session || user?.role !== 'super_admin') {
+    if (!user || user?.role !== 'super_admin') {
         throw new Error("Unauthorized security modification");
     }
 
     try {
         const newTempPassword = `RC-RESET-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-        // Update Better Auth password using admin plugin
-        const authApi = auth.api as Record<string, Function>;
-        if (typeof authApi.changeUserPassword === 'function') {
-            await authApi.changeUserPassword({
-                headers: await headers(),
-                body: {
-                    userId,
-                    newPassword: newTempPassword
-                }
-            });
-        }
+        // Better Auth password change removed as we are using custom auth
+        // In the new system, this should likely hash and store in a custom table if needed,
+        // but for now we just update the profile's temp_password.
 
         // Synchronize with Profile
         await prisma.profiles.update({
@@ -166,21 +143,15 @@ export async function resetUserPasswordAction(userId: string) {
  * deleteUserAction: Permanently removes a user from the platform.
  */
 export async function deleteUserAction(userId: string) {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
+    const user = await getCurrentUser();
 
-    const user = session?.user as SessionUser | undefined;
-    if (!session || user?.role !== 'super_admin') {
+    if (!user || user?.role !== 'super_admin') {
         throw new Error("Unauthorized account eradication");
     }
 
     try {
-        // Delete from profiles and user tables atomically
-        await prisma.$transaction([
-            prisma.profiles.delete({ where: { id: userId } }),
-            prisma.$executeRaw`DELETE FROM "user" WHERE id = ${userId}`
-        ]);
+        // Delete from profiles (Better Auth user table is being removed)
+        await prisma.profiles.delete({ where: { id: userId } });
 
         revalidatePath("/super-admin/users");
         return { success: true };
@@ -194,23 +165,17 @@ export async function deleteUserAction(userId: string) {
  * updateUserRoleAction: Atomic role synchronization across system layers.
  */
 export async function updateUserRoleAction(userId: string, newRole: string) {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
+    const user = await getCurrentUser();
 
-    const user = session?.user as SessionUser | undefined;
-    if (!session || user?.role !== 'super_admin') {
+    if (!user || user?.role !== 'super_admin') {
         throw new Error("Unauthorized role modification");
     }
 
     try {
-        await prisma.$transaction([
-            prisma.profiles.update({
-                where: { id: userId },
-                data: { role: newRole }
-            }),
-            prisma.$executeRaw`UPDATE "user" SET role = ${newRole} WHERE id = ${userId}`
-        ]);
+        await prisma.profiles.update({
+            where: { id: userId },
+            data: { role: newRole }
+        });
 
         revalidatePath("/super-admin/users");
         return { success: true };

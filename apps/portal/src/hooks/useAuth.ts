@@ -1,36 +1,49 @@
 "use client";
 
-import { authClient } from "@/lib/auth/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth/client";
 
-// Extended user type to include custom fields from Better Auth config
-export interface ExtendedUser {
+export interface User {
     id: string;
     email: string;
-    name: string | null;
-    image?: string | null;
-    role?: string;
-    roleId?: string;
-    dealerId?: string;
+    name: string;
+    role: string;
+    roleLevel: number;
+    dealerId?: string | null;
+    dealer_id?: string | null;
+    dealer?: any;
 }
 
 export function useAuth() {
-    const { data: session, isPending, error } = authClient.useSession();
     const router = useRouter();
+    const queryClient = useQueryClient();
+
+    const { data, isLoading, error } = useQuery({
+        queryKey: ["auth-user"],
+        queryFn: async () => {
+            const res = await fetch("/api/auth/me");
+            if (!res.ok) {
+                if (res.status === 401) return null;
+                throw new Error("Failed to fetch user");
+            }
+            const json = await res.json();
+            return json.user as User;
+        },
+        retry: false,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
 
     const signOut = async () => {
         await authClient.signOut();
+        queryClient.setQueryData(["auth-user"], null);
         router.push("/login");
         router.refresh();
     };
 
-    // Cast user to our extended type
-    const user = session?.user as ExtendedUser | undefined;
-
     return {
-        user: user ?? null,
-        session,
-        loading: isPending,
+        user: data ?? null,
+        loading: isLoading,
         error,
         signOut,
     };

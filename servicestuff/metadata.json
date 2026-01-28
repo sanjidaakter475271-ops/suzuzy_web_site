@@ -1,0 +1,10 @@
+{
+  "name": "ServiceMate Pro",
+  "description": "A mobile-first showroom service management application for staff to manage tasks, view dashboards, and utilize AI assistance.",
+  "requestFramePermissions": [
+    "notifications",
+    "biometric",
+    "camera",
+    "microphone"
+  ]
+}

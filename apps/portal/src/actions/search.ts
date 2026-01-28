@@ -1,9 +1,8 @@
 "use server";
 
-import { auth } from "@/lib/auth/config";
+import { getCurrentUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma/client";
-import { headers } from "next/headers";
-import { checkRole, getRoleLevel } from "@/middlewares/checkRole";
+import { getRoleLevel } from "@/middlewares/checkRole";
 
 /**
  * searchProtocol: Unified search action for Command Menu.
@@ -12,13 +11,9 @@ import { checkRole, getRoleLevel } from "@/middlewares/checkRole";
 export async function searchProtocol(query: string) {
     if (!query || query.trim().length < 2) return { success: true, data: [] };
 
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
+    const user = await getCurrentUser();
 
-    if (!session || !session.user) return { success: true, data: [] };
-
-    const user = session.user as any;
+    if (!user) return { success: true, data: [] };
     const roleLevel = getRoleLevel(user.role);
     const dealerId = user.dealerId;
 

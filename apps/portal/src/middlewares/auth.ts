@@ -1,35 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth/config";
+import { verifyToken } from "@/lib/auth/jwt";
 
-// Extended session user type matching Better Auth config
+// Extended session user type
 interface SessionUser {
     id: string;
     email: string;
-    name?: string | null;
-    role?: string;
-    roleId?: string;
+    role: string;
     dealerId?: string | null;
 }
 
 export interface AuthenticatedRequest extends NextRequest {
-    user?: {
-        id: string;
-        email: string;
-        role: string;
-        roleId?: string;
-        dealerId?: string | null;
-    };
+    user?: SessionUser;
 }
 
 /**
- * Auth Middleware: Validates Better Auth session and attaches user metadata
+ * Auth Middleware: Validates custom JWT and attaches user metadata
  */
 export async function authMiddleware(request: NextRequest) {
-    const session = await auth.api.getSession({
-        headers: request.headers,
-    });
+    const token = request.cookies.get("access_token")?.value;
+    const payload = token ? await verifyToken(token) : null;
 
-    if (!session) {
+    if (!payload) {
         return {
             authenticated: false,
             user: null,
@@ -40,16 +31,13 @@ export async function authMiddleware(request: NextRequest) {
         };
     }
 
-    const user = session.user as SessionUser;
-
     return {
         authenticated: true,
         user: {
-            id: user.id,
-            email: user.email,
-            role: user.role || "customer",
-            roleId: user.roleId,
-            dealerId: user.dealerId,
+            id: payload.userId,
+            email: payload.email,
+            role: payload.role || "customer",
+            dealerId: payload.dealerId,
         },
         response: null,
     };

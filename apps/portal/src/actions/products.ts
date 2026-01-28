@@ -1,8 +1,7 @@
 "use server";
 
-import { auth } from "@/lib/auth/config";
+import { getCurrentUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma/client";
-import { headers } from "next/headers";
 
 interface SessionUser {
     id: string;
@@ -16,15 +15,11 @@ interface SessionUser {
  * getDealerProducts: Fetches products for the current dealer, applying ownership scope
  */
 export async function getDealerProducts() {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
+    const user = await getCurrentUser();
 
-    if (!session) {
+    if (!user) {
         throw new Error("Unauthorized");
     }
-
-    const user = session.user as unknown as SessionUser;
 
     // Model-specific filter for products
     let filter: any = {};
@@ -94,11 +89,8 @@ export async function getCategories() {
  * updateProductStatusAction: Toggles or sets product status
  */
 export async function updateProductStatusAction(productId: string, newStatus: string) {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
-    if (!session) throw new Error("Unauthorized");
-    const user = session.user as unknown as SessionUser;
+    const user = await getCurrentUser();
+    if (!user) throw new Error("Unauthorized");
 
     if (user.role !== 'super_admin' && user.role !== 'showroom_admin') {
         const product = await prisma.products.findFirst({
@@ -122,11 +114,8 @@ export async function updateProductStatusAction(productId: string, newStatus: st
  * bulkUpdateProductStatusAction: Batch updates status for multiple products
  */
 export async function bulkUpdateProductStatusAction(productIds: string[], newStatus: string) {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
-    if (!session) throw new Error("Unauthorized");
-    const user = session.user as unknown as SessionUser;
+    const user = await getCurrentUser();
+    if (!user) throw new Error("Unauthorized");
 
     try {
         await prisma.products.updateMany({
@@ -146,11 +135,8 @@ export async function bulkUpdateProductStatusAction(productIds: string[], newSta
  * bulkDeleteProductsAction: Batch deletes multiple products
  */
 export async function bulkDeleteProductsAction(productIds: string[]) {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
-    if (!session) throw new Error("Unauthorized");
-    const user = session.user as unknown as SessionUser;
+    const user = await getCurrentUser();
+    if (!user) throw new Error("Unauthorized");
 
     try {
         await prisma.products.deleteMany({
@@ -169,13 +155,9 @@ export async function bulkDeleteProductsAction(productIds: string[]) {
  * deleteProduct: Deletes (archives) a product if owned by the user
  */
 export async function deleteProductAction(productId: string) {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
+    const user = await getCurrentUser();
 
-    if (!session) throw new Error("Unauthorized");
-
-    const user = session.user as unknown as SessionUser;
+    if (!user) throw new Error("Unauthorized");
 
     // Ownership check (middleware logic applied manually here)
     if (user.role !== 'super_admin' && user.role !== 'showroom_admin') {
@@ -208,11 +190,8 @@ export async function importProductsAction(data: {
     rows: Record<string, string | number>[];
     defaultCategoryId: string;
 }) {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
-    if (!session) throw new Error("Unauthorized");
-    const user = session.user as unknown as SessionUser;
+    const user = await getCurrentUser();
+    if (!user) throw new Error("Unauthorized");
 
     if (user.role !== 'super_admin' && user.dealerId !== data.dealerId) {
         throw new Error("Unauthorized dealer scope");

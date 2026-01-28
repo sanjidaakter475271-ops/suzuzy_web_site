@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/useAuth";
 import { authClient } from "@/lib/auth/client";
 import { completeOnboardingAction } from "@/actions/auth";
 import { toast } from "sonner";
@@ -28,9 +29,8 @@ export default function OnboardingPage() {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
 
-    // Better Auth hook
-    const { data: session, isPending: authLoading } = authClient.useSession();
-    const user = session?.user;
+    // Custom Auth hook
+    const { user, loading: authLoading } = useAuth();
 
     useEffect(() => {
         if (!authLoading && !user) {

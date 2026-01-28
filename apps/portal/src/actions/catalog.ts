@@ -1,8 +1,6 @@
 "use server";
 
 import { prisma } from "@/lib/prisma/client";
-import { auth } from "@/lib/auth/config";
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { broadcast } from "@/lib/socket-server";
 

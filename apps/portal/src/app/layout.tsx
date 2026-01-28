@@ -30,6 +30,7 @@ export const metadata: Metadata = {
 };
 
 import { Toaster } from "sonner";
+import { QueryProvider } from "@/components/providers/query-provider";
 
 export default function RootLayout({
   children,
@@ -39,7 +40,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth dark" suppressHydrationWarning>
       <body className={`${playfair.variable} ${dmSans.variable} ${hindSiliguri.variable} ${roboto.variable} font-sans antialiased bg-[#0D0D0F] text-[#F8F8F8]`}>
-        {children}
+        <QueryProvider>
+          {children}
+        </QueryProvider>
         <Toaster richColors position="top-right" theme="dark" />
       </body>
     </html>
