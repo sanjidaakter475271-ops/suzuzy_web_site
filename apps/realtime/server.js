@@ -43,6 +43,14 @@ const httpServer = createServer((req, res) => {
                     if (data.user_id) {
                         io.to(`user:${data.user_id}`).emit(event, data);
                     }
+                    if (data.technicianId || data.technician_id) {
+                        const tId = data.technicianId || data.technician_id;
+                        io.to(`technician:${tId}`).emit(event, data);
+                    }
+                    if (data.dealer_id || data.dealerId) {
+                        const dId = data.dealer_id || data.dealerId;
+                        io.to(`dealer:${dId}`).emit(event, data);
+                    }
                     // Also generic broadcast
                     io.emit(event, data);
 
