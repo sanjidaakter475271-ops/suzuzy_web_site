@@ -29,10 +29,21 @@ export async function POST(req: NextRequest) {
         // 3. Create Dealer and Profile in Transaction
         const hashedPassword = await hashPassword(password);
 
-        const result = await prisma.$transaction(async (tx) => {
-            // Create dealer if businessName provided
+        const result = await prisma.$transaction(async (tx: any) => {
+            const isTechnician = businessName === "Service Staff";
+            const roleName = isTechnician ? "technician" : (businessName ? "dealer_owner" : "customer");
+
+            const role = await tx.roles.findUnique({
+                where: { name: roleName }
+            });
+
+            if (!role) {
+                throw new Error(`Role '${roleName}' not found in database`);
+            }
+
+            // Create dealer if businessName provided (only for dealer_owner role)
             let dealer = null;
-            if (businessName) {
+            if (businessName && roleName === "dealer_owner") {
                 const slug = businessName.toLowerCase().replace(/ /g, "-") + "-" + Math.floor(Math.random() * 1000);
                 dealer = await tx.dealers.create({
                     data: {
@@ -45,25 +56,45 @@ export async function POST(req: NextRequest) {
                 });
             }
 
-            const CUSTOMER_ROLE_ID = "43498ddd-6416-4836-8590-17e4294bdd97";
-
             const profile = await tx.profiles.create({
                 data: {
                     id: crypto.randomUUID(),
                     email,
                     full_name: name,
                     password_hash: hashedPassword,
-                    role_id: CUSTOMER_ROLE_ID,
+                    role_id: role.id,
                     dealer_id: dealer?.id,
-                    status: "active",
+                    status: isTechnician ? "pending" : "active",
                 },
                 include: { roles: true }
             });
 
+            // If it's a technician, also create service_staff entry
+            if (isTechnician) {
+                await tx.service_staff.create({
+                    data: {
+                        name: name,
+                        email: email,
+                        profile_id: profile.id,
+                        status: "pending",
+                        designation: "Technician",
+                        staff_id: `TECH-${Math.random().toString(36).substring(2, 7).toUpperCase()}`
+                    }
+                });
+            }
+
             return { profile, dealer };
         });
 
-        // 4. Create Session
+        // 4. Create Session (Only if status is active)
+        if (result.profile.status === "pending") {
+            return NextResponse.json({
+                success: true,
+                user: result.profile,
+                message: "Registration successful. Your account is pending approval."
+            });
+        }
+
         const payload = {
             userId: result.profile.id,
             email: result.profile.email || "",

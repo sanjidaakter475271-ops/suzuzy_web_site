@@ -24,7 +24,6 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { GlassCard } from "@/components/ui/premium/GlassCard";
-import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
 interface Role {
@@ -56,18 +55,24 @@ export default function NewPersonnelPage() {
 
     useEffect(() => {
         const fetchData = async () => {
-            const { data: rolesData } = await supabase
-                .from('roles')
-                .select('*')
-                .filter('role_type', 'eq', 'system')
-                .order('level', { ascending: true });
-            setRoles(rolesData || []);
+            try {
+                const [rolesRes, unitsRes] = await Promise.all([
+                    fetch('/api/super-admin/roles'),
+                    fetch('/api/super-admin/business-units')
+                ]);
 
-            const { data: unitsData } = await supabase
-                .from('business_units')
-                .select('*')
-                .order('name', { ascending: true });
-            setBusinessUnits(unitsData || []);
+                if (rolesRes.ok) {
+                    const rolesData = await rolesRes.json();
+                    setRoles(rolesData || []);
+                }
+
+                if (unitsRes.ok) {
+                    const unitsData = await unitsRes.json();
+                    setBusinessUnits(unitsData || []);
+                }
+            } catch (error) {
+                console.error("Error fetching authorization data:", error);
+            }
         };
         fetchData();
     }, []);
@@ -87,7 +92,7 @@ export default function NewPersonnelPage() {
 
             const selectedRole = roles.find(r => r.id === formData.role_id);
 
-            const response = await fetch('/api/admin/create-user', {
+            const response = await fetch('/api/super-admin/users', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -109,9 +114,9 @@ export default function NewPersonnelPage() {
 
             toast.success("Personnel Authorized & Protocol Initialized");
             router.push("/super-admin/users");
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error creating personnel:", error);
-            toast.error("Protocol Rejection: Database Integrity Error");
+            toast.error(error.message || "Protocol Rejection: Database Integrity Error");
         } finally {
             setLoading(false);
         }

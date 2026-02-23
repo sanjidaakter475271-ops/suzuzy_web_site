@@ -39,13 +39,14 @@ export default function SuperAdminDashboard() {
         async function loadStats() {
             setLoading(true);
             try {
-                const result = await getSuperAdminStats();
-                if (result.success && result.data) {
-                    setStats(prev => ({
-                        ...prev,
-                        ...result.data
-                    }));
-                }
+                const res = await fetch('/api/super-admin/dashboard/stats');
+                if (!res.ok) throw new Error("Stats sync failure");
+                const data = await res.json();
+
+                setStats(prev => ({
+                    ...prev,
+                    ...data
+                }));
             } catch (error) {
                 console.error("Error fetching dashboard stats:", error);
             } finally {

@@ -29,7 +29,8 @@ import {
     Zap,
     TrendingUp,
     Calendar,
-    Calculator
+    Calculator,
+    ShieldCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "@/hooks/useUser";
@@ -54,6 +55,7 @@ const SUPER_ADMIN_NAV: NavItem[] = [
     { name: "Orders", href: "/super-admin/orders", icon: ShoppingCart },
     { name: "Payments", href: "/super-admin/payments", icon: CreditCard },
     { name: "Subscription Plans", href: "/super-admin/plans", icon: FileText },
+    { name: "Role & Unit", href: "/super-admin/roles-units", icon: ShieldCheck },
     { name: "Audit Logs", href: "/super-admin/audit-logs", icon: History },
     { name: "Settings", href: "/super-admin/settings", icon: Settings },
     { name: "Emergency", href: "/super-admin/emergency", icon: ShieldAlert, danger: true },
@@ -82,7 +84,8 @@ const SALES_ADMIN_NAV: NavItem[] = [
 ];
 
 const SERVICE_ADMIN_NAV: NavItem[] = [
-    { name: "Dashboard", href: "/service-admin", icon: LayoutGrid },
+    { name: "Dashboard", href: "/service-admin", icon: BarChart3 },
+    { name: "Workshop", href: "/service-admin/workshop", icon: LayoutGrid },
     { name: "Team Members", href: "/service-admin/members", icon: UserPlus },
     { name: "Settings", href: "/service-admin/settings", icon: Settings },
 ];
@@ -120,7 +123,7 @@ interface SidebarNavProps {
 
 export default function SidebarNav({ mode = "desktop" }: SidebarNavProps) {
     const pathname = usePathname();
-    const { profile } = useUser();
+    const { profile, signOut } = useUser();
     const [isHovered, setIsHovered] = useState(false);
     const [expandedItem, setExpandedItem] = useState<string | null>(null);
 
@@ -147,6 +150,9 @@ export default function SidebarNav({ mode = "desktop" }: SidebarNavProps) {
         // Dealers (Levels 10-15)
         // dealer_owner(10) to sub_dealer(15)
         if (roleLevel >= 10 && roleLevel <= 15) return DEALER_NAV;
+
+        // Fallback for custom dealer roles
+        if (profile?.role?.includes('dealer')) return DEALER_NAV;
 
         return [];
     };
@@ -334,19 +340,16 @@ export default function SidebarNav({ mode = "desktop" }: SidebarNavProps) {
                 {/* Logout Button */}
                 <div className={cn("mt-2 transition-all", isExpanded ? "px-0 pb-4" : "flex justify-center pb-4")}>
                     <button
-                        onClick={async () => {
-                            await authClient.signOut();
-                            window.location.href = '/login';
-                        }}
+                        onClick={() => signOut()}
                         className={cn(
                             "flex items-center gap-3 rounded-lg text-[#DC2626]/80 hover:text-[#DC2626] hover:bg-[#DC2626]/10 transition-all group",
                             isExpanded ? "w-full px-4 py-3" : "p-3 justify-center"
                         )}
-                        title={!isExpanded ? "Connect Out" : undefined}
+                        title={!isExpanded ? "Sign Out" : undefined}
                     >
                         <LogOut className="w-4 h-4" />
                         {isExpanded && (
-                            <span className="text-[11px] font-bold uppercase tracking-wider">Connect Out</span>
+                            <span className="text-[11px] font-bold uppercase tracking-wider">Sign Out</span>
                         )}
                     </button>
                 </div>

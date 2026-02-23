@@ -1,9 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
+import { ENV } from "../lib/env";
 
 export const diagnoseIssue = async (issueDescription: string): Promise<string> => {
-  // Always use const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
-  // Assume process.env.API_KEY is pre-configured and valid.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: ENV.GEMINI_API_KEY });
 
   try {
     const response = await ai.models.generateContent({

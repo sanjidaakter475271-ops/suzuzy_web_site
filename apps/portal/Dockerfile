@@ -4,7 +4,7 @@
 # ============================================
 # Stage 1: Dependencies
 # ============================================
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /app
 
 # Copy package files
@@ -17,7 +17,7 @@ RUN npm install --frozen-lockfile || npm install
 # ============================================
 # Stage 2: Builder
 # ============================================
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Build-time environment variables
@@ -50,11 +50,12 @@ RUN npm run build
 # ============================================
 # Stage 3: Runner (Production)
 # ============================================
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME "0.0.0.0"
 
 # Install runtime dependencies
 RUN apk add --no-cache openssl libc6-compat
@@ -79,7 +80,6 @@ USER nextjs
 EXPOSE 3000
 
 ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
 
 # Use standard Next.js standalone server (Socket.io runs as separate service)
 CMD ["node", "server.js"]

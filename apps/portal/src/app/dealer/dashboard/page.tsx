@@ -9,6 +9,8 @@ import { DollarSign, ShoppingBag, Package, TrendingUp, Loader2, Activity, Zap } 
 import { useUser } from "@/hooks/useUser";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { useSocket } from "@/hooks/useSocket";
+import { toast } from "sonner";
 
 interface RevenueData {
     date: string;
@@ -33,7 +35,6 @@ interface OrderItem {
     };
 }
 
-import { getDealerDashboardData } from "@/actions/dashboard";
 
 export default function DealerDashboard() {
     const { profile } = useUser();
@@ -49,10 +50,18 @@ export default function DealerDashboard() {
     const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
     const [recentOrders, setRecentOrders] = useState<OrderItem[]>([]);
 
+    // Socket.io integration
+    const { socket, isConnected } = useSocket();
+
     async function fetchDashboard() {
+        if (!profile?.dealer_id) return;
+
         setIsSyncing(true);
         try {
-            const result = await getDealerDashboardData();
+            const res = await fetch('/api/v1/dashboard/stats');
+            if (!res.ok) throw new Error("Dashboard sync failure");
+            const result = await res.json();
+
             if (result.success && result.data) {
                 const { deliveredOrders, activeCount, prodCount, lowStockCount, topProducts: topP, recentOrders: recent } = result.data;
 
@@ -83,11 +92,35 @@ export default function DealerDashboard() {
         }
     }
 
+    // Initial fetch only
     useEffect(() => {
-        if (profile) {
+        if (profile?.dealer_id) {
             fetchDashboard();
         }
-    }, [profile]);
+    }, [profile?.dealer_id]); // Only runs when dealer_id changes/loads, preventing loops
+
+    // Realtime events
+    useEffect(() => {
+        if (!socket) return;
+
+        // Listener logic
+        const handleUpdate = (data: any) => {
+            console.log("Realtime update received:", data);
+            toast.info("New activity detected", { description: "Dashboard updated" });
+            fetchDashboard(); // Re-fetch to get latest atomic stats
+        };
+
+        socket.on('order:changed', handleUpdate);
+        socket.on('inventory:changed', handleUpdate);
+        socket.on('sale:received', handleUpdate);
+
+        return () => {
+            socket.off('order:changed', handleUpdate);
+            socket.off('inventory:changed', handleUpdate);
+            socket.off('sale:received', handleUpdate);
+        };
+    }, [socket, profile?.dealer_id]);
+
 
     if (loading) {
         return (

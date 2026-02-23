@@ -5,6 +5,13 @@
             "args": [
                 "c:/Users/NAZMUL/Desktop/Pocket options/mcp-sequential-thinking/server.py"
             ]
+        },
+        "context7": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@upstash/context7-mcp"
+            ]
         }
     }
 }

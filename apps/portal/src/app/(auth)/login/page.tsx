@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, ArrowRight, ShieldCheck, ChevronRight } from 'lucide-react';
 // import { login } from '@/lib/auth/auth-actions';
@@ -30,6 +31,8 @@ export default function LoginPage() {
 
             if (level === 1) {
                 router.push('/super-admin/dashboard');
+            } else if (level === 3) {
+                router.push('/service-admin/dashboard');
             } else if (level >= 4 && level <= 5) {
                 router.push('/sales-admin/dashboard');
             } else if (level <= 7) {
@@ -87,6 +90,11 @@ export default function LoginPage() {
                     return;
                 }
 
+                if (data.requirePasswordChange) {
+                    router.push('/set-initial-password');
+                    return;
+                }
+
                 handleLoginSuccess(data.user);
             }
         } catch (err: any) {
@@ -96,17 +104,24 @@ export default function LoginPage() {
         }
     };
 
-    const handleLoginSuccess = (user: any) => {
+    const queryClient = useQueryClient();
+
+    const handleLoginSuccess = async (user: any) => {
+        // Invalidate auth query to ensure fresh data on next page load
+        await queryClient.invalidateQueries({ queryKey: ["auth-user"] });
+
         const role = user.roles?.name || user.role || "customer";
 
         let redirectPath = "/dashboard";
         if (role === "super_admin") {
             redirectPath = "/super-admin/dashboard";
-        } else if (["showroom_sales_admin", "service_sales_admin"].includes(role)) {
+        } else if (role === "service_admin") {
+            redirectPath = "/service-admin/dashboard";
+        } else if (role.includes("sales_admin")) {
             redirectPath = "/sales-admin/dashboard";
-        } else if (["showroom_admin", "service_admin", "support", "accountant"].includes(role)) {
+        } else if (role.includes("showroom") || role.includes("service") || role === "support" || role === "accountant" || role === "admin") {
             redirectPath = "/admin/dashboard";
-        } else if (["dealer_owner", "dealer_manager", "dealer_staff", "sub_dealer"].includes(role)) {
+        } else if (role.includes("dealer") || role === "sub_dealer") {
             redirectPath = "/dealer/dashboard";
         }
 

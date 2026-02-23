@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import {
     Shield,
     Mail,
@@ -70,31 +69,15 @@ export default function UserPortfolioPage() {
             if (!id) return;
             setLoading(true);
             try {
-                // 1. Fetch Core Profile
-                const { data: profileData, error } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', id)
-                    .single();
+                const res = await fetch(`/api/super-admin/users/${id}`);
+                if (!res.ok) throw new Error("Portfolio retrieval failure");
+                const data = await res.json();
 
-                if (error) throw error;
-                setProfile(profileData);
-
-                // 2. Fetch Role-Specific Intelligence
-                const data: RoleData = { orders: [], payments: [] };
-                if (profileData.role.includes('dealer')) {
-                    const { data: orders } = await supabase.from('orders').select('*').eq('dealer_id', id).order('created_at', { ascending: false });
-                    const { data: payments } = await supabase.from('payments').select('*').eq('dealer_id', id).order('created_at', { ascending: false });
-                    data.orders = (orders as Order[]) || [];
-                    data.payments = (payments as Payment[]) || [];
-                } else if (profileData.role === 'customer') {
-                    const { data: orders } = await supabase.from('orders').select('*').eq('user_id', id).order('created_at', { ascending: false });
-                    data.orders = (orders as Order[]) || [];
-                } else if (profileData.role === 'accountant') {
-                    const { data: payments } = await supabase.from('payments').select('*').limit(20).order('created_at', { ascending: false });
-                    data.payments = (payments as Payment[]) || [];
-                }
-                setRoleData(data);
+                setProfile(data);
+                setRoleData({
+                    orders: data.orders || [],
+                    payments: data.payments || []
+                });
 
             } catch (error: unknown) {
                 console.error("Portfolio retrieval failed:", error);

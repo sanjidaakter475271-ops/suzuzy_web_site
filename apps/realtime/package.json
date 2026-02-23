@@ -8,8 +8,9 @@
         "dev": "node server.js"
     },
     "dependencies": {
-        "socket.io": "^4.7.2",
-        "cors": "^2.8.5"
+        "cors": "^2.8.5",
+        "jsonwebtoken": "^9.0.3",
+        "socket.io": "^4.7.2"
     },
     "engines": {
         "node": ">=18"

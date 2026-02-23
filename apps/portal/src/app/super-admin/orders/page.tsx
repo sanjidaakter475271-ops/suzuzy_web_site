@@ -55,23 +55,10 @@ export default function SuperAdminOrdersPage() {
     const fetchOrders = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('orders')
-                .select(`
-                    *,
-                    sub_orders (
-                        id,
-                        dealer_id,
-                        status,
-                        dealers (
-                            business_name
-                        )
-                    )
-                `)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            setOrders((data as unknown as GlobalOrder[]) || []);
+            const res = await fetch('/api/super-admin/orders');
+            if (!res.ok) throw new Error("Order registry retrieval failure");
+            const data = await res.json();
+            setOrders(data || []);
         } catch (error) {
             console.error("Error fetching orders:", error);
             toast.error("Global order sync failed");

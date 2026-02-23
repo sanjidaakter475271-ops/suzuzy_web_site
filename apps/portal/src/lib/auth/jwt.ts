@@ -9,6 +9,7 @@ export interface TokenPayload {
     email: string;
     role: string;
     dealerId?: string | null;
+    requirePasswordChange?: boolean;
     [key: string]: any;
 }
 

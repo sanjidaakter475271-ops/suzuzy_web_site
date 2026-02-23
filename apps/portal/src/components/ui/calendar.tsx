@@ -46,14 +46,19 @@ function Calendar({
                     "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
                 day_today: "bg-accent text-accent-foreground",
                 day_outside:
-                    "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
+                    "day-outside text-muted-foreground aria-selected:bg-accent/50 aria-selected:text-muted-foreground",
                 day_disabled: "text-muted-foreground opacity-50",
                 day_range_middle:
                     "aria-selected:bg-accent aria-selected:text-accent-foreground",
                 day_hidden: "invisible",
                 ...classNames,
             }}
-
+            components={{
+                Chevron: ({ orientation }) => {
+                    const Icon = orientation === "left" ? ChevronLeft : ChevronRight
+                    return <Icon className="h-4 w-4" />
+                },
+            }}
             {...props}
         />
     )

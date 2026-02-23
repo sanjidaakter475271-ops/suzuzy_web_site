@@ -9,22 +9,34 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@capacitor-community/barcode-scanner": "^4.0.1",
-    "@capacitor/android": "^8.0.1",
-    "@capacitor/cli": "^7.4.5",
-    "@capacitor/core": "^8.0.1",
+    "@capacitor-mlkit/barcode-scanning": "^7.0.0",
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/device": "^7.0.0",
+    "@capacitor/geolocation": "^7.0.0",
+    "@capacitor/network": "^7.0.0",
+    "@capacitor/preferences": "^7.0.0",
+    "@capacitor/push-notifications": "^7.0.0",
     "@google/genai": "^1.38.0",
     "@supabase/supabase-js": "^2.93.1",
-    "better-auth": "^1.4.17",
+    "axios": "^1.13.5",
+    "expo": "^54.0.33",
+    "framer-motion": "^12.34.0",
     "lucide-react": "^0.563.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-router-dom": "^7.13.0"
+    "react-router-dom": "^7.13.0",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/react": "~19.1.10",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
+  },
+  "overrides": {
+    "minimatch": "^10.2.1"
   }
 }

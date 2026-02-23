@@ -40,7 +40,6 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { useUser } from "@/hooks/useUser";
-import { getDealerProducts, getCategories, deleteProductAction, updateProductStatusAction, bulkUpdateProductStatusAction, bulkDeleteProductsAction } from "@/actions/products";
 
 interface Product {
     id: string;
@@ -80,8 +79,8 @@ export default function ProductsPage() {
     const fetchInitialData = async () => {
         try {
             const [prodRes, catRes] = await Promise.all([
-                getDealerProducts(),
-                getCategories()
+                fetch('/api/v1/products').then(res => res.json()),
+                fetch('/api/v1/categories').then(res => res.json())
             ]);
 
             if (prodRes.success && prodRes.data) {
@@ -108,7 +107,8 @@ export default function ProductsPage() {
         if (!confirm("Permanently archive this asset from the registry?")) return;
 
         try {
-            const result = await deleteProductAction(id);
+            const res = await fetch(`/api/v1/products/${id}`, { method: 'DELETE' });
+            const result = await res.json();
 
             if (!result.success) throw new Error(result.error);
             toast.success("Asset archived");
@@ -122,7 +122,12 @@ export default function ProductsPage() {
     const toggleStatus = async (productId: string, currentStatus: string) => {
         const newStatus = currentStatus === 'active' ? 'draft' : 'active';
         try {
-            const result = await updateProductStatusAction(productId, newStatus);
+            const res = await fetch(`/api/v1/products/${productId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            const result = await res.json();
 
             if (!result.success) throw new Error(result.error);
             toast.success(`Asset status updated to ${newStatus}`);
@@ -137,7 +142,12 @@ export default function ProductsPage() {
         if (selectedIds.length === 0) return;
         setIsBulkUpdating(true);
         try {
-            const result = await bulkUpdateProductStatusAction(selectedIds, newStatus);
+            const res = await fetch('/api/v1/products/bulk/status', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: selectedIds, status: newStatus })
+            });
+            const result = await res.json();
 
             if (!result.success) throw new Error(result.error);
             toast.success(`Registry updated: ${selectedIds.length} assets set to ${newStatus}`);
@@ -157,7 +167,12 @@ export default function ProductsPage() {
 
         setIsBulkUpdating(true);
         try {
-            const result = await bulkDeleteProductsAction(selectedIds);
+            const res = await fetch('/api/v1/products/bulk/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: selectedIds })
+            });
+            const result = await res.json();
 
             if (!result.success) throw new Error(result.error);
             toast.success(`${selectedIds.length} assets purged from registry`);

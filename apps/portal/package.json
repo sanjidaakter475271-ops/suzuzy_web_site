@@ -4,15 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:unified": "node server-unified.js",
-    "dev:all": "concurrently \"next dev\" \"node server/socket.js\"",
+    "migrate": "tsx scripts/prisma-migrate.ts",
     "build": "next build",
+    "seed:service": "tsx prisma/seed-service.ts",
     "start": "next start",
-    "start:all": "concurrently \"node server.js\" \"node server/socket.js\"",
-    "lint": "eslint",
-    "socket:dev": "node server/socket.js"
+    "lint": "eslint"
   },
   "dependencies": {
+    "@faker-js/faker": "^10.3.0",
+    "@google/generative-ai": "^0.24.1",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -30,6 +30,7 @@
     "@tanstack/react-query": "^5.90.16",
     "@tanstack/react-table": "^8.21.3",
     "argon2": "^0.44.0",
+    "axios": "^1.13.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -41,6 +42,7 @@
     "next": "16.1.1",
     "nodemailer": "^7.0.13",
     "otplib": "^12.0.1",
+    "papaparse": "^5.5.3",
     "pg": "^8.17.2",
     "qrcode": "^1.5.4",
     "react": "19.2.3",
@@ -55,6 +57,7 @@
     "tailwind-merge": "^3.4.0",
     "uuid": "^13.0.0",
     "xlsx": "^0.18.5",
+    "zod": "^4.3.6",
     "zustand": "^5.0.10"
   },
   "devDependencies": {
@@ -62,6 +65,7 @@
     "@types/ioredis": "^4.28.10",
     "@types/node": "^20",
     "@types/nodemailer": "^7.0.9",
+    "@types/papaparse": "^5.5.2",
     "@types/pg": "^8.16.0",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",

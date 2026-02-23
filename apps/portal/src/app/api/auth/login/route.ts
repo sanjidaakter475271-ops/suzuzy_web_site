@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     try {
         // Parse request body
         const body = await req.json();
-        email = body.email;
+        email = body.email?.trim()?.toLowerCase();
         password = body.password;
         rememberMe = body.rememberMe;
 
@@ -139,7 +139,8 @@ export async function POST(req: NextRequest) {
         role: user.roles?.name || "customer",
         dealerId: user.dealer_id,
         unitId: primaryUnit?.id,
-        unitType: primaryUnit?.unit_type
+        unitType: primaryUnit?.unit_type,
+        requirePasswordChange: user.password_changed_at === null
     };
 
     // 6. Check MFA
@@ -189,7 +190,16 @@ export async function POST(req: NextRequest) {
         // Continue even if logging fails
     }
 
-    const response = NextResponse.json({ success: true, user });
+    const response = NextResponse.json({
+        success: true,
+        user,
+        requirePasswordChange: payload.requirePasswordChange,
+        session: {
+            accessToken: session.accessToken,
+            refreshToken: session.refreshToken,
+            expiresAt: new Date(Date.now() + (session.expiresIn * 1000)).toISOString()
+        }
+    });
 
     // Set cookies
     response.cookies.set("access_token", session.accessToken, {

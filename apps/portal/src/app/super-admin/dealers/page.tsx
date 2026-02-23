@@ -46,16 +46,16 @@ export default function DealersPage() {
     const fetchDealers = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('dealers')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            setDealers((data as Dealer[]) || []);
-        } catch (error) {
+            const response = await fetch('/api/super-admin/dealers');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "System registry unavailable");
+            }
+            const data = await response.json();
+            setDealers(data || []);
+        } catch (error: any) {
             console.error("Error fetching dealers:", error);
-            toast.error("Failed to load dealers");
+            toast.error(error.message || "Failed to load dealers");
         } finally {
             setLoading(false);
         }

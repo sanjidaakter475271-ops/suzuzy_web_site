@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { revokeSession } from "@/lib/auth/session";
+import { revokeSessionByToken } from "@/lib/auth/session";
 
 export async function POST(req: NextRequest) {
     const refreshToken = (await cookies()).get("refresh_token")?.value;
 
     if (refreshToken) {
-        await revokeSession(refreshToken);
+        await revokeSessionByToken(refreshToken);
     }
 
     const response = NextResponse.json({ success: true });

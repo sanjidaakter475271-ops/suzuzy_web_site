@@ -108,6 +108,7 @@ export async function refreshTokens(oldRefreshToken: string) {
         email: user.email || "",
         role: user.roles?.name || "customer",
         dealerId: user.dealer_id,
+        requirePasswordChange: user.password_changed_at === null
     };
 
     const newRefreshToken = await generateRefreshToken(payload);
@@ -140,8 +141,23 @@ export async function revokeSession(sessionId: string) {
         data: { is_active: false }
     });
 
+
     await (prisma as any).refresh_tokens_public.updateMany({
         where: { session_id: sessionId },
         data: { is_revoked: true, revoked_at: new Date(), revoked_reason: "Logout" }
     });
+}
+
+/**
+ * Revoke a session using the refresh token
+ */
+export async function revokeSessionByToken(token: string) {
+    const rtRecord = await (prisma as any).refresh_tokens_public.findUnique({
+        where: { token_hash: token },
+        select: { session_id: true }
+    });
+
+    if (rtRecord?.session_id) {
+        await revokeSession(rtRecord.session_id);
+    }
 }

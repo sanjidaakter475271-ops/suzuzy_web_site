@@ -1,0 +1,7 @@
+Fixes and Changes Summary:
+
+1. apps/portal/postcss.config.mjs: Tailwind CSS configuration restore kora hoyeche login page er styling fix korar jonno.
+2. servicestuff/vite.config.ts: Port conflict solve korar jonno dev server port 3003 e set kora hoyeche.
+3. servicestuff/.env.local: Portal API URL update kora hoyeche (10.184.157.234) jate server er sathe connect kora jay.
+4. apps/portal/next.config.ts: CORS configuration add kora hoyeche jate frontend theke API request block na hoy.
+5. apps/portal/src/app/api/auth/register/route.ts: Registration process er 500 Internal Server error fix kora hoyeche hardcoded invalid Role ID remove kore dynamic lookup add korar maddhome.

@@ -24,7 +24,13 @@ interface RoleCheckOptions {
  * getRoleLevel: Helper to get numeric level for a role
  */
 export function getRoleLevel(role: string): number {
-    return ROLE_LEVELS[role] || 99;
+    // Exact match first
+    if (ROLE_LEVELS[role]) return ROLE_LEVELS[role];
+
+    // Fuzzy match for dealers
+    if (role?.includes('dealer')) return 12; // Same as dealer_staff
+
+    return 99;
 }
 
 /**

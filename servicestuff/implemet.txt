@@ -1,0 +1,3684 @@
+🚀 Next Level Service Center App - Complete Implementation Plan
+📋 System Overview
+text
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           SERVICE CENTER WORKFLOW                                │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
+│  │   SERVICE    │    │  TECHNICIAN  │    │    PARTS     │    │    ADMIN     │  │
+│  │    ADMIN     │───▶│     APP      │───▶│  SELECTION   │───▶│  APPROVAL    │  │
+│  │ Token Create │    │ Ticket View  │    │   Process    │    │   & Stock    │  │
+│  └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘  │
+│         │                   │                   │                   │           │
+│         ▼                   ▼                   ▼                   ▼           │
+│  ┌──────────────────────────────────────────────────────────────────────────┐  │
+│  │                         REALTIME DATABASE                                 │  │
+│  │  • Tickets • Parts • Stock • Categories • Technicians • Transactions     │  │
+│  └──────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+📁 Complete Project Structure
+text
+
+service-center-app/
+├── 📁 prisma/
+│   └── schema.prisma                 # Complete database schema
+├── 📁 src/
+│   ├── 📁 app/
+│   │   ├── 📁 api/
+│   │   │   ├── 📁 technician/
+│   │   │   │   ├── 📁 tickets/
+│   │   │   │   │   └── route.ts      # Get assigned tickets
+│   │   │   │   ├── 📁 ticket/[id]/
+│   │   │   │   │   └── route.ts      # Single ticket operations
+│   │   │   │   ├── 📁 categories/
+│   │   │   │   │   └── route.ts      # Get categories by model
+│   │   │   │   ├── 📁 parts/
+│   │   │   │   │   └── route.ts      # Get parts by category
+│   │   │   │   ├── 📁 job-card/
+│   │   │   │   │   └── route.ts      # Submit job card
+│   │   │   │   └── 📁 finish/
+│   │   │   │       └── route.ts      # Mark job finished
+│   │   │   └── 📁 admin/
+│   │   │       ├── 📁 verify-job/
+│   │   │       │   └── route.ts      # Verify & update stock
+│   │   │       └── 📁 pending-jobs/
+│   │   │           └── route.ts      # Get pending verifications
+│   │   ├── 📁 technician/
+│   │   │   ├── layout.tsx            # Technician layout
+│   │   │   ├── page.tsx              # Dashboard
+│   │   │   └── 📁 job/[ticketId]/
+│   │   │       └── page.tsx          # Job processing page
+│   │   └── 📁 admin/
+│   │       └── 📁 verify/
+│   │           └── page.tsx          # Admin verification page
+│   ├── 📁 components/
+│   │   ├── 📁 technician/
+│   │   │   ├── TicketCard.tsx        # Pending ticket card
+│   │   │   ├── CustomerInfo.tsx      # Customer details display
+│   │   │   ├── CategoryGrid.tsx      # Category selection
+│   │   │   ├── PartsSelector.tsx     # Parts popup modal
+│   │   │   ├── BrandSelector.tsx     # Brand/variant selection
+│   │   │   ├── QuantitySelector.tsx  # +/- quantity control
+│   │   │   ├── SelectedParts.tsx     # Cart/selected parts list
+│   │   │   ├── JobSummary.tsx        # Chalan/Invoice view
+│   │   │   └── FinishButton.tsx      # Complete job button
+│   │   ├── 📁 admin/
+│   │   │   ├── PendingJobCard.tsx    # Pending verification card
+│   │   │   ├── JobVerifyModal.tsx    # Verification modal
+│   │   │   └── StockUpdateStatus.tsx # Stock update status
+│   │   └── 📁 ui/
+│   │       ├── Modal.tsx
+│   │       ├── Dropdown.tsx
+│   │       ├── Button.tsx
+│   │       ├── Badge.tsx
+│   │       └── Toast.tsx
+│   ├── 📁 hooks/
+│   │   ├── useTechnicianTickets.ts
+│   │   ├── useCategories.ts
+│   │   ├── useParts.ts
+│   │   ├── useJobCard.ts
+│   │   └── useRealtime.ts
+│   ├── 📁 store/
+│   │   ├── technicianStore.ts        # Zustand store
+│   │   └── jobCardStore.ts           # Job card state
+│   ├── 📁 lib/
+│   │   ├── prisma.ts
+│   │   ├── pusher.ts                 # Realtime notifications
+│   │   └── utils.ts
+│   └── 📁 types/
+│       └── index.ts                  # TypeScript types
+└── package.json
+🗄️ Database Schema (Complete)
+prisma
+
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== USER & AUTHENTICATION ====================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  phone         String?
+  password      String
+  role          UserRole  @default(TECHNICIAN)
+  avatar        String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  technician    Technician?
+  serviceAdmin  ServiceAdmin?
+
+  @@map("users")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  SERVICE_ADMIN
+  TECHNICIAN
+  INVENTORY_ADMIN
+}
+
+// ==================== TECHNICIAN ====================
+
+model Technician {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id])
+  employeeId    String    @unique
+  specialization String[]
+  rampId        String?
+  ramp          Ramp?     @relation(fields: [rampId], references: [id])
+  isAvailable   Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  assignedTickets  Ticket[]
+  jobCards         JobCard[]
+  partsUsage       PartsUsage[]
+
+  @@map("technicians")
+}
+
+// ==================== RAMP ====================
+
+model Ramp {
+  id            String    @id @default(cuid())
+  name          String
+  rampNumber    Int       @unique
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  technicians   Technician[]
+  tickets       Ticket[]
+
+  @@map("ramps")
+}
+
+// ==================== SERVICE ADMIN ====================
+
+model ServiceAdmin {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id])
+  employeeId    String    @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  createdTickets  Ticket[]
+  verifiedJobs    JobCard[]  @relation("VerifiedBy")
+
+  @@map("service_admins")
+}
+
+// ==================== CUSTOMER ====================
+
+model Customer {
+  id            String    @id @default(cuid())
+  name          String
+  phone         String
+  email         String?
+  address       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  vehicles      Vehicle[]
+  tickets       Ticket[]
+
+  @@map("customers")
+}
+
+// ==================== VEHICLE ====================
+
+model Vehicle {
+  id            String    @id @default(cuid())
+  customerId    String
+  customer      Customer  @relation(fields: [customerId], references: [id])
+  modelId       String
+  model         BikeModel @relation(fields: [modelId], references: [id])
+  engineNumber  String    @unique
+  frameNumber   String    @unique
+  registrationNo String?
+  color         String?
+  purchaseDate  DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  tickets       Ticket[]
+
+  @@map("vehicles")
+}
+
+// ==================== BIKE MODEL ====================
+
+model BikeModel {
+  id            String    @id @default(cuid())
+  name          String                    // e.g., "Gixer SF"
+  code          String    @unique         // e.g., "GIXER-SF"
+  brand         String                    // e.g., "Suzuki"
+  variant       String?                   // e.g., "150cc"
+  image         String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  vehicles      Vehicle[]
+  categories    ModelCategory[]
+  parts         Part[]
+
+  @@map("bike_models")
+}
+
+// ==================== CATEGORY ====================
+
+model Category {
+  id            String    @id @default(cuid())
+  name          String                    // e.g., "Engine", "Engine Oil", "Brakes"
+  code          String    @unique
+  icon          String?                   // Icon name/path
+  description   String?
+  sortOrder     Int       @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  models        ModelCategory[]
+  parts         Part[]
+
+  @@map("categories")
+}
+
+// ==================== MODEL-CATEGORY MAPPING ====================
+
+model ModelCategory {
+  id            String    @id @default(cuid())
+  modelId       String
+  model         BikeModel @relation(fields: [modelId], references: [id])
+  categoryId    String
+  category      Category  @relation(fields: [categoryId], references: [id])
+  isActive      Boolean   @default(true)
+
+  @@unique([modelId, categoryId])
+  @@map("model_categories")
+}
+
+// ==================== PARTS ====================
+
+model Part {
+  id            String    @id @default(cuid())
+  name          String                    // e.g., "Piston Ring"
+  partNumber    String    @unique
+  categoryId    String
+  category      Category  @relation(fields: [categoryId], references: [id])
+  description   String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  compatibleModels BikeModel[]
+  variants      PartVariant[]
+  partsUsage    PartsUsage[]
+
+  @@map("parts")
+}
+
+// ==================== PART VARIANTS (Brands) ====================
+
+model PartVariant {
+  id            String    @id @default(cuid())
+  partId        String
+  part          Part      @relation(fields: [partId], references: [id])
+  brandName     String                    // e.g., "Original", "Aftermarket", "Premium"
+  sku           String    @unique
+  price         Decimal   @db.Decimal(10, 2)
+  mrp           Decimal?  @db.Decimal(10, 2)
+  image         String?
+  stockQuantity Int       @default(0)
+  minStock      Int       @default(5)
+  unit          String    @default("PCS") // PCS, LTR, ML, SET
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  partsUsage    PartsUsage[]
+  stockHistory  StockHistory[]
+
+  @@map("part_variants")
+}
+
+// ==================== TICKET ====================
+
+model Ticket {
+  id            String    @id @default(cuid())
+  tokenNumber   String    @unique
+  customerId    String
+  customer      Customer  @relation(fields: [customerId], references: [id])
+  vehicleId     String
+  vehicle       Vehicle   @relation(fields: [vehicleId], references: [id])
+  rampId        String?
+  ramp          Ramp?     @relation(fields: [rampId], references: [id])
+  technicianId  String?
+  technician    Technician? @relation(fields: [technicianId], references: [id])
+  createdById   String
+  createdBy     ServiceAdmin @relation(fields: [createdById], references: [id])
+  
+  serviceType   ServiceType
+  priority      Priority  @default(NORMAL)
+  status        TicketStatus @default(PENDING)
+  
+  customerComplaint String?
+  diagnosticNotes   String?
+  estimatedTime     Int?              // in minutes
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  assignedAt    DateTime?
+  startedAt     DateTime?
+  completedAt   DateTime?
+
+  // Relations
+  jobCard       JobCard?
+
+  @@index([status, technicianId])
+  @@index([tokenNumber])
+  @@map("tickets")
+}
+
+enum ServiceType {
+  FREE_SERVICE
+  PAID_SERVICE
+  WARRANTY
+  REPAIR
+  ACCIDENT
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  PENDING           // Created, waiting for technician
+  ASSIGNED          // Assigned to technician
+  IN_PROGRESS       // Technician started working
+  PARTS_SELECTED    // Parts selected, waiting for finish
+  FINISHED          // Technician finished, waiting for admin verification
+  VERIFIED          // Admin verified, stock updated
+  COMPLETED         // Fully completed
+  CANCELLED
+}
+
+// ==================== JOB CARD ====================
+
+model JobCard {
+  id            String    @id @default(cuid())
+  jobCardNumber String    @unique
+  ticketId      String    @unique
+  ticket        Ticket    @relation(fields: [ticketId], references: [id])
+  technicianId  String
+  technician    Technician @relation(fields: [technicianId], references: [id])
+  
+  status        JobCardStatus @default(DRAFT)
+  
+  laborCharge   Decimal   @default(0) @db.Decimal(10, 2)
+  partsTotal    Decimal   @default(0) @db.Decimal(10, 2)
+  discount      Decimal   @default(0) @db.Decimal(10, 2)
+  grandTotal    Decimal   @default(0) @db.Decimal(10, 2)
+  
+  technicianNotes String?
+  adminNotes      String?
+  
+  verifiedById  String?
+  verifiedBy    ServiceAdmin? @relation("VerifiedBy", fields: [verifiedById], references: [id])
+  verifiedAt    DateTime?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  partsUsed     PartsUsage[]
+
+  @@map("job_cards")
+}
+
+enum JobCardStatus {
+  DRAFT             // Technician is selecting parts
+  SUBMITTED         // Parts selection complete
+  PENDING_VERIFY    // Waiting for admin verification
+  VERIFIED          // Admin verified, stock updated
+  REJECTED          // Admin rejected
+}
+
+// ==================== PARTS USAGE ====================
+
+model PartsUsage {
+  id              String    @id @default(cuid())
+  jobCardId       String
+  jobCard         JobCard   @relation(fields: [jobCardId], references: [id])
+  partId          String
+  part            Part      @relation(fields: [partId], references: [id])
+  partVariantId   String
+  partVariant     PartVariant @relation(fields: [partVariantId], references: [id])
+  technicianId    String
+  technician      Technician @relation(fields: [technicianId], references: [id])
+  
+  quantity        Int
+  unitPrice       Decimal   @db.Decimal(10, 2)
+  totalPrice      Decimal   @db.Decimal(10, 2)
+  
+  isStockUpdated  Boolean   @default(false)
+  stockUpdatedAt  DateTime?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("parts_usage")
+}
+
+// ==================== STOCK HISTORY ====================
+
+model StockHistory {
+  id              String    @id @default(cuid())
+  partVariantId   String
+  partVariant     PartVariant @relation(fields: [partVariantId], references: [id])
+  
+  type            StockChangeType
+  quantity        Int
+  previousStock   Int
+  newStock        Int
+  
+  reference       String?           // Job card number, PO number, etc.
+  notes           String?
+  
+  createdById     String
+  createdAt       DateTime  @default(now())
+
+  @@map("stock_history")
+}
+
+enum StockChangeType {
+  PURCHASE        // Stock added from purchase
+  USAGE           // Used in service
+  ADJUSTMENT      // Manual adjustment
+  RETURN          // Returned stock
+  DAMAGED         // Damaged/expired
+}
+
+// ==================== NOTIFICATIONS ====================
+
+model Notification {
+  id            String    @id @default(cuid())
+  userId        String
+  type          NotificationType
+  title         String
+  message       String
+  data          Json?
+  isRead        Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  NEW_TICKET
+  JOB_FINISHED
+  JOB_VERIFIED
+  STOCK_LOW
+  SYSTEM
+}
+🔧 API Implementation
+1. Technician Tickets API
+TypeScript
+
+// src/app/api/technician/tickets/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+
+// GET - Technician er assigned tickets
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session || session.user.role !== 'TECHNICIAN') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Get technician
+    const technician = await prisma.technician.findUnique({
+      where: { userId: session.user.id }
+    });
+
+    if (!technician) {
+      return NextResponse.json(
+        { success: false, error: 'Technician not found' },
+        { status: 404 }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+    const status = searchParams.get('status');
+
+    // Build where clause
+    const whereClause: any = {
+      technicianId: technician.id
+    };
+
+    if (status) {
+      whereClause.status = status;
+    } else {
+      // Default: show pending, assigned, in_progress tickets
+      whereClause.status = {
+        in: ['PENDING', 'ASSIGNED', 'IN_PROGRESS', 'PARTS_SELECTED']
+      };
+    }
+
+    const tickets = await prisma.ticket.findMany({
+      where: whereClause,
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            phone: true
+          }
+        },
+        vehicle: {
+          include: {
+            model: {
+              select: {
+                id: true,
+                name: true,
+                brand: true,
+                variant: true,
+                image: true
+              }
+            }
+          }
+        },
+        ramp: {
+          select: {
+            id: true,
+            name: true,
+            rampNumber: true
+          }
+        },
+        jobCard: {
+          include: {
+            partsUsed: {
+              include: {
+                part: true,
+                partVariant: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: [
+        { priority: 'desc' },
+        { createdAt: 'asc' }
+      ]
+    });
+
+    // Format tickets for app
+    const formattedTickets = tickets.map(ticket => ({
+      id: ticket.id,
+      tokenNumber: ticket.tokenNumber,
+      status: ticket.status,
+      priority: ticket.priority,
+      serviceType: ticket.serviceType,
+      customer: {
+        name: ticket.customer.name,
+        phone: ticket.customer.phone
+      },
+      vehicle: {
+        model: ticket.vehicle.model.name,
+        brand: ticket.vehicle.model.brand,
+        variant: ticket.vehicle.model.variant,
+        modelId: ticket.vehicle.model.id,
+        engineNumber: ticket.vehicle.engineNumber,
+        frameNumber: ticket.vehicle.frameNumber,
+        registrationNo: ticket.vehicle.registrationNo,
+        image: ticket.vehicle.model.image
+      },
+      ramp: ticket.ramp ? {
+        name: ticket.ramp.name,
+        number: ticket.ramp.rampNumber
+      } : null,
+      jobCard: ticket.jobCard,
+      customerComplaint: ticket.customerComplaint,
+      createdAt: ticket.createdAt,
+      assignedAt: ticket.assignedAt
+    }));
+
+    return NextResponse.json({
+      success: true,
+      data: formattedTickets,
+      count: formattedTickets.length
+    });
+
+  } catch (error) {
+    console.error('Error fetching technician tickets:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch tickets' },
+      { status: 500 }
+    );
+  }
+}
+2. Single Ticket Operations API
+TypeScript
+
+// src/app/api/technician/ticket/[id]/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { pusherServer } from '@/lib/pusher';
+
+// GET - Single ticket details
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: params.id },
+      include: {
+        customer: true,
+        vehicle: {
+          include: {
+            model: true
+          }
+        },
+        ramp: true,
+        technician: {
+          include: {
+            user: {
+              select: {
+                name: true,
+                phone: true
+              }
+            }
+          }
+        },
+        jobCard: {
+          include: {
+            partsUsed: {
+              include: {
+                part: true,
+                partVariant: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!ticket) {
+      return NextResponse.json(
+        { success: false, error: 'Ticket not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: ticket
+    });
+
+  } catch (error) {
+    console.error('Error fetching ticket:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch ticket' },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH - Update ticket status (start work)
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session || session.user.role !== 'TECHNICIAN') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { action } = body;
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: params.id },
+      include: { technician: true }
+    });
+
+    if (!ticket) {
+      return NextResponse.json(
+        { success: false, error: 'Ticket not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get technician
+    const technician = await prisma.technician.findUnique({
+      where: { userId: session.user.id }
+    });
+
+    if (!technician || ticket.technicianId !== technician.id) {
+      return NextResponse.json(
+        { success: false, error: 'Not authorized for this ticket' },
+        { status: 403 }
+      );
+    }
+
+    let updateData: any = {};
+
+    switch (action) {
+      case 'START':
+        if (ticket.status !== 'PENDING' && ticket.status !== 'ASSIGNED') {
+          return NextResponse.json(
+            { success: false, error: 'Ticket already started' },
+            { status: 400 }
+          );
+        }
+        updateData = {
+          status: 'IN_PROGRESS',
+          startedAt: new Date()
+        };
+        
+        // Create job card if not exists
+        const existingJobCard = await prisma.jobCard.findUnique({
+          where: { ticketId: params.id }
+        });
+
+        if (!existingJobCard) {
+          const jobCardNumber = `JC-${Date.now()}`;
+          await prisma.jobCard.create({
+            data: {
+              jobCardNumber,
+              ticketId: params.id,
+              technicianId: technician.id,
+              status: 'DRAFT'
+            }
+          });
+        }
+        break;
+
+      default:
+        return NextResponse.json(
+          { success: false, error: 'Invalid action' },
+          { status: 400 }
+        );
+    }
+
+    const updatedTicket = await prisma.ticket.update({
+      where: { id: params.id },
+      data: updateData,
+      include: {
+        customer: true,
+        vehicle: {
+          include: { model: true }
+        },
+        jobCard: true
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: updatedTicket,
+      message: 'Ticket updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Error updating ticket:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to update ticket' },
+      { status: 500 }
+    );
+  }
+}
+3. Categories by Model API
+TypeScript
+
+// src/app/api/technician/categories/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+
+// GET - Model specific categories
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+    const modelId = searchParams.get('modelId');
+
+    if (!modelId) {
+      return NextResponse.json(
+        { success: false, error: 'Model ID required' },
+        { status: 400 }
+      );
+    }
+
+    // Get categories mapped to this model
+    const modelCategories = await prisma.modelCategory.findMany({
+      where: {
+        modelId: modelId,
+        isActive: true,
+        category: {
+          isActive: true
+        }
+      },
+      include: {
+        category: {
+          include: {
+            parts: {
+              where: {
+                isActive: true,
+                compatibleModels: {
+                  some: {
+                    id: modelId
+                  }
+                }
+              },
+              include: {
+                variants: {
+                  where: {
+                    isActive: true,
+                    stockQuantity: {
+                      gt: 0  // Only available stock
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        category: {
+          sortOrder: 'asc'
+        }
+      }
+    });
+
+    // Format categories with parts count
+    const categories = modelCategories.map(mc => ({
+      id: mc.category.id,
+      name: mc.category.name,
+      code: mc.category.code,
+      icon: mc.category.icon,
+      description: mc.category.description,
+      partsCount: mc.category.parts.length,
+      availableParts: mc.category.parts.filter(
+        p => p.variants.length > 0
+      ).length
+    }));
+
+    return NextResponse.json({
+      success: true,
+      data: categories
+    });
+
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch categories' },
+      { status: 500 }
+    );
+  }
+}
+4. Parts by Category API
+TypeScript
+
+// src/app/api/technician/parts/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+
+// GET - Parts with variants for a category and model
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+    const categoryId = searchParams.get('categoryId');
+    const modelId = searchParams.get('modelId');
+
+    if (!categoryId || !modelId) {
+      return NextResponse.json(
+        { success: false, error: 'Category ID and Model ID required' },
+        { status: 400 }
+      );
+    }
+
+    // Get parts for this category that are compatible with this model
+    const parts = await prisma.part.findMany({
+      where: {
+        categoryId: categoryId,
+        isActive: true,
+        compatibleModels: {
+          some: {
+            id: modelId
+          }
+        }
+      },
+      include: {
+        category: {
+          select: {
+            name: true,
+            code: true
+          }
+        },
+        variants: {
+          where: {
+            isActive: true
+          },
+          orderBy: {
+            price: 'asc'
+          }
+        }
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    });
+
+    // Format parts data
+    const formattedParts = parts.map(part => ({
+      id: part.id,
+      name: part.name,
+      partNumber: part.partNumber,
+      category: part.category,
+      description: part.description,
+      variants: part.variants.map(v => ({
+        id: v.id,
+        brandName: v.brandName,
+        sku: v.sku,
+        price: parseFloat(v.price.toString()),
+        mrp: v.mrp ? parseFloat(v.mrp.toString()) : null,
+        image: v.image,
+        stockQuantity: v.stockQuantity,
+        unit: v.unit,
+        isInStock: v.stockQuantity > 0,
+        isLowStock: v.stockQuantity <= v.minStock && v.stockQuantity > 0
+      })),
+      hasStock: part.variants.some(v => v.stockQuantity > 0),
+      variantsCount: part.variants.length
+    }));
+
+    return NextResponse.json({
+      success: true,
+      data: formattedParts
+    });
+
+  } catch (error) {
+    console.error('Error fetching parts:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch parts' },
+      { status: 500 }
+    );
+  }
+}
+5. Job Card Submit API
+TypeScript
+
+// src/app/api/technician/job-card/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { Decimal } from '@prisma/client/runtime/library';
+
+interface PartUsageInput {
+  partId: string;
+  partVariantId: string;
+  quantity: number;
+}
+
+// POST - Submit job card with parts
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session || session.user.role !== 'TECHNICIAN') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { ticketId, partsUsed, laborCharge = 0, notes } = body;
+
+    // Validate input
+    if (!ticketId || !partsUsed || !Array.isArray(partsUsed)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input data' },
+        { status: 400 }
+      );
+    }
+
+    // Get technician
+    const technician = await prisma.technician.findUnique({
+      where: { userId: session.user.id }
+    });
+
+    if (!technician) {
+      return NextResponse.json(
+        { success: false, error: 'Technician not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get or create job card
+    let jobCard = await prisma.jobCard.findUnique({
+      where: { ticketId }
+    });
+
+    if (!jobCard) {
+      jobCard = await prisma.jobCard.create({
+        data: {
+          jobCardNumber: `JC-${Date.now()}`,
+          ticketId,
+          technicianId: technician.id,
+          status: 'DRAFT'
+        }
+      });
+    }
+
+    // Validate parts and check stock
+    const partsData: PartUsageInput[] = partsUsed;
+    let partsTotal = new Decimal(0);
+    const partsToCreate: any[] = [];
+
+    for (const item of partsData) {
+      const variant = await prisma.partVariant.findUnique({
+        where: { id: item.partVariantId },
+        include: { part: true }
+      });
+
+      if (!variant) {
+        return NextResponse.json(
+          { success: false, error: `Part variant not found: ${item.partVariantId}` },
+          { status: 400 }
+        );
+      }
+
+      if (variant.stockQuantity < item.quantity) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: `Insufficient stock for ${variant.part.name} - ${variant.brandName}. Available: ${variant.stockQuantity}` 
+          },
+          { status: 400 }
+        );
+      }
+
+      const totalPrice = variant.price.mul(item.quantity);
+      partsTotal = partsTotal.add(totalPrice);
+
+      partsToCreate.push({
+        jobCardId: jobCard.id,
+        partId: item.partId,
+        partVariantId: item.partVariantId,
+        technicianId: technician.id,
+        quantity: item.quantity,
+        unitPrice: variant.price,
+        totalPrice: totalPrice
+      });
+    }
+
+    // Calculate grand total
+    const grandTotal = partsTotal.add(new Decimal(laborCharge));
+
+    // Transaction: Create parts usage and update job card
+    const result = await prisma.$transaction(async (tx) => {
+      // Delete existing parts usage for this job card (in case of re-submission)
+      await tx.partsUsage.deleteMany({
+        where: { jobCardId: jobCard!.id }
+      });
+
+      // Create new parts usage
+      if (partsToCreate.length > 0) {
+        await tx.partsUsage.createMany({
+          data: partsToCreate
+        });
+      }
+
+      // Update job card
+      const updatedJobCard = await tx.jobCard.update({
+        where: { id: jobCard!.id },
+        data: {
+          laborCharge: new Decimal(laborCharge),
+          partsTotal,
+          grandTotal,
+          technicianNotes: notes,
+          status: 'SUBMITTED'
+        },
+        include: {
+          partsUsed: {
+            include: {
+              part: true,
+              partVariant: true
+            }
+          }
+        }
+      });
+
+      // Update ticket status
+      await tx.ticket.update({
+        where: { id: ticketId },
+        data: {
+          status: 'PARTS_SELECTED'
+        }
+      });
+
+      return updatedJobCard;
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: result,
+      message: 'Job card submitted successfully'
+    });
+
+  } catch (error) {
+    console.error('Error submitting job card:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to submit job card' },
+      { status: 500 }
+    );
+  }
+}
+
+// GET - Get job card details
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+    const ticketId = searchParams.get('ticketId');
+    const jobCardId = searchParams.get('jobCardId');
+
+    if (!ticketId && !jobCardId) {
+      return NextResponse.json(
+        { success: false, error: 'Ticket ID or Job Card ID required' },
+        { status: 400 }
+      );
+    }
+
+    const whereClause: any = {};
+    if (ticketId) whereClause.ticketId = ticketId;
+    if (jobCardId) whereClause.id = jobCardId;
+
+    const jobCard = await prisma.jobCard.findFirst({
+      where: whereClause,
+      include: {
+        ticket: {
+          include: {
+            customer: true,
+            vehicle: {
+              include: { model: true }
+            }
+          }
+        },
+        technician: {
+          include: {
+            user: {
+              select: { name: true, phone: true }
+            }
+          }
+        },
+        partsUsed: {
+          include: {
+            part: true,
+            partVariant: true
+          }
+        }
+      }
+    });
+
+    if (!jobCard) {
+      return NextResponse.json(
+        { success: false, error: 'Job card not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: jobCard
+    });
+
+  } catch (error) {
+    console.error('Error fetching job card:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch job card' },
+      { status: 500 }
+    );
+  }
+}
+6. Finish Job API
+TypeScript
+
+// src/app/api/technician/finish/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { pusherServer } from '@/lib/pusher';
+
+// POST - Mark job as finished
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session || session.user.role !== 'TECHNICIAN') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { ticketId, jobCardId, notes } = body;
+
+    if (!ticketId || !jobCardId) {
+      return NextResponse.json(
+        { success: false, error: 'Ticket ID and Job Card ID required' },
+        { status: 400 }
+      );
+    }
+
+    // Get technician
+    const technician = await prisma.technician.findUnique({
+      where: { userId: session.user.id }
+    });
+
+    if (!technician) {
+      return NextResponse.json(
+        { success: false, error: 'Technician not found' },
+        { status: 404 }
+      );
+    }
+
+    // Verify job card belongs to this technician
+    const jobCard = await prisma.jobCard.findUnique({
+      where: { id: jobCardId },
+      include: {
+        ticket: {
+          include: {
+            customer: true,
+            vehicle: { include: { model: true } }
+          }
+        },
+        partsUsed: {
+          include: {
+            part: true,
+            partVariant: true
+          }
+        }
+      }
+    });
+
+    if (!jobCard || jobCard.technicianId !== technician.id) {
+      return NextResponse.json(
+        { success: false, error: 'Job card not found or not authorized' },
+        { status: 403 }
+      );
+    }
+
+    if (jobCard.partsUsed.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No parts selected. Please select parts first.' },
+        { status: 400 }
+      );
+    }
+
+    // Update job card and ticket
+    const result = await prisma.$transaction(async (tx) => {
+      // Update job card
+      const updatedJobCard = await tx.jobCard.update({
+        where: { id: jobCardId },
+        data: {
+          status: 'PENDING_VERIFY',
+          technicianNotes: notes || jobCard.technicianNotes
+        }
+      });
+
+      // Update ticket
+      await tx.ticket.update({
+        where: { id: ticketId },
+        data: {
+          status: 'FINISHED',
+          completedAt: new Date()
+        }
+      });
+
+      // Create notification for service admin
+      await tx.notification.create({
+        data: {
+          userId: jobCard.ticket.createdById,
+          type: 'JOB_FINISHED',
+          title: 'Job Completed - Verification Required',
+          message: `Token ${jobCard.ticket.tokenNumber} - ${jobCard.ticket.customer.name}'s ${jobCard.ticket.vehicle.model.name} service completed. Please verify.`,
+          data: {
+            ticketId: ticketId,
+            jobCardId: jobCardId,
+            tokenNumber: jobCard.ticket.tokenNumber
+          }
+        }
+      });
+
+      return updatedJobCard;
+    });
+
+    // Send realtime notification to service admin
+    await pusherServer.trigger('service-admin', 'job-finished', {
+      ticketId,
+      jobCardId,
+      tokenNumber: jobCard.ticket.tokenNumber,
+      customerName: jobCard.ticket.customer.name,
+      vehicleModel: jobCard.ticket.vehicle.model.name,
+      technicianName: session.user.name,
+      partsCount: jobCard.partsUsed.length,
+      grandTotal: parseFloat(jobCard.grandTotal.toString())
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: result,
+      message: 'Job marked as finished. Waiting for admin verification.'
+    });
+
+  } catch (error) {
+    console.error('Error finishing job:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to finish job' },
+      { status: 500 }
+    );
+  }
+}
+7. Admin Verify Job API
+TypeScript
+
+// src/app/api/admin/verify-job/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { pusherServer } from '@/lib/pusher';
+
+// POST - Verify job and update stock
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session || session.user.role !== 'SERVICE_ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { jobCardId, action, adminNotes } = body;
+
+    if (!jobCardId || !action) {
+      return NextResponse.json(
+        { success: false, error: 'Job Card ID and action required' },
+        { status: 400 }
+      );
+    }
+
+    // Get service admin
+    const serviceAdmin = await prisma.serviceAdmin.findUnique({
+      where: { userId: session.user.id }
+    });
+
+    if (!serviceAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Service admin not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get job card with parts
+    const jobCard = await prisma.jobCard.findUnique({
+      where: { id: jobCardId },
+      include: {
+        ticket: {
+          include: {
+            customer: true,
+            technician: {
+              include: {
+                user: { select: { id: true, name: true } }
+              }
+            }
+          }
+        },
+        partsUsed: {
+          include: {
+            partVariant: true
+          }
+        }
+      }
+    });
+
+    if (!jobCard) {
+      return NextResponse.json(
+        { success: false, error: 'Job card not found' },
+        { status: 404 }
+      );
+    }
+
+    if (jobCard.status !== 'PENDING_VERIFY') {
+      return NextResponse.json(
+        { success: false, error: 'Job card is not pending verification' },
+        { status: 400 }
+      );
+    }
+
+    if (action === 'VERIFY') {
+      // Verify and update stock
+      const result = await prisma.$transaction(async (tx) => {
+        // Update stock for each part used
+        for (const usage of jobCard.partsUsed) {
+          const variant = await tx.partVariant.findUnique({
+            where: { id: usage.partVariantId }
+          });
+
+          if (!variant) {
+            throw new Error(`Part variant not found: ${usage.partVariantId}`);
+          }
+
+          if (variant.stockQuantity < usage.quantity) {
+            throw new Error(
+              `Insufficient stock for ${variant.brandName}. Available: ${variant.stockQuantity}, Required: ${usage.quantity}`
+            );
+          }
+
+          const previousStock = variant.stockQuantity;
+          const newStock = previousStock - usage.quantity;
+
+          // Update stock
+          await tx.partVariant.update({
+            where: { id: usage.partVariantId },
+            data: {
+              stockQuantity: newStock
+            }
+          });
+
+          // Create stock history
+          await tx.stockHistory.create({
+            data: {
+              partVariantId: usage.partVariantId,
+              type: 'USAGE',
+              quantity: -usage.quantity,
+              previousStock,
+              newStock,
+              reference: jobCard.jobCardNumber,
+              notes: `Used in job card ${jobCard.jobCardNumber} by technician ${jobCard.ticket.technician?.user.name}`,
+              createdById: session.user.id
+            }
+          });
+
+          // Mark usage as stock updated
+          await tx.partsUsage.update({
+            where: { id: usage.id },
+            data: {
+              isStockUpdated: true,
+              stockUpdatedAt: new Date()
+            }
+          });
+        }
+
+        // Update job card
+        const updatedJobCard = await tx.jobCard.update({
+          where: { id: jobCardId },
+          data: {
+            status: 'VERIFIED',
+            verifiedById: serviceAdmin.id,
+            verifiedAt: new Date(),
+            adminNotes
+          }
+        });
+
+        // Update ticket
+        await tx.ticket.update({
+          where: { id: jobCard.ticketId },
+          data: {
+            status: 'VERIFIED'
+          }
+        });
+
+        // Create notification for technician
+        if (jobCard.ticket.technician) {
+          await tx.notification.create({
+            data: {
+              userId: jobCard.ticket.technician.user.id,
+              type: 'JOB_VERIFIED',
+              title: 'Job Verified',
+              message: `Your job for token ${jobCard.ticket.tokenNumber} has been verified by admin.`,
+              data: {
+                ticketId: jobCard.ticketId,
+                jobCardId: jobCardId
+              }
+            }
+          });
+        }
+
+        return updatedJobCard;
+      });
+
+      // Send realtime notification
+      if (jobCard.ticket.technician) {
+        await pusherServer.trigger(
+          `technician-${jobCard.ticket.technician.id}`,
+          'job-verified',
+          {
+            jobCardId,
+            ticketId: jobCard.ticketId,
+            tokenNumber: jobCard.ticket.tokenNumber,
+            status: 'VERIFIED'
+          }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: result,
+        message: 'Job verified and stock updated successfully'
+      });
+
+    } else if (action === 'REJECT') {
+      // Reject job card
+      const result = await prisma.$transaction(async (tx) => {
+        const updatedJobCard = await tx.jobCard.update({
+          where: { id: jobCardId },
+          data: {
+            status: 'REJECTED',
+            adminNotes
+          }
+        });
+
+        await tx.ticket.update({
+          where: { id: jobCard.ticketId },
+          data: {
+            status: 'IN_PROGRESS'
+          }
+        });
+
+        // Notify technician
+        if (jobCard.ticket.technician) {
+          await tx.notification.create({
+            data: {
+              userId: jobCard.ticket.technician.user.id,
+              type: 'JOB_VERIFIED',
+              title: 'Job Rejected',
+              message: `Your job for token ${jobCard.ticket.tokenNumber} has been rejected. Reason: ${adminNotes || 'No reason provided'}`,
+              data: {
+                ticketId: jobCard.ticketId,
+                jobCardId: jobCardId
+              }
+            }
+          });
+        }
+
+        return updatedJobCard;
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: result,
+        message: 'Job rejected. Technician has been notified.'
+      });
+    }
+
+    return NextResponse.json(
+      { success: false, error: 'Invalid action' },
+      { status: 400 }
+    );
+
+  } catch (error: any) {
+    console.error('Error verifying job:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to verify job' },
+      { status: 500 }
+    );
+  }
+}
+🎨 Frontend Components
+1. Technician Dashboard
+TypeScript
+
+// src/app/technician/page.tsx
+
+'use client';
+
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Wrench, 
+  Clock, 
+  AlertCircle, 
+  CheckCircle2,
+  ChevronRight,
+  RefreshCw
+} from 'lucide-react';
+import { useTechnicianStore } from '@/store/technicianStore';
+import TicketCard from '@/components/technician/TicketCard';
+import { pusherClient } from '@/lib/pusher-client';
+
+export default function TechnicianDashboard() {
+  const { tickets, fetchTickets, isLoading } = useTechnicianStore();
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    fetchTickets();
+
+    // Subscribe to realtime updates
+    const channel = pusherClient.subscribe('technician-updates');
+    
+    channel.bind('new-ticket', () => {
+      fetchTickets();
+    });
+
+    channel.bind('ticket-updated', () => {
+      fetchTickets();
+    });
+
+    return () => {
+      pusherClient.unsubscribe('technician-updates');
+    };
+  }, [fetchTickets]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchTickets();
+    setRefreshing(false);
+  };
+
+  const pendingTickets = tickets.filter(t => 
+    ['PENDING', 'ASSIGNED'].includes(t.status)
+  );
+  const inProgressTickets = tickets.filter(t => 
+    ['IN_PROGRESS', 'PARTS_SELECTED'].includes(t.status)
+  );
+
+  const statusCards = [
+    {
+      title: 'Pending',
+      count: pendingTickets.length,
+      icon: Clock,
+      color: 'from-amber-500 to-orange-500',
+      bgColor: 'bg-amber-50'
+    },
+    {
+      title: 'In Progress',
+      count: inProgressTickets.length,
+      icon: Wrench,
+      color: 'from-blue-500 to-cyan-500',
+      bgColor: 'bg-blue-50'
+    },
+    {
+      title: 'Completed Today',
+      count: tickets.filter(t => t.status === 'FINISHED').length,
+      icon: CheckCircle2,
+      color: 'from-green-500 to-emerald-500',
+      bgColor: 'bg-green-50'
+    }
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                Technician Dashboard
+              </h1>
+              <p className="text-sm text-slate-500 mt-1">
+                Manage your assigned service tickets
+              </p>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-3 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+            >
+              <RefreshCw 
+                className={`w-5 h-5 text-slate-600 ${refreshing ? 'animate-spin' : ''}`} 
+              />
+            </motion.button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        {/* Status Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {statusCards.map((card, index) => (
+            <motion.div
+              key={card.title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className={`${card.bgColor} rounded-2xl p-6 border border-slate-200/50`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-slate-600 text-sm font-medium">{card.title}</p>
+                  <p className="text-3xl font-bold text-slate-800 mt-1">
+                    {card.count}
+                  </p>
+                </div>
+                <div className={`p-3 rounded-xl bg-gradient-to-br ${card.color}`}>
+                  <card.icon className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Pending Tickets Section */}
+        {pendingTickets.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 bg-amber-100 rounded-lg">
+                <Clock className="w-5 h-5 text-amber-600" />
+              </div>
+              <h2 className="text-lg font-semibold text-slate-800">
+                Pending Tickets
+              </h2>
+              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
+                {pendingTickets.length}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <AnimatePresence>
+                {pendingTickets.map((ticket, index) => (
+                  <TicketCard 
+                    key={ticket.id} 
+                    ticket={ticket} 
+                    index={index}
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
+          </section>
+        )}
+
+        {/* In Progress Section */}
+        {inProgressTickets.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Wrench className="w-5 h-5 text-blue-600" />
+              </div>
+              <h2 className="text-lg font-semibold text-slate-800">
+                In Progress
+              </h2>
+              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                {inProgressTickets.length}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <AnimatePresence>
+                {inProgressTickets.map((ticket, index) => (
+                  <TicketCard 
+                    key={ticket.id} 
+                    ticket={ticket} 
+                    index={index}
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
+          </section>
+        )}
+
+        {/* Empty State */}
+        {tickets.length === 0 && !isLoading && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-16"
+          >
+            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Wrench className="w-10 h-10 text-slate-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-slate-700">
+              No tickets assigned
+            </h3>
+            <p className="text-slate-500 mt-2">
+              You'll be notified when new tickets are assigned to you
+            </p>
+          </motion.div>
+        )}
+      </main>
+    </div>
+  );
+}
+2. Ticket Card Component
+TypeScript
+
+// src/components/technician/TicketCard.tsx
+
+'use client';
+
+import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { 
+  User, 
+  Phone, 
+  Bike, 
+  MapPin, 
+  ChevronRight,
+  Clock,
+  AlertTriangle
+} from 'lucide-react';
+import { Ticket } from '@/types';
+import { formatDistanceToNow } from 'date-fns';
+
+interface TicketCardProps {
+  ticket: Ticket;
+  index: number;
+}
+
+const priorityConfig = {
+  LOW: { color: 'bg-slate-100 text-slate-600', label: 'Low' },
+  NORMAL: { color: 'bg-blue-100 text-blue-600', label: 'Normal' },
+  HIGH: { color: 'bg-orange-100 text-orange-600', label: 'High' },
+  URGENT: { color: 'bg-red-100 text-red-600', label: 'Urgent' }
+};
+
+const statusConfig = {
+  PENDING: { color: 'bg-amber-500', label: 'Pending' },
+  ASSIGNED: { color: 'bg-blue-500', label: 'Assigned' },
+  IN_PROGRESS: { color: 'bg-cyan-500', label: 'In Progress' },
+  PARTS_SELECTED: { color: 'bg-purple-500', label: 'Parts Selected' },
+  FINISHED: { color: 'bg-green-500', label: 'Finished' }
+};
+
+export default function TicketCard({ ticket, index }: TicketCardProps) {
+  const router = useRouter();
+
+  const handleClick = () => {
+    router.push(`/technician/job/${ticket.id}`);
+  };
+
+  const priority = priorityConfig[ticket.priority] || priorityConfig.NORMAL;
+  const status = statusConfig[ticket.status as keyof typeof statusConfig];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ delay: index * 0.05 }}
+      whileHover={{ y: -4, boxShadow: '0 12px 40px -12px rgba(0,0,0,0.15)' }}
+      onClick={handleClick}
+      className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden cursor-pointer group"
+    >
+      {/* Header with Token */}
+      <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="px-3 py-1 bg-white/20 rounded-lg">
+            <span className="text-white font-bold text-sm">
+              #{ticket.tokenNumber}
+            </span>
+          </div>
+          <div className={`w-2 h-2 rounded-full ${status.color} animate-pulse`} />
+        </div>
+        <div className={`px-2 py-0.5 rounded-md text-xs font-medium ${priority.color}`}>
+          {priority.label}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-4 space-y-4">
+        {/* Customer Info */}
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center flex-shrink-0">
+            <User className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-slate-800 truncate">
+              {ticket.customer.name}
+            </h3>
+            <div className="flex items-center gap-1 text-slate-500 text-sm">
+              <Phone className="w-3.5 h-3.5" />
+              <span>{ticket.customer.phone}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Vehicle Info */}
+        <div className="bg-slate-50 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Bike className="w-4 h-4 text-slate-500" />
+            <span className="font-medium text-slate-700">
+              {ticket.vehicle.brand} {ticket.vehicle.model}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="bg-white rounded-lg px-2 py-1.5 border border-slate-200">
+              <span className="text-slate-400 block">Engine No</span>
+              <span className="font-mono text-slate-700 text-xs">
+                {ticket.vehicle.engineNumber}
+              </span>
+            </div>
+            <div className="bg-white rounded-lg px-2 py-1.5 border border-slate-200">
+              <span className="text-slate-400 block">Frame No</span>
+              <span className="font-mono text-slate-700 text-xs">
+                {ticket.vehicle.frameNumber}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Ramp Info */}
+        {ticket.ramp && (
+          <div className="flex items-center gap-2 text-sm">
+            <MapPin className="w-4 h-4 text-slate-400" />
+            <span className="text-slate-600">
+              {ticket.ramp.name} (Ramp #{ticket.ramp.number})
+            </span>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-1 text-slate-400 text-xs">
+            <Clock className="w-3.5 h-3.5" />
+            <span>
+              {formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true })}
+            </span>
+          </div>
+          <motion.div
+            initial={{ x: 0 }}
+            whileHover={{ x: 4 }}
+            className="flex items-center gap-1 text-blue-600 text-sm font-medium"
+          >
+            <span>View Details</span>
+            <ChevronRight className="w-4 h-4" />
+          </motion.div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+3. Job Processing Page
+TypeScript
+
+// src/app/technician/job/[ticketId]/page.tsx
+
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ArrowLeft, 
+  User, 
+  Phone, 
+  Bike,
+  Play,
+  Package,
+  Receipt,
+  CheckCircle2,
+  Loader2
+} from 'lucide-react';
+import CustomerInfo from '@/components/technician/CustomerInfo';
+import CategoryGrid from '@/components/technician/CategoryGrid';
+import PartsSelector from '@/components/technician/PartsSelector';
+import SelectedPartsList from '@/components/technician/SelectedPartsList';
+import JobSummary from '@/components/technician/JobSummary';
+import { useJobCardStore } from '@/store/jobCardStore';
+import toast from 'react-hot-toast';
+
+type ViewMode = 'info' | 'categories' | 'parts' | 'summary';
+
+export default function JobPage() {
+  const params = useParams();
+  const router = useRouter();
+  const ticketId = params.ticketId as string;
+
+  const { 
+    ticket,
+    selectedCategory,
+    selectedParts,
+    isLoading,
+    fetchTicket,
+    startJob,
+    setSelectedCategory,
+    clearSelectedCategory,
+    submitJobCard,
+    finishJob
+  } = useJobCardStore();
+
+  const [viewMode, setViewMode] = useState<ViewMode>('info');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchTicket(ticketId);
+  }, [ticketId, fetchTicket]);
+
+  const handleStartJob = async () => {
+    const result = await startJob(ticketId);
+    if (result.success) {
+      setViewMode('categories');
+      toast.success('Job started successfully!');
+    } else {
+      toast.error(result.error || 'Failed to start job');
+    }
+  };
+
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setViewMode('parts');
+  };
+
+  const handleBackFromParts = () => {
+    clearSelectedCategory();
+    setViewMode('categories');
+  };
+
+  const handleProceedToSummary = () => {
+    if (selectedParts.length === 0) {
+      toast.error('Please select at least one part');
+      return;
+    }
+    setViewMode('summary');
+  };
+
+  const handleSubmitAndFinish = async () => {
+    setIsSubmitting(true);
+    try {
+      // First submit job card
+      const submitResult = await submitJobCard();
+      if (!submitResult.success) {
+        throw new Error(submitResult.error);
+      }
+
+      // Then mark as finished
+      const finishResult = await finishJob();
+      if (!finishResult.success) {
+        throw new Error(finishResult.error);
+      }
+
+      toast.success('Job completed! Waiting for admin verification.');
+      router.push('/technician');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to complete job');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading || !ticket) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                if (viewMode === 'parts') {
+                  handleBackFromParts();
+                } else if (viewMode === 'summary') {
+                  setViewMode('categories');
+                } else {
+                  router.back();
+                }
+              }}
+              className="p-2 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-slate-600" />
+            </motion.button>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-slate-800">
+                  Token #{ticket.tokenNumber}
+                </h1>
+                <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${
+                  ticket.status === 'IN_PROGRESS' 
+                    ? 'bg-cyan-100 text-cyan-700' 
+                    : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {ticket.status.replace('_', ' ')}
+                </span>
+              </div>
+              <p className="text-sm text-slate-500">
+                {ticket.vehicle.brand} {ticket.vehicle.model}
+              </p>
+            </div>
+          </div>
+
+          {/* Progress Steps */}
+          <div className="flex items-center gap-2 mt-4 overflow-x-auto pb-2">
+            {[
+              { key: 'info', label: 'Customer Info', icon: User },
+              { key: 'categories', label: 'Categories', icon: Package },
+              { key: 'parts', label: 'Parts', icon: Bike },
+              { key: 'summary', label: 'Summary', icon: Receipt }
+            ].map((step, index) => {
+              const isActive = step.key === viewMode;
+              const isPast = ['info', 'categories', 'parts', 'summary'].indexOf(viewMode) > 
+                            ['info', 'categories', 'parts', 'summary'].indexOf(step.key);
+
+              return (
+                <div 
+                  key={step.key}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg whitespace-nowrap transition-all ${
+                    isActive 
+                      ? 'bg-blue-100 text-blue-700' 
+                      : isPast 
+                        ? 'bg-green-50 text-green-600' 
+                        : 'bg-slate-100 text-slate-400'
+                  }`}
+                >
+                  {isPast ? (
+                    <CheckCircle2 className="w-4 h-4" />
+                  ) : (
+                    <step.icon className="w-4 h-4" />
+                  )}
+                  <span className="text-sm font-medium">{step.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        <AnimatePresence mode="wait">
+          {/* Customer Info View */}
+          {viewMode === 'info' && (
+            <motion.div
+              key="info"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+            >
+              <CustomerInfo ticket={ticket} />
+              
+              {/* Start Job Button */}
+              {(ticket.status === 'PENDING' || ticket.status === 'ASSIGNED') && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleStartJob}
+                  className="w-full mt-6 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-2xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-green-500/25"
+                >
+                  <Play className="w-5 h-5" />
+                  Start Job
+                </motion.button>
+              )}
+
+              {ticket.status === 'IN_PROGRESS' && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setViewMode('categories')}
+                  className="w-full mt-6 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-2xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25"
+                >
+                  <Package className="w-5 h-5" />
+                  Select Parts
+                </motion.button>
+              )}
+            </motion.div>
+          )}
+
+          {/* Categories View */}
+          {viewMode === 'categories' && (
+            <motion.div
+              key="categories"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+            >
+              <CategoryGrid 
+                modelId={ticket.vehicle.modelId}
+                onSelectCategory={handleCategorySelect}
+              />
+              
+              {/* Selected Parts Summary */}
+              {selectedParts.length > 0 && (
+                <SelectedPartsList 
+                  parts={selectedParts}
+                  onProceed={handleProceedToSummary}
+                />
+              )}
+            </motion.div>
+          )}
+
+          {/* Parts Selection View */}
+          {viewMode === 'parts' && selectedCategory && (
+            <motion.div
+              key="parts"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+            >
+              <PartsSelector 
+                categoryId={selectedCategory}
+                modelId={ticket.vehicle.modelId}
+                onBack={handleBackFromParts}
+              />
+            </motion.div>
+          )}
+
+          {/* Summary View */}
+          {viewMode === 'summary' && (
+            <motion.div
+              key="summary"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+            >
+              <JobSummary 
+                ticket={ticket}
+                parts={selectedParts}
+                onBack={() => setViewMode('categories')}
+                onSubmit={handleSubmitAndFinish}
+                isSubmitting={isSubmitting}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+    </div>
+  );
+}
+4. Category Grid Component
+TypeScript
+
+// src/components/technician/CategoryGrid.tsx
+
+'use client';
+
+import { useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { 
+  Cog, 
+  Droplet, 
+  Disc, 
+  Zap, 
+  Settings,
+  Shield,
+  Wind,
+  Gauge,
+  Package
+} from 'lucide-react';
+import { useCategoriesStore } from '@/store/categoriesStore';
+
+interface CategoryGridProps {
+  modelId: string;
+  onSelectCategory: (categoryId: string) => void;
+}
+
+const categoryIcons: Record<string, any> = {
+  'ENGINE': Cog,
+  'ENGINE_OIL': Droplet,
+  'BRAKES': Disc,
+  'ELECTRICAL': Zap,
+  'TRANSMISSION': Settings,
+  'BODY': Shield,
+  'SUSPENSION': Wind,
+  'INSTRUMENTS': Gauge,
+  'DEFAULT': Package
+};
+
+export default function CategoryGrid({ modelId, onSelectCategory }: CategoryGridProps) {
+  const { categories, fetchCategories, isLoading } = useCategoriesStore();
+
+  useEffect(() => {
+    fetchCategories(modelId);
+  }, [modelId, fetchCategories]);
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {[...Array(8)].map((_, i) => (
+          <div 
+            key={i} 
+            className="h-32 bg-slate-200 rounded-2xl animate-pulse"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold text-slate-800 mb-4">
+        Select Category
+      </h2>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {categories.map((category, index) => {
+          const IconComponent = categoryIcons[category.code] || categoryIcons['DEFAULT'];
+          
+          return (
+            <motion.button
+              key={category.id}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.05 }}
+              whileHover={{ scale: 1.03, y: -4 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => onSelectCategory(category.id)}
+              className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all text-left group"
+            >
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <IconComponent className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="font-semibold text-slate-800 mb-1">
+                {category.name}
+              </h3>
+              <p className="text-sm text-slate-500">
+                {category.availableParts} parts available
+              </p>
+              {category.availableParts === 0 && (
+                <span className="inline-block mt-2 px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-md">
+                  Out of stock
+                </span>
+              )}
+            </motion.button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+5. Parts Selector Modal
+TypeScript
+
+// src/components/technician/PartsSelector.tsx
+
+'use client';
+
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ArrowLeft, 
+  Search, 
+  Package,
+  Check,
+  Plus,
+  Minus,
+  AlertCircle,
+  Image as ImageIcon
+} from 'lucide-react';
+import { usePartsStore } from '@/store/partsStore';
+import { useJobCardStore } from '@/store/jobCardStore';
+import Image from 'next/image';
+import toast from 'react-hot-toast';
+
+interface PartsSelectorProps {
+  categoryId: string;
+  modelId: string;
+  onBack: () => void;
+}
+
+export default function PartsSelector({ categoryId, modelId, onBack }: PartsSelectorProps) {
+  const { parts, fetchParts, isLoading } = usePartsStore();
+  const { addPart, removePart, updatePartQuantity, selectedParts } = useJobCardStore();
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPart, setSelectedPart] = useState<string | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState(1);
+
+  useEffect(() => {
+    fetchParts(categoryId, modelId);
+  }, [categoryId, modelId, fetchParts]);
+
+  const filteredParts = parts.filter(part =>
+    part.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    part.partNumber.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handlePartSelect = (partId: string) => {
+    setSelectedPart(partId);
+    setSelectedVariant(null);
+    setQuantity(1);
+  };
+
+  const handleVariantSelect = (variantId: string) => {
+    setSelectedVariant(variantId);
+  };
+
+  const handleAddPart = () => {
+    if (!selectedPart || !selectedVariant) {
+      toast.error('Please select a part and variant');
+      return;
+    }
+
+    const part = parts.find(p => p.id === selectedPart);
+    const variant = part?.variants.find(v => v.id === selectedVariant);
+
+    if (!part || !variant) return;
+
+    if (quantity > variant.stockQuantity) {
+      toast.error(`Only ${variant.stockQuantity} units available`);
+      return;
+    }
+
+    addPart({
+      partId: part.id,
+      partName: part.name,
+      partNumber: part.partNumber,
+      variantId: variant.id,
+      brandName: variant.brandName,
+      price: variant.price,
+      quantity,
+      unit: variant.unit,
+      image: variant.image
+    });
+
+    toast.success(`${part.name} added!`);
+    setSelectedPart(null);
+    setSelectedVariant(null);
+    setQuantity(1);
+  };
+
+  const currentPart = parts.find(p => p.id === selectedPart);
+  const currentVariant = currentPart?.variants.find(v => v.id === selectedVariant);
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={onBack}
+          className="p-2 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5 text-slate-600" />
+        </motion.button>
+        <h2 className="text-lg font-semibold text-slate-800">
+          Select Parts
+        </h2>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Search parts..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Parts List */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider">
+            Available Parts
+          </h3>
+          
+          {isLoading ? (
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-20 bg-slate-200 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
+              {filteredParts.map((part) => {
+                const isSelected = selectedPart === part.id;
+                const hasStock = part.hasStock;
+
+                return (
+                  <motion.button
+                    key={part.id}
+                    whileHover={{ scale: hasStock ? 1.01 : 1 }}
+                    whileTap={{ scale: hasStock ? 0.99 : 1 }}
+                    onClick={() => hasStock && handlePartSelect(part.id)}
+                    disabled={!hasStock}
+                    className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50'
+                        : hasStock
+                          ? 'border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50'
+                          : 'border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        isSelected ? 'bg-blue-500' : 'bg-slate-100'
+                      }`}>
+                        <Package className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-slate-500'}`} />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-slate-800">{part.name}</h4>
+                        <p className="text-xs text-slate-500">{part.partNumber}</p>
+                      </div>
+                      {isSelected && (
+                        <Check className="w-5 h-5 text-blue-500" />
+                      )}
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs text-slate-500">
+                        {part.variantsCount} variant{part.variantsCount > 1 ? 's' : ''} available
+                      </span>
+                      {!hasStock && (
+                        <span className="text-xs text-red-500 font-medium">Out of stock</span>
+                      )}
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Variant Selection & Quantity */}
+        <AnimatePresence mode="wait">
+          {selectedPart && currentPart && (
+            <motion.div
+              key="variant-selector"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="bg-white rounded-2xl border border-slate-200 p-6 space-y-6"
+            >
+              <div>
+                <h3 className="font-semibold text-slate-800 mb-1">
+                  {currentPart.name}
+                </h3>
+                <p className="text-sm text-slate-500">{currentPart.partNumber}</p>
+              </div>
+
+              {/* Brand/Variant Selection */}
+              <div>
+                <h4 className="text-sm font-medium text-slate-600 mb-3">
+                  Select Brand / Variant
+                </h4>
+                <div className="space-y-2">
+                  {currentPart.variants.map((variant) => {
+                    const isVariantSelected = selectedVariant === variant.id;
+
+                    return (
+                      <motion.button
+                        key={variant.id}
+                        whileHover={{ scale: variant.isInStock ? 1.01 : 1 }}
+                        onClick={() => variant.isInStock && handleVariantSelect(variant.id)}
+                        disabled={!variant.isInStock}
+                        className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                          isVariantSelected
+                            ? 'border-green-500 bg-green-50'
+                            : variant.isInStock
+                              ? 'border-slate-200 bg-white hover:border-green-200'
+                              : 'border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed'
+                        }`}
+                      >
+                        <div className="flex items-center gap-4">
+                          {/* Variant Image */}
+                          <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden">
+                            {variant.image ? (
+                              <Image
+                                src={variant.image}
+                                alt={variant.brandName}
+                                width={64}
+                                height={64}
+                                className="object-cover"
+                              />
+                            ) : (
+                              <ImageIcon className="w-6 h-6 text-slate-400" />
+                            )}
+                          </div>
+
+                          <div className="flex-1">
+                            <h5 className="font-medium text-slate-800">
+                              {variant.brandName}
+                            </h5>
+                            <p className="text-xs text-slate-500">SKU: {variant.sku}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-lg font-bold text-green-600">
+                                ৳{variant.price.toLocaleString()}
+                              </span>
+                              {variant.mrp && variant.mrp > variant.price && (
+                                <span className="text-xs text-slate-400 line-through">
+                                  ৳{variant.mrp.toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            {variant.isInStock ? (
+                              <span className={`text-xs font-medium ${
+                                variant.isLowStock ? 'text-amber-600' : 'text-green-600'
+                              }`}>
+                                {variant.stockQuantity} in stock
+                              </span>
+                            ) : (
+                              <span className="text-xs font-medium text-red-500">
+                                Out of stock
+                              </span>
+                            )}
+                            {isVariantSelected && (
+                              <Check className="w-5 h-5 text-green-500 mt-1 ml-auto" />
+                            )}
+                          </div>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Quantity Selector */}
+              <AnimatePresence>
+                {selectedVariant && currentVariant && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                  >
+                    <h4 className="text-sm font-medium text-slate-600 mb-3">
+                      Quantity
+                    </h4>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center bg-slate-100 rounded-xl">
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                          className="p-3 hover:bg-slate-200 rounded-l-xl transition-colors"
+                        >
+                          <Minus className="w-5 h-5 text-slate-600" />
+                        </motion.button>
+                        <input
+                          type="number"
+                          value={quantity}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 1;
+                            setQuantity(Math.min(val, currentVariant.stockQuantity));
+                          }}
+                          className="w-16 text-center bg-transparent font-bold text-lg outline-none"
+                          min={1}
+                          max={currentVariant.stockQuantity}
+                        />
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => setQuantity(Math.min(currentVariant.stockQuantity, quantity + 1))}
+                          className="p-3 hover:bg-slate-200 rounded-r-xl transition-colors"
+                        >
+                          <Plus className="w-5 h-5 text-slate-600" />
+                        </motion.button>
+                      </div>
+                      <div className="text-sm text-slate-500">
+                        {currentVariant.unit}
+                      </div>
+                    </div>
+
+                    {/* Price Summary */}
+                    <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-600">Total Price:</span>
+                        <span className="text-2xl font-bold text-green-600">
+                          ৳{(currentVariant.price * quantity).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Add Button */}
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleAddPart}
+                      className="w-full mt-4 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25"
+                    >
+                      <Plus className="w-5 h-5" />
+                      Add to Job Card
+                    </motion.button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+6. Job Summary (Chalan)
+TypeScript
+
+// src/components/technician/JobSummary.tsx
+
+'use client';
+
+import { motion } from 'framer-motion';
+import { 
+  Receipt, 
+  User, 
+  Bike, 
+  Calendar,
+  Package,
+  Trash2,
+  ArrowLeft,
+  Send,
+  Loader2,
+  CheckCircle2
+} from 'lucide-react';
+import { Ticket, SelectedPart } from '@/types';
+import { format } from 'date-fns';
+import { useJobCardStore } from '@/store/jobCardStore';
+import Image from 'next/image';
+
+interface JobSummaryProps {
+  ticket: Ticket;
+  parts: SelectedPart[];
+  onBack: () => void;
+  onSubmit: () => void;
+  isSubmitting: boolean;
+}
+
+export default function JobSummary({ 
+  ticket, 
+  parts, 
+  onBack, 
+  onSubmit, 
+  isSubmitting 
+}: JobSummaryProps) {
+  const { removePart, updatePartQuantity } = useJobCardStore();
+
+  const partsTotal = parts.reduce((sum, part) => sum + (part.price * part.quantity), 0);
+  const laborCharge = 0; // Can be made configurable
+  const grandTotal = partsTotal + laborCharge;
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      {/* Chalan Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-t-2xl p-6 text-white"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded-lg">
+              <Receipt className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">Job Card Summary</h2>
+              <p className="text-white/70 text-sm">Service Chalan</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-white/70 text-sm">Token Number</p>
+            <p className="text-2xl font-bold">#{ticket.tokenNumber}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mt-6">
+          <div className="bg-white/10 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-white/70 text-sm mb-1">
+              <User className="w-4 h-4" />
+              <span>Customer</span>
+            </div>
+            <p className="font-semibold">{ticket.customer.name}</p>
+            <p className="text-sm text-white/70">{ticket.customer.phone}</p>
+          </div>
+          <div className="bg-white/10 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-white/70 text-sm mb-1">
+              <Bike className="w-4 h-4" />
+              <span>Vehicle</span>
+            </div>
+            <p className="font-semibold">{ticket.vehicle.brand} {ticket.vehicle.model}</p>
+            <p className="text-sm text-white/70">Engine: {ticket.vehicle.engineNumber}</p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Parts List */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.1 }}
+        className="bg-white border-x border-slate-200 p-6"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+            <Package className="w-5 h-5 text-blue-500" />
+            Parts Used
+          </h3>
+          <span className="text-sm text-slate-500">
+            {parts.length} item{parts.length > 1 ? 's' : ''}
+          </span>
+        </div>
+
+        <div className="space-y-3">
+          {parts.map((part, index) => (
+            <motion.div
+              key={`${part.partId}-${part.variantId}`}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.05 }}
+              className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl"
+            >
+              {/* Part Image */}
+              <div className="w-16 h-16 bg-white rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                {part.image ? (
+                  <Image
+                    src={part.image}
+                    alt={part.partName}
+                    width={64}
+                    height={64}
+                    className="object-cover"
+                  />
+                ) : (
+                  <Package className="w-6 h-6 text-slate-400" />
+                )}
+              </div>
+
+              {/* Part Details */}
+              <div className="flex-1 min-w-0">
+                <h4 className="font-medium text-slate-800 truncate">
+                  {part.partName}
+                </h4>
+                <p className="text-sm text-slate-500">
+                  {part.brandName} • {part.partNumber}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-sm text-slate-600">
+                    ৳{part.price.toLocaleString()} × {part.quantity} {part.unit}
+                  </span>
+                </div>
+              </div>
+
+              {/* Price & Remove */}
+              <div className="text-right">
+                <p className="font-bold text-green-600">
+                  ৳{(part.price * part.quantity).toLocaleString()}
+                </p>
+                <button
+                  onClick={() => removePart(part.partId, part.variantId)}
+                  className="mt-1 text-red-500 hover:text-red-600 p-1"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Totals */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="bg-white border-x border-b border-slate-200 p-6 space-y-3"
+      >
+        <div className="flex items-center justify-between text-slate-600">
+          <span>Parts Total</span>
+          <span className="font-medium">৳{partsTotal.toLocaleString()}</span>
+        </div>
+        <div className="flex items-center justify-between text-slate-600">
+          <span>Labor Charge</span>
+          <span className="font-medium">৳{laborCharge.toLocaleString()}</span>
+        </div>
+        <div className="h-px bg-slate-200 my-2" />
+        <div className="flex items-center justify-between">
+          <span className="text-lg font-semibold text-slate-800">Grand Total</span>
+          <span className="text-2xl font-bold text-green-600">
+            ৳{grandTotal.toLocaleString()}
+          </span>
+        </div>
+      </motion.div>
+
+      {/* Footer with Date & Actions */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="bg-slate-50 rounded-b-2xl p-6 border-x border-b border-slate-200"
+      >
+        <div className="flex items-center justify-between text-sm text-slate-500 mb-6">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            <span>{format(new Date(), 'PPP p')}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onBack}
+            disabled={isSubmitting}
+            className="flex-1 py-4 bg-slate-200 text-slate-700 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-slate-300 transition-colors disabled:opacity-50"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Edit Parts
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onSubmit}
+            disabled={isSubmitting || parts.length === 0}
+            className="flex-[2] py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-green-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-5 h-5" />
+                Submit & Finish Job
+              </>
+            )}
+          </motion.button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+🏪 State Management (Zustand)
+Job Card Store
+TypeScript
+
+// src/store/jobCardStore.ts
+
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { Ticket, SelectedPart, Category } from '@/types';
+
+interface JobCardState {
+  // Ticket
+  ticket: Ticket | null;
+  isLoading: boolean;
+  
+  // Categories
+  categories: Category[];
+  selectedCategory: string | null;
+  
+  // Parts
+  selectedParts: SelectedPart[];
+  
+  // Actions
+  fetchTicket: (ticketId: string) => Promise<void>;
+  startJob: (ticketId: string) => Promise<{ success: boolean; error?: string }>;
+  setSelectedCategory: (categoryId: string) => void;
+  clearSelectedCategory: () => void;
+  addPart: (part: SelectedPart) => void;
+  removePart: (partId: string, variantId: string) => void;
+  updatePartQuantity: (partId: string, variantId: string, quantity: number) => void;
+  submitJobCard: () => Promise<{ success: boolean; error?: string }>;
+  finishJob: () => Promise<{ success: boolean; error?: string }>;
+  clearJobCard: () => void;
+}
+
+export const useJobCardStore = create<JobCardState>()(
+  persist(
+    (set, get) => ({
+      ticket: null,
+      isLoading: false,
+      categories: [],
+      selectedCategory: null,
+      selectedParts: [],
+
+      fetchTicket: async (ticketId) => {
+        set({ isLoading: true });
+        try {
+          const res = await fetch(`/api/technician/ticket/${ticketId}`);
+          const data = await res.json();
+          
+          if (data.success) {
+            set({ ticket: data.data });
+            
+            // If job card exists, load selected parts
+            if (data.data.jobCard?.partsUsed) {
+              const parts = data.data.jobCard.partsUsed.map((p: any) => ({
+                partId: p.part.id,
+                partName: p.part.name,
+                partNumber: p.part.partNumber,
+                variantId: p.partVariant.id,
+                brandName: p.partVariant.brandName,
+                price: parseFloat(p.unitPrice),
+                quantity: p.quantity,
+                unit: p.partVariant.unit,
+                image: p.partVariant.image
+              }));
+              set({ selectedParts: parts });
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching ticket:', error);
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      startJob: async (ticketId) => {
+        try {
+          const res = await fetch(`/api/technician/ticket/${ticketId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'START' })
+          });
+          const data = await res.json();
+          
+          if (data.success) {
+            set({ ticket: data.data });
+            return { success: true };
+          }
+          return { success: false, error: data.error };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      },
+
+      setSelectedCategory: (categoryId) => {
+        set({ selectedCategory: categoryId });
+      },
+
+      clearSelectedCategory: () => {
+        set({ selectedCategory: null });
+      },
+
+      addPart: (part) => {
+        const { selectedParts } = get();
+        const existingIndex = selectedParts.findIndex(
+          p => p.partId === part.partId && p.variantId === part.variantId
+        );
+
+        if (existingIndex >= 0) {
+          // Update quantity if already exists
+          const updated = [...selectedParts];
+          updated[existingIndex].quantity += part.quantity;
+          set({ selectedParts: updated });
+        } else {
+          set({ selectedParts: [...selectedParts, part] });
+        }
+      },
+
+      removePart: (partId, variantId) => {
+        const { selectedParts } = get();
+        set({
+          selectedParts: selectedParts.filter(
+            p => !(p.partId === partId && p.variantId === variantId)
+          )
+        });
+      },
+
+      updatePartQuantity: (partId, variantId, quantity) => {
+        const { selectedParts } = get();
+        set({
+          selectedParts: selectedParts.map(p =>
+            p.partId === partId && p.variantId === variantId
+              ? { ...p, quantity }
+              : p
+          )
+        });
+      },
+
+      submitJobCard: async () => {
+        const { ticket, selectedParts } = get();
+        if (!ticket) return { success: false, error: 'No ticket found' };
+
+        try {
+          const res = await fetch('/api/technician/job-card', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ticketId: ticket.id,
+              partsUsed: selectedParts.map(p => ({
+                partId: p.partId,
+                partVariantId: p.variantId,
+                quantity: p.quantity
+              })),
+              laborCharge: 0
+            })
+          });
+
+          const data = await res.json();
+          return { success: data.success, error: data.error };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      },
+
+      finishJob: async () => {
+        const { ticket } = get();
+        if (!ticket || !ticket.jobCard) {
+          return { success: false, error: 'No job card found' };
+        }
+
+        try {
+          const res = await fetch('/api/technician/finish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ticketId: ticket.id,
+              jobCardId: ticket.jobCard.id
+            })
+          });
+
+          const data = await res.json();
+          
+          if (data.success) {
+            get().clearJobCard();
+          }
+          
+          return { success: data.success, error: data.error };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
+      },
+
+      clearJobCard: () => {
+        set({
+          ticket: null,
+          categories: [],
+          selectedCategory: null,
+          selectedParts: []
+        });
+      }
+    }),
+    {
+      name: 'job-card-storage',
+      partialize: (state) => ({
+        selectedParts: state.selectedParts
+      })
+    }
+  )
+);
+🔔 Realtime Notifications (Pusher)
+TypeScript
+
+// src/lib/pusher.ts
+
+import PusherServer from 'pusher';
+import PusherClient from 'pusher-js';
+
+export const pusherServer = new PusherServer({
+  appId: process.env.PUSHER_APP_ID!,
+  key: process.env.NEXT_PUBLIC_PUSHER_KEY!,
+  secret: process.env.PUSHER_SECRET!,
+  cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+  useTLS: true
+});
+
+// src/lib/pusher-client.ts
+
+export const pusherClient = new PusherClient(
+  process.env.NEXT_PUBLIC_PUSHER_KEY!,
+  {
+    cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!
+  }
+);
+📱 Admin Verification Page
+TypeScript
+
+// src/app/admin/verify/page.tsx
+
+'use client';
+
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  CheckCircle2,
+  XCircle,
+  Clock,
+  User,
+  Bike,
+  Package,
+  Receipt,
+  Loader2
+} from 'lucide-react';
+import { pusherClient } from '@/lib/pusher-client';
+import toast from 'react-hot-toast';
+
+interface PendingJob {
+  id: string;
+  jobCardNumber: string;
+  ticket: {
+    tokenNumber: string;
+    customer: {
+      name: string;
+      phone: string;
+    };
+    vehicle: {
+      model: {
+        name: string;
+        brand: string;
+      };
+      engineNumber: string;
+    };
+  };
+  technician: {
+    user: {
+      name: string;
+    };
+  };
+  partsUsed: Array<{
+    id: string;
+    part: { name: string };
+    partVariant: { brandName: string; sku: string };
+    quantity: number;
+    unitPrice: string;
+    totalPrice: string;
+  }>;
+  grandTotal: string;
+  createdAt: string;
+}
+
+export default function AdminVerifyPage() {
+  const [pendingJobs, setPendingJobs] = useState<PendingJob[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
+  const [selectedJob, setSelectedJob] = useState<PendingJob | null>(null);
+
+  const fetchPendingJobs = async () => {
+    try {
+      const res = await fetch('/api/admin/pending-jobs');
+      const data = await res.json();
+      if (data.success) {
+        setPendingJobs(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching pending jobs:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPendingJobs();
+
+    // Subscribe to realtime updates
+    const channel = pusherClient.subscribe('service-admin');
+    
+    channel.bind('job-finished', (data: any) => {
+      toast.success(`New job completed: Token #${data.tokenNumber}`, {
+        duration: 5000,
+        icon: '🔔'
+      });
+      fetchPendingJobs();
+    });
+
+    return () => {
+      pusherClient.unsubscribe('service-admin');
+    };
+  }, []);
+
+  const handleVerify = async (jobCardId: string, action: 'VERIFY' | 'REJECT') => {
+    setVerifyingId(jobCardId);
+    try {
+      const res = await fetch('/api/admin/verify-job', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobCardId,
+          action,
+          adminNotes: action === 'REJECT' ? 'Rejected by admin' : undefined
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success(
+          action === 'VERIFY' 
+            ? 'Job verified and stock updated!' 
+            : 'Job rejected'
+        );
+        fetchPendingJobs();
+        setSelectedJob(null);
+      } else {
+        toast.error(data.error || 'Failed to process');
+      }
+    } catch (error) {
+      toast.error('An error occurred');
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">
+                Job Verification
+              </h1>
+              <p className="text-sm text-slate-500 mt-1">
+                Verify completed jobs and update inventory
+              </p>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-xl border border-amber-200">
+              <Clock className="w-5 h-5 text-amber-600" />
+              <span className="font-semibold text-amber-700">
+                {pendingJobs.length} Pending
+              </span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          </div>
+        ) : pendingJobs.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-20"
+          >
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="w-10 h-10 text-green-500" />
+            </div>
+            <h3 className="text-xl font-semibold text-slate-700">
+              All caught up!
+            </h3>
+            <p className="text-slate-500 mt-2">
+              No pending jobs to verify
+            </p>
+          </motion.div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {pendingJobs.map((job, index) => (
+              <motion.div
+                key={job.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition-shadow"
+              >
+                {/* Job Header */}
+                <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-white/80 text-sm">Token Number</p>
+                      <p className="text-2xl font-bold">#{job.ticket.tokenNumber}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-white/80 text-sm">Job Card</p>
+                      <p className="font-semibold">{job.jobCardNumber}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Job Details */}
+                <div className="p-6 space-y-4">
+                  {/* Customer & Vehicle */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <User className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-500">Customer</p>
+                        <p className="font-medium text-slate-800">
+                          {job.ticket.customer.name}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          {job.ticket.customer.phone}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <Bike className="w-4 h-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-500">Vehicle</p>
+                        <p className="font-medium text-slate-800">
+                          {job.ticket.vehicle.model.brand} {job.ticket.vehicle.model.name}
+                        </p>
+                        <p className="text-xs text-slate-500 font-mono">
+                          {job.ticket.vehicle.engineNumber}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Technician */}
+                  <div className="text-sm text-slate-500">
+                    Technician: <span className="font-medium text-slate-700">
+                      {job.technician.user.name}
+                    </span>
+                  </div>
+
+                  {/* Parts Summary */}
+                  <div className="bg-slate-50 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Package className="w-4 h-4 text-slate-500" />
+                      <span className="font-medium text-slate-700">
+                        Parts Used ({job.partsUsed.length})
+                      </span>
+                    </div>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {job.partsUsed.slice(0, 3).map(part => (
+                        <div 
+                          key={part.id}
+                          className="flex items-center justify-between text-sm"
+                        >
+                          <span className="text-slate-600">
+                            {part.part.name} ({part.partVariant.brandName})
+                          </span>
+                          <span className="text-slate-800">
+                            ×{part.quantity} = ৳{parseFloat(part.totalPrice).toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                      {job.partsUsed.length > 3 && (
+                        <button
+                          onClick={() => setSelectedJob(job)}
+                          className="text-blue-600 text-sm hover:underline"
+                        >
+                          +{job.partsUsed.length - 3} more items
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Total */}
+                  <div className="flex items-center justify-between py-3 border-t border-slate-200">
+                    <span className="font-medium text-slate-600">Grand Total</span>
+                    <span className="text-2xl font-bold text-green-600">
+                      ৳{parseFloat(job.grandTotal).toLocaleString()}
+                    </span>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-3">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleVerify(job.id, 'REJECT')}
+                      disabled={verifyingId === job.id}
+                      className="flex-1 py-3 bg-red-100 text-red-600 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-red-200 transition-colors disabled:opacity-50"
+                    >
+                      <XCircle className="w-5 h-5" />
+                      Reject
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleVerify(job.id, 'VERIFY')}
+                      disabled={verifyingId === job.id}
+                      className="flex-[2] py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-green-500/25 disabled:opacity-50"
+                    >
+                      {verifyingId === job.id ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="w-5 h-5" />
+                      )}
+                      Verify & Update Stock
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </main>
+
+      {/* Detail Modal */}
+      <AnimatePresence>
+        {selectedJob && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedJob(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-2xl max-w-lg w-full max-h-[80vh] overflow-y-auto"
+            >
+              <div className="p-6 border-b border-slate-200">
+                <h2 className="text-xl font-bold text-slate-800">
+                  Parts Details
+                </h2>
+                <p className="text-slate-500">
+                  Token #{selectedJob.ticket.tokenNumber}
+                </p>
+              </div>
+              <div className="p-6 space-y-3">
+                {selectedJob.partsUsed.map(part => (
+                  <div
+                    key={part.id}
+                    className="p-4 bg-slate-50 rounded-xl"
+                  >
+                    <h4 className="font-medium text-slate-800">
+                      {part.part.name}
+                    </h4>
+                    <p className="text-sm text-slate-500">
+                      {part.partVariant.brandName} • {part.partVariant.sku}
+                    </p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-sm text-slate-600">
+                        ৳{parseFloat(part.unitPrice).toLocaleString()} × {part.quantity}
+                      </span>
+                      <span className="font-bold text-green-600">
+                        ৳{parseFloat(part.totalPrice).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+🎯 Flow Diagram
+text
+
+┌────────────────────────────────────────────────────────────────────────────────┐
+│                            COMPLETE WORKFLOW                                    │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   SERVICE    │     │  TECHNICIAN  │     │  TECHNICIAN  │     │   SERVICE    │
+│    ADMIN     │     │  DASHBOARD   │     │   JOB PAGE   │     │    ADMIN     │
+│              │     │              │     │              │     │              │
+│ Create Token │────▶│ See Pending  │────▶│ Customer     │     │   Verify     │
+│ + Assign     │     │ Ticket       │     │ Info         │     │   Page       │
+│ Technician   │     │              │     │              │     │              │
+└──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
+                            │                    │                     │
+                            ▼                    ▼                     │
+                     ┌──────────────┐     ┌──────────────┐            │
+                     │    Click     │     │ Start Job    │            │
+                     │   Ticket     │────▶│   Button     │            │
+                     └──────────────┘     └──────────────┘            │
+                                                │                      │
+                                                ▼                      │
+                                         ┌──────────────┐             │
+                                         │  Category    │             │
+                                         │   Grid       │             │
+                                         │ (Engine,     │             │
+                                         │  Oil, etc)   │             │
+                                         └──────────────┘             │
+                                                │                      │
+                                                ▼                      │
+                                         ┌──────────────┐             │
+                                         │   Parts      │             │
+                                         │  Selector    │             │
+                                         │  (Popup)     │             │
+                                         │              │             │
+                                         │ - Parts list │             │
+                                         │ - Brands     │             │
+                                         │ - Image      │             │
+                                         │ - +/- Qty    │             │
+                                         

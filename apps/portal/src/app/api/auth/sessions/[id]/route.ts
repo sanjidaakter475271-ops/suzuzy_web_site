@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 
 export async function DELETE(
     req: NextRequest,
-    { params }: any
+    { params }: { params: Promise<{ id: string }> }
 ) {
     const { id: sessionId } = await params;
     const user = await getCurrentUser();

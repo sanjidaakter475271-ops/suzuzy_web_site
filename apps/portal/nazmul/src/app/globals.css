@@ -1,0 +1,231 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Brand Colors (Orange Palette) */
+  --color-brand: #C75B12;
+  --color-brand-hover: #C5A021;
+  /* Golden on hover */
+  --color-brand-light: #E7B089;
+  --color-brand-soft: #F7E6D8;
+
+  /* Surface Colors (Light) */
+  --color-surface-page: #FAF7F2;
+  --color-surface-card: #FFF9F1;
+  --color-surface-sidebar: #F3E6D8;
+  --color-surface-hover: #EAD3BE;
+  --color-surface-border: #E6DDD4;
+
+  /* Dark Mode Colors (Black/Premium Midnight) */
+  --color-dark-page: #0A0A0A;
+  --color-dark-card: #121212;
+  --color-dark-sidebar: #0F0F0F;
+  --color-dark-border: #2A241F;
+
+  /* Ink Colors */
+  --color-ink-heading: #2E1F14;
+  --color-ink-body: #5F5147;
+  --color-ink-muted: #8A7B6E;
+
+  /* Status Colors */
+  --color-success: #1F9D55;
+  --color-success-bg: #E6F6ED;
+  --color-danger: #D64545;
+  --color-danger-bg: #FBEAEA;
+  --color-warning: #C5A021;
+  --color-warning-bg: #FFF9F1;
+  --color-info: #4B6CB7;
+  --color-info-bg: #EAF0FA;
+
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+
+  /* Shadows with Golden Shed on Hover */
+  --shadow-card: 0 6px 20px rgba(0, 0, 0, 0.4);
+  --shadow-soft: 0 2px 10px rgba(0, 0, 0, 0.2);
+  --shadow-hover: 0 10px 30px rgba(197, 160, 33, 0.3);
+
+  /* Font */
+  --font-sans: "Inter", "system-ui", "sans-serif";
+}
+
+:root {
+  --background: var(--color-surface-page);
+  --foreground: var(--color-ink-body);
+}
+
+.dark {
+  --background: var(--color-dark-page);
+  --foreground: #F3F1EF;
+}
+
+@layer base {
+  * {
+    @apply border-surface-border dark:border-dark-border;
+  }
+
+  body {
+    @apply bg-surface-page dark:bg-dark-page text-ink-body dark:text-[#E8E4E1] transition-colors duration-200;
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply text-ink-heading dark:text-white font-bold tracking-tight;
+  }
+}
+
+/* Custom Card & Button Hover - Golden Glow */
+.hover-golden:hover {
+  box-shadow: 0 10px 40px rgba(197, 160, 33, 0.35) !important;
+  border-color: #C5A021 !important;
+  transform: translateY(-2px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Recharts / ResponsiveContainer Fix */
+.recharts-responsive-container {
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3A2E25;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C5A021;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #3A2E25;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media print {
+
+  /* Hide navigation elements */
+  .print\:hidden,
+  header,
+  nav,
+  aside,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Reset layout for print */
+  body,
+  html {
+    background: white !important;
+    color: black !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: auto !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    position: static !important;
+    overflow: visible !important;
+  }
+
+  /* Reset dark mode colors for print */
+  * {
+    color: black !important;
+    border-color: #000 !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Force borders for tables */
+  table {
+    border: 1.5pt solid black !important;
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  th,
+  td {
+    border: 0.5pt solid black !important;
+    padding: 8pt !important;
+  }
+
+  th {
+    background-color: #f2f2f2 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Card styling for print */
+  .rounded-2xl,
+  .rounded-xl,
+  .rounded-lg {
+    border-radius: 0 !important;
+  }
+
+  /* Opening Balance Box */
+  .bg-brand\/5 {
+    background-color: #f9f9f9 !important;
+    border: 1pt solid black !important;
+    padding: 10pt !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Animation disable for print */
+  .animate-fade {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+
+  /* Ensure rows don't break across pages messily */
+  tr {
+    page-break-inside: avoid !important;
+  }
+
+  /* Page Setup */
+  @page {
+    size: A4;
+    margin: 1.5cm;
+  }
+}

@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -69,55 +68,29 @@ export default function AdminPayments() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            // Fetch Payments
-            const { data: paymentsData, error: paymentsError } = await supabase
-                .from('payments')
-                .select(`
-                    *,
-                    orders (
-                        id,
-                        profiles:user_id (
-                            full_name,
-                            email
-                        )
-                    )
-                `)
-                .order('created_at', { ascending: false });
+            const res = await fetch('/api/super-admin/payments');
+            if (!res.ok) throw new Error("Financial registry retrieval failure");
+            const data = await res.json();
 
-            if (paymentsError) throw paymentsError;
+            const paymentsData = data.payments || [];
+            const payoutsData = data.payouts || [];
 
-            // Fetch Payouts
-            const { data: payoutsData, error: payoutsError } = await supabase
-                .from('dealer_payouts')
-                .select(`
-                    *,
-                    dealers (
-                        business_name,
-                        owner:owner_user_id (
-                            full_name
-                        )
-                    )
-                `)
-                .order('created_at', { ascending: false });
-
-            if (payoutsError) throw payoutsError;
-
-            setPayments(paymentsData || []);
-            setPayouts(payoutsData || []);
+            setPayments(paymentsData);
+            setPayouts(payoutsData);
 
             // Calculate basic stats
-            const totalRev = (paymentsData || [])
-                .filter(p => p.status === 'completed')
-                .reduce((sum, p) => sum + Number(p.amount), 0);
+            const totalRev = paymentsData
+                .filter((p: any) => p.status === 'completed')
+                .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
 
-            const pendingPay = (payoutsData || [])
-                .filter(p => p.status === 'pending')
-                .reduce((sum, p) => sum + Number(p.amount), 0);
+            const pendingPay = payoutsData
+                .filter((p: any) => p.status === 'pending')
+                .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
 
             setStats({
                 totalRevenue: totalRev,
                 pendingPayouts: pendingPay,
-                completedPayments: (paymentsData || []).filter(p => p.status === 'completed').length
+                completedPayments: paymentsData.filter((p: any) => p.status === 'completed').length
             });
 
         } catch (error) {

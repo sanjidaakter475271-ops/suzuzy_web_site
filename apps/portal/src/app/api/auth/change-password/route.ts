@@ -45,17 +45,17 @@ export async function POST(req: NextRequest) {
             where: { id: user.id },
             data: {
                 password_hash: hashedPassword,
-                password_changed_at: new Date()
+                password_changed_at: new Date(),
             } as any
         }),
-        // Optional: Logout other devices on password change
-        prisma.user_sessions.updateMany({
-            where: {
-                user_id: user.id,
-                is_active: true,
-            } as any,
-            data: { is_active: false } as any
-        })
+        // Optional: Logout other devices on password change - DISABLED to allow seamless redirect
+        // prisma.user_sessions.updateMany({
+        //     where: {
+        //         user_id: user.id,
+        //         is_active: true,
+        //     } as any,
+        //     data: { is_active: false } as any
+        // })
     ]);
 
     return NextResponse.json({ success: true, message: "Password changed successfully. Please login again." });

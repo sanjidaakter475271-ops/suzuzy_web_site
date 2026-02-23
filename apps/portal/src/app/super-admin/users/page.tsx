@@ -31,7 +31,6 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import {
-    getUsers,
     updateUserStatusAction,
     resetUserPasswordAction,
     deleteUserAction,
@@ -65,18 +64,21 @@ export default function UsersManagementPage() {
 
     // Role weighting for level-based flow
     const roleWeights: Record<string, number> = {
-        super_admin: 4,
-        admin: 3,
-        dealer: 2,
+        super_admin: 10,
+        showroom_admin: 9,
+        service_admin: 8,
+        admin: 7,
+        dealer: 6,
         customer: 1
     };
 
     const fetchUsers = async () => {
         setLoading(true);
         try {
-            const result = await getUsers();
-            if (!result.success) throw new Error(result.error);
-            setUsers((result.data as Profile[]) || []);
+            const res = await fetch('/api/super-admin/users');
+            if (!res.ok) throw new Error("Registry synchronization failed");
+            const data = await res.json();
+            setUsers(data || []);
         } catch (error: unknown) {
             console.error("Error fetching users:", error);
             const message = error instanceof Error ? error.message : "Registry synchronization failed";
@@ -405,10 +407,10 @@ export default function UsersManagementPage() {
                         </div>
                     </div>
                     <div className="h-4 w-[1px] bg-white/10 mx-2" />
-                    <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-white/20 ml-2">Authority:</span>
-                        <div className="flex bg-white/5 p-1 rounded-xl">
-                            {['all', 'super_admin', 'admin', 'dealer', 'customer'].map(role => (
+                    <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-white/20 ml-2 whitespace-nowrap">Authority:</span>
+                        <div className="flex bg-white/5 p-1 rounded-xl whitespace-nowrap">
+                            {['all', 'super_admin', 'showroom_admin', 'service_admin', 'admin', 'dealer', 'customer'].map(role => (
                                 <button
                                     key={role}
                                     onClick={() => setRoleFilter(role)}
@@ -451,9 +453,9 @@ export default function UsersManagementPage() {
                                             Update
                                         </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="bg-[#0D0D0F] border-[#D4AF37]/20 text-[#A1A1AA] rounded-xl">
+                                    <DropdownMenuContent align="end" className="bg-[#0D0D0F] border-[#D4AF37]/20 text-[#A1A1AA] rounded-xl max-h-80 overflow-y-auto">
                                         <DropdownMenuLabel className="text-[9px] uppercase tracking-widest text-[#D4AF37]">Select Level</DropdownMenuLabel>
-                                        {['customer', 'dealer', 'admin', 'super_admin'].map((role) => (
+                                        {['customer', 'dealer', 'sells_stuff', 'service_stuff', 'admin', 'service_admin', 'showroom_admin', 'super_admin'].map((role) => (
                                             <DropdownMenuItem
                                                 key={role}
                                                 onClick={() => updateRole(row.original.id, role)}

@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { chartTheme, customTooltipStyle } from "./chart-theme";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
 
 interface AreaChartProps {
     data: Record<string, string | number>[];
@@ -37,9 +38,19 @@ export function AreaChart({
     color = chartTheme.colors.primary,
     gradientId = "chartGradient",
 }: AreaChartProps) {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) {
+        return <div className={cn("w-full", className)} style={{ height }} />;
+    }
+
     return (
         <div className={cn("w-full", className)} style={{ height }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="99%" minHeight={0} minWidth={0}>
                 <RechartsAreaChart data={data}>
                     <defs>
                         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">

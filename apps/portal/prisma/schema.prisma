@@ -25,18 +25,23 @@ model audit_log_entries {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model flow_state {
-  id                     String                @id @db.Uuid
-  user_id                String?               @db.Uuid
-  auth_code              String
-  code_challenge_method  code_challenge_method
-  code_challenge         String
+  id                     String                 @id @db.Uuid
+  user_id                String?                @db.Uuid
+  auth_code              String?
+  code_challenge_method  code_challenge_method?
+  code_challenge         String?
   provider_type          String
   provider_access_token  String?
   provider_refresh_token String?
-  created_at             DateTime?             @db.Timestamptz(6)
-  updated_at             DateTime?             @db.Timestamptz(6)
+  created_at             DateTime?              @db.Timestamptz(6)
+  updated_at             DateTime?              @db.Timestamptz(6)
   authentication_method  String
-  auth_code_issued_at    DateTime?             @db.Timestamptz(6)
+  auth_code_issued_at    DateTime?              @db.Timestamptz(6)
+  invite_token           String?
+  referrer               String?
+  oauth_client_state_id  String?                @db.Uuid
+  linking_target_id      String?                @db.Uuid
+  email_optional         Boolean                @default(false)
   saml_relay_states      saml_relay_states[]
 
   @@index([created_at(sort: Desc)])
@@ -170,21 +175,22 @@ model oauth_client_states {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model oauth_clients {
-  id                   String                  @id @db.Uuid
-  client_secret_hash   String?
-  registration_type    oauth_registration_type
-  redirect_uris        String
-  grant_types          String
-  client_name          String?
-  client_uri           String?
-  logo_uri             String?
-  created_at           DateTime                @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime                @default(now()) @db.Timestamptz(6)
-  deleted_at           DateTime?               @db.Timestamptz(6)
-  client_type          oauth_client_type       @default(confidential)
-  oauth_authorizations oauth_authorizations[]
-  oauth_consents       oauth_consents[]
-  sessions             sessions[]
+  id                         String                  @id @db.Uuid
+  client_secret_hash         String?
+  registration_type          oauth_registration_type
+  redirect_uris              String
+  grant_types                String
+  client_name                String?
+  client_uri                 String?
+  logo_uri                   String?
+  created_at                 DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime                @default(now()) @db.Timestamptz(6)
+  deleted_at                 DateTime?               @db.Timestamptz(6)
+  client_type                oauth_client_type       @default(confidential)
+  token_endpoint_auth_method String
+  oauth_authorizations       oauth_authorizations[]
+  oauth_consents             oauth_consents[]
+  sessions                   sessions[]
 
   @@index([deleted_at])
   @@schema("auth")
@@ -456,6 +462,7 @@ model bike_models {
   image_url           String?
   product_bike_models product_bike_models[]
   service_vehicles    service_vehicles[]
+  service_checklist_templates service_checklist_templates[]
 
   @@schema("public")
 }
@@ -541,6 +548,7 @@ model categories {
   product_attribute_sets                        product_attribute_sets[]
   products_products_category_idTocategories     products[]               @relation("products_category_idTocategories")
   products_products_sub_category_idTocategories products[]               @relation("products_sub_category_idTocategories")
+  return_policies                               return_policies[]
 
   @@schema("public")
 }
@@ -826,11 +834,13 @@ model dealers {
   inventory_batches                        inventory_batches[]
   inventory_movements                      inventory_movements[]
   order_items                              order_items[]
+  orders                                   orders[]
   payment_transactions                     payment_transactions[]
   products                                 products[]
   profiles_profiles_dealer_idTodealers     profiles[]              @relation("profiles_dealer_idTodealers")
   purchase_orders                          purchase_orders[]
   sales                                    sales[]
+  shipments                                shipments[]
   stock_adjustments                        stock_adjustments[]
   stock_locations                          stock_locations[]
   sub_orders                               sub_orders[]
@@ -1079,11 +1089,18 @@ model order_items {
   unit_price       Decimal           @db.Decimal(12, 2)
   total_price      Decimal           @db.Decimal(12, 2)
   created_at       DateTime?         @default(now()) @db.Timestamptz(6)
+  product_name     String?           @db.VarChar(255)
+  variant_name     String?           @db.VarChar(255)
+  sku              String?           @db.VarChar(50)
+  discount         Decimal?          @default(0) @db.Decimal(10, 2)
+  tax              Decimal?          @default(0) @db.Decimal(10, 2)
+  total            Decimal?          @db.Decimal(12, 2)
   dealers          dealers?          @relation(fields: [dealer_id], references: [id], onUpdate: NoAction)
   orders           orders?           @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   products         products?         @relation(fields: [product_id], references: [id], onUpdate: NoAction)
   sub_orders       sub_orders?       @relation(fields: [sub_order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   product_variants product_variants? @relation(fields: [variant_id], references: [id], onUpdate: NoAction)
+  return_items     return_items[]
 
   @@schema("public")
 }
@@ -1137,14 +1154,29 @@ model orders {
   notes               String?
   created_at          DateTime?           @default(now()) @db.Timestamptz(6)
   updated_at          DateTime?           @default(now()) @db.Timestamptz(6)
+  dealer_id           String?             @db.Uuid
+  address_id          String?             @db.Uuid
+  coupon_id           String?             @db.Uuid
+  currency            String?             @default("BDT") @db.VarChar(3)
+  internal_notes      String?
+  source              String?             @default("web") @db.VarChar(20)
+  ip_address          String?             @db.Inet
+  confirmed_at        DateTime?           @db.Timestamptz(6)
+  shipped_at          DateTime?           @db.Timestamptz(6)
+  delivered_at        DateTime?           @db.Timestamptz(6)
+  cancelled_at        DateTime?           @db.Timestamptz(6)
+  cancellation_reason String?
   commissions         commissions[]
   order_items         order_items[]
+  dealers             dealers?            @relation(fields: [dealer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   customer_addresses  customer_addresses? @relation(fields: [shipping_address_id], references: [id], onUpdate: NoAction)
   profiles            profiles?           @relation(fields: [user_id], references: [id], onUpdate: NoAction)
   payments            payments[]
   refunds             refunds[]
+  return_requests     return_requests[]
   reviews             reviews[]
   sales               sales[]
+  shipments           shipments[]
   sub_orders          sub_orders[]
 
   @@index([user_id], map: "idx_orders_user")
@@ -1233,16 +1265,17 @@ model payment_transactions {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model payments {
-  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  order_id               String?   @db.Uuid
-  amount                 Decimal   @db.Decimal(12, 2)
-  method                 String    @db.VarChar(50)
-  status                 String?   @default("pending") @db.VarChar(20)
-  gateway_transaction_id String?   @db.VarChar(100)
+  id                     String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id               String?        @db.Uuid
+  amount                 Decimal        @db.Decimal(12, 2)
+  method                 String         @db.VarChar(50)
+  status                 String?        @default("pending") @db.VarChar(20)
+  gateway_transaction_id String?        @db.VarChar(100)
   gateway_response       Json?
-  created_at             DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at             DateTime? @default(now()) @db.Timestamptz(6)
-  orders                 orders?   @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  created_at             DateTime?      @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime?      @default(now()) @db.Timestamptz(6)
+  payment_logs           payment_logs[]
+  orders                 orders?        @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   refunds                refunds[]
 
   @@schema("public")
@@ -1477,29 +1510,29 @@ model products {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model profiles {
-  id                                                              String                  @id @db.Uuid
-  email                                                           String?                 @unique @default("") @db.VarChar(255)
-  phone                                                           String?                 @unique @db.VarChar(20)
-  first_name                                                      String?                 @db.VarChar(100)
-  last_name                                                       String?                 @db.VarChar(100)
-  role_id                                                         String?                 @db.Uuid
-  dealer_id                                                       String?                 @db.Uuid
-  status                                                          String?                 @default("pending") @db.VarChar(20)
-  email_verified                                                  Boolean?                @default(false)
-  mfa_enabled                                                     Boolean?                @default(false)
-  created_at                                                      DateTime?               @default(now()) @db.Timestamptz(6)
-  updated_at                                                      DateTime?               @default(now()) @db.Timestamptz(6)
+  id                                                              String                    @id @db.Uuid
+  email                                                           String?                   @unique @default("") @db.VarChar(255)
+  phone                                                           String?                   @unique @db.VarChar(20)
+  first_name                                                      String?                   @db.VarChar(100)
+  last_name                                                       String?                   @db.VarChar(100)
+  role_id                                                         String?                   @db.Uuid
+  dealer_id                                                       String?                   @db.Uuid
+  status                                                          String?                   @default("pending") @db.VarChar(20)
+  email_verified                                                  Boolean?                  @default(false)
+  mfa_enabled                                                     Boolean?                  @default(false)
+  created_at                                                      DateTime?                 @default(now()) @db.Timestamptz(6)
+  updated_at                                                      DateTime?                 @default(now()) @db.Timestamptz(6)
   full_name                                                       String?
   role                                                            String?
-  onboarding_completed                                            Boolean?                @default(false)
+  onboarding_completed                                            Boolean?                  @default(false)
   temp_password                                                   String?
   password_hash                                                   String?
-  phone_verified                                                  Boolean?                @default(false)
+  phone_verified                                                  Boolean?                  @default(false)
   mfa_secret                                                      String?
-  last_login_at                                                   DateTime?               @db.Timestamptz(6)
-  failed_login_attempts                                           Int?                    @default(0)
-  locked_until                                                    DateTime?               @db.Timestamptz(6)
-  password_changed_at                                             DateTime?               @db.Timestamptz(6)
+  last_login_at                                                   DateTime?                 @db.Timestamptz(6)
+  failed_login_attempts                                           Int?                      @default(0)
+  locked_until                                                    DateTime?                 @db.Timestamptz(6)
+  password_changed_at                                             DateTime?                 @db.Timestamptz(6)
   audit_logs                                                      audit_logs[]
   auth_providers                                                  auth_providers[]
   business_unit_users                                             business_unit_users[]
@@ -1510,42 +1543,58 @@ model profiles {
   dealer_payouts                                                  dealer_payouts[]
   dealer_reviews                                                  dealer_reviews[]
   dealer_users                                                    dealer_users[]
-  dealers_dealers_owner_user_idToprofiles                         dealers[]               @relation("dealers_owner_user_idToprofiles")
-  expenses_expenses_approved_byToprofiles                         expenses[]              @relation("expenses_approved_byToprofiles")
-  expenses_expenses_created_byToprofiles                          expenses[]              @relation("expenses_created_byToprofiles")
+  dealers_dealers_owner_user_idToprofiles                         dealers[]                 @relation("dealers_owner_user_idToprofiles")
+  email_logs                                                      email_logs[]
+  expenses_expenses_approved_byToprofiles                         expenses[]                @relation("expenses_approved_byToprofiles")
+  expenses_expenses_created_byToprofiles                          expenses[]                @relation("expenses_created_byToprofiles")
   inventory_movements                                             inventory_movements[]
   login_history                                                   login_history[]
+  notification_preferences                                        notification_preferences?
   notifications                                                   notifications[]
   order_notes                                                     order_notes[]
   order_status_history                                            order_status_history[]
   orders                                                          orders[]
   otp_verifications                                               otp_verifications[]
   password_resets                                                 password_resets[]
-  payment_transactions_payment_transactions_customer_idToprofiles payment_transactions[]  @relation("payment_transactions_customer_idToprofiles")
-  payment_transactions_payment_transactions_received_byToprofiles payment_transactions[]  @relation("payment_transactions_received_byToprofiles")
+  payment_transactions_payment_transactions_customer_idToprofiles payment_transactions[]    @relation("payment_transactions_customer_idToprofiles")
+  payment_transactions_payment_transactions_received_byToprofiles payment_transactions[]    @relation("payment_transactions_received_byToprofiles")
+  points_history                                                  points_history[]
   products                                                        products[]
-  dealers_profiles_dealer_idTodealers                             dealers?                @relation("profiles_dealer_idTodealers", fields: [dealer_id], references: [id], onUpdate: NoAction)
-  roles                                                           roles?                  @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  purchase_orders_purchase_orders_created_byToprofiles            purchase_orders[]       @relation("purchase_orders_created_byToprofiles")
-  purchase_orders_purchase_orders_received_byToprofiles           purchase_orders[]       @relation("purchase_orders_received_byToprofiles")
+  dealers_profiles_dealer_idTodealers                             dealers?                  @relation("profiles_dealer_idTodealers", fields: [dealer_id], references: [id], onUpdate: NoAction)
+  roles                                                           roles?                    @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  purchase_orders_purchase_orders_created_byToprofiles            purchase_orders[]         @relation("purchase_orders_created_byToprofiles")
+  purchase_orders_purchase_orders_received_byToprofiles           purchase_orders[]         @relation("purchase_orders_received_byToprofiles")
   push_subscriptions                                              push_subscriptions[]
+  push_tokens                                                     push_tokens[]
+  referrals_referrals_referred_idToprofiles                       referrals[]               @relation("referrals_referred_idToprofiles")
+  referrals_referrals_referrer_idToprofiles                       referrals[]               @relation("referrals_referrer_idToprofiles")
   refresh_tokens_public                                           refresh_tokens_public[]
   refunds                                                         refunds[]
+  return_requests_return_requests_processed_byToprofiles          return_requests[]         @relation("return_requests_processed_byToprofiles")
+  return_requests_return_requests_user_idToprofiles               return_requests[]         @relation("return_requests_user_idToprofiles")
   review_replies                                                  review_replies[]
   reviews                                                         reviews[]
-  sales_sales_customer_idToprofiles                               sales[]                 @relation("sales_customer_idToprofiles")
-  sales_sales_sold_byToprofiles                                   sales[]                 @relation("sales_sold_byToprofiles")
+  sales_sales_customer_idToprofiles                               sales[]                   @relation("sales_customer_idToprofiles")
+  sales_sales_sold_byToprofiles                                   sales[]                   @relation("sales_sold_byToprofiles")
+  service_feedback                                                service_feedback[]
   service_staff                                                   service_staff[]
   service_tickets                                                 service_tickets[]
   service_vehicles                                                service_vehicles[]
-  stock_adjustments_stock_adjustments_approved_byToprofiles       stock_adjustments[]     @relation("stock_adjustments_approved_byToprofiles")
-  stock_adjustments_stock_adjustments_performed_byToprofiles      stock_adjustments[]     @relation("stock_adjustments_performed_byToprofiles")
+  sms_logs                                                        sms_logs[]
+  stock_adjustments_stock_adjustments_approved_byToprofiles       stock_adjustments[]       @relation("stock_adjustments_approved_byToprofiles")
+  stock_adjustments_stock_adjustments_performed_byToprofiles      stock_adjustments[]       @relation("stock_adjustments_performed_byToprofiles")
   support_tickets                                                 support_tickets[]
   ticket_messages                                                 ticket_messages[]
   transactions                                                    transactions[]
+  user_loyalty                                                    user_loyalty?
   user_sessions                                                   user_sessions[]
+  user_wallets                                                    user_wallets?
+  wallet_transactions                                             wallet_transactions[]
   wishlists                                                       wishlists[]
+  service_requisitions                                            service_requisitions[]
 
+  qc_requests_requester                           qc_requests[]             @relation("QcRequester")
+  qc_requests_reviewer                            qc_requests[]             @relation("QcReviewer")
   @@index([dealer_id], map: "idx_profiles_dealer")
   @@schema("public")
 }
@@ -1577,9 +1626,9 @@ model purchase_order_items {
   ordered_quantity   Int
   received_quantity  Int?                @default(0)
   damaged_quantity   Int?                @default(0)
-  accepted_quantity  Int?                @default(dbgenerated("(received_quantity - damaged_quantity)"))
+  accepted_quantity  Int?
   unit_cost_price    Decimal             @db.Decimal
-  total_cost         Decimal?            @default(dbgenerated("((ordered_quantity)::numeric * unit_cost_price)")) @db.Decimal
+  total_cost         Decimal?            @db.Decimal
   discount_type      String?             @db.VarChar
   discount_value     Decimal?            @default(0) @db.Decimal
   discount_amount    Decimal?            @default(0) @db.Decimal
@@ -1618,7 +1667,7 @@ model purchase_orders {
   other_charges                                  Decimal?               @default(0) @db.Decimal
   grand_total                                    Decimal                @db.Decimal
   paid_amount                                    Decimal?               @default(0) @db.Decimal
-  due_amount                                     Decimal?               @default(dbgenerated("(grand_total - paid_amount)")) @db.Decimal
+  due_amount                                     Decimal?               @db.Decimal
   status                                         String?                @default("draft") @db.VarChar
   payment_status                                 String?                @default("unpaid") @db.VarChar
   invoice_number                                 String?                @db.VarChar
@@ -1735,6 +1784,7 @@ model roles {
   is_system_role   Boolean?           @default(false)
   created_at       DateTime?          @default(now()) @db.Timestamptz(6)
   updated_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  description      String?
   profiles         profiles[]
   role_permissions role_permissions[]
 
@@ -1759,12 +1809,12 @@ model sale_items {
   unit_cost_price      Decimal            @db.Decimal
   unit_selling_price   Decimal            @db.Decimal
   mrp                  Decimal?           @db.Decimal
-  subtotal             Decimal?           @default(dbgenerated("((quantity)::numeric * unit_selling_price)")) @db.Decimal
+  subtotal             Decimal?           @db.Decimal
   discount_amount      Decimal?           @default(0) @db.Decimal
   tax_amount           Decimal?           @default(0) @db.Decimal
   total_amount         Decimal?           @db.Decimal
-  unit_profit          Decimal?           @default(dbgenerated("(unit_selling_price - unit_cost_price)")) @db.Decimal
-  total_profit         Decimal?           @default(dbgenerated("((unit_selling_price - unit_cost_price) * ((quantity - returned_quantity))::numeric)")) @db.Decimal
+  unit_profit          Decimal?           @db.Decimal
+  total_profit         Decimal?           @db.Decimal
   warranty_period_days Int?
   warranty_expires_at  DateTime?          @db.Date
   status               String?            @default("sold") @db.VarChar
@@ -1806,7 +1856,7 @@ model sales {
   payment_method                       String?      @db.VarChar
   payment_status                       String?      @default("paid") @db.VarChar
   paid_amount                          Decimal?     @default(0) @db.Decimal
-  due_amount                           Decimal?     @default(dbgenerated("(grand_total - paid_amount)")) @db.Decimal
+  due_amount                           Decimal?     @db.Decimal
   sale_date                            DateTime     @default(dbgenerated("CURRENT_DATE")) @db.Date
   sale_time                            DateTime     @default(dbgenerated("CURRENT_TIME")) @db.Time(6)
   sold_by                              String?      @db.Uuid
@@ -1869,12 +1919,13 @@ model shipping_rates {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model shipping_zones {
-  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name             String             @db.VarChar(100)
-  description      String?
-  is_active        Boolean?           @default(true)
-  created_at       DateTime?          @default(now()) @db.Timestamptz(6)
-  shipping_methods shipping_methods[]
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String                @db.VarChar(100)
+  description         String?
+  is_active           Boolean?              @default(true)
+  created_at          DateTime?             @default(now()) @db.Timestamptz(6)
+  shipping_methods    shipping_methods[]
+  shipping_zone_areas shipping_zone_areas[]
 
   @@schema("public")
 }
@@ -1898,9 +1949,9 @@ model stock_adjustment_items {
   batch_id          String?            @db.Uuid
   system_quantity   Int
   actual_quantity   Int
-  difference        Int?               @default(dbgenerated("(actual_quantity - system_quantity)"))
+  difference        Int?
   unit_cost         Decimal?           @db.Decimal
-  value_impact      Decimal?           @default(dbgenerated("(((actual_quantity - system_quantity))::numeric * unit_cost)")) @db.Decimal
+  value_impact      Decimal?           @db.Decimal
   reason            String?
   created_at        DateTime?          @default(now()) @db.Timestamptz(6)
   stock_adjustments stock_adjustments? @relation(fields: [adjustment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -2256,24 +2307,6 @@ model service_ramps {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model service_requisitions {
-  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  ticket_id       String?          @db.Uuid
-  staff_id        String?          @db.Uuid
-  product_id      String?          @db.Uuid
-  quantity        Int?             @default(1)
-  status          String?          @default("pending")
-  notes           String?
-  created_at      DateTime?        @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime?        @default(now()) @db.Timestamptz(6)
-  unit_price      Decimal?         @default(0) @db.Decimal
-  total_price     Decimal?         @default(0) @db.Decimal
-  products        products?        @relation(fields: [product_id], references: [id], onUpdate: NoAction)
-  service_staff   service_staff?   @relation(fields: [staff_id], references: [id], onUpdate: NoAction)
-  service_tickets service_tickets? @relation(fields: [ticket_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@schema("public")
-}
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -2290,10 +2323,20 @@ model service_staff {
   email                String?
   status               String?                @default("approved")
   designation          String?                @default("Technician")
+  latitude             Decimal?               @db.Decimal(10, 8)
+  longitude            Decimal?               @db.Decimal(11, 8)
+  last_active_at       DateTime?              @db.Timestamptz(6)
   service_ramps        service_ramps[]
   service_requisitions service_requisitions[]
   profiles             profiles?              @relation(fields: [profile_id], references: [id], onUpdate: NoAction)
+  service_tasks        service_tasks[]
   service_tickets      service_tickets[]
+  tool_usage           tool_usage[]
+  job_cards            job_cards[]
+  technician_attendance technician_attendance[]
+  technician_time_logs technician_time_logs[]
+  job_photos          job_photos[]
+  technician_issue_reports technician_issue_reports[]
 
   @@schema("public")
 }
@@ -2313,12 +2356,15 @@ model service_tickets {
   staff_id                                                       String?                @db.Uuid
   admin_notes                                                    String?
   finalized_at                                                   DateTime?              @db.Timestamptz(6)
+  service_feedback                                               service_feedback?
+  service_history                                                service_history[]
   service_ramps_service_ramps_current_ticket_idToservice_tickets service_ramps[]        @relation("service_ramps_current_ticket_idToservice_tickets")
   service_requisitions                                           service_requisitions[]
   profiles                                                       profiles?              @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
   service_ramps_service_tickets_ramp_idToservice_ramps           service_ramps?         @relation("service_tickets_ramp_idToservice_ramps", fields: [ramp_id], references: [id], onUpdate: NoAction)
   service_staff                                                  service_staff?         @relation(fields: [staff_id], references: [id], onUpdate: NoAction)
   service_vehicles                                               service_vehicles?      @relation(fields: [vehicle_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  job_cards                                                      job_cards[]
 
   @@schema("public")
 }
@@ -2353,6 +2399,7 @@ model service_vehicles {
   road_condition       String?
   date_of_purchase     DateTime?         @db.Date
   purchase_from        String?
+  service_history      service_history[]
   service_tickets      service_tickets[]
   profiles             profiles?         @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
   bike_models          bike_models?      @relation(fields: [model_id], references: [id], onUpdate: NoAction)
@@ -2392,15 +2439,50 @@ model business_units {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model job_cards {
-  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  ticket_id          String?   @db.Uuid
-  technician_id      String?   @db.Uuid
-  status             String?   @default("in_progress") @db.VarChar(50)
+  id                 String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticket_id          String?           @db.Uuid
+  technician_id      String?           @db.Uuid
+  status             String?           @default("in_progress") @db.VarChar(50)
   notes              String?
-  service_start_time DateTime? @default(now()) @db.Timestamptz(6)
-  service_end_time   DateTime? @db.Timestamptz(6)
-  created_at         DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime? @default(now()) @db.Timestamptz(6)
+  service_start_time DateTime?         @default(now()) @db.Timestamptz(6)
+  service_end_time   DateTime?         @db.Timestamptz(6)
+  created_at         DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?         @default(now()) @db.Timestamptz(6)
+  estimated_completion_at DateTime?      @db.Timestamptz(6)
+  service_history    service_history[]
+  service_tasks      service_tasks[]
+  tool_usage         tool_usage[]
+  parts_usage        parts_usage[]
+  technician_time_logs technician_time_logs[]
+  job_photos          job_photos[]
+  service_checklist_items service_checklist_items[]
+  technician_issue_reports technician_issue_reports[]
+  qc_requests         qc_requests[]
+  service_tickets    service_tickets?  @relation(fields: [ticket_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  service_staff      service_staff?    @relation(fields: [technician_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model service_requisitions {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticket_id         String?          @db.Uuid
+  staff_id          String?          @db.Uuid
+  product_id        String?          @db.Uuid
+  quantity          Int              @default(1)
+  status            String?          @default("pending") @db.VarChar(30)
+  notes             String?
+  unit_price        Decimal?         @default(0) @db.Decimal
+  total_price       Decimal?         @default(0) @db.Decimal
+  approved_by       String?          @db.Uuid
+  approved_at       DateTime?        @db.Timestamptz(6)
+  created_at        DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime?        @default(now()) @db.Timestamptz(6)
+  
+  service_tickets   service_tickets? @relation(fields: [ticket_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  service_staff     service_staff?   @relation(fields: [staff_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  products          products?        @relation(fields: [product_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  profiles          profiles?        @relation(fields: [approved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@schema("public")
 }
@@ -2409,12 +2491,14 @@ model job_cards {
 model part_variants {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   part_id        String?   @db.Uuid
+  parts          parts?    @relation(fields: [part_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   brand          String    @db.VarChar(100)
   sku            String?   @unique @db.VarChar(100)
   price          Decimal   @default(0) @db.Decimal(10, 2)
   stock_quantity Int?      @default(0)
   created_at     DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?     @default(now()) @db.Timestamptz(6)
+  parts_usage    parts_usage[]
 
   @@schema("public")
 }
@@ -2427,6 +2511,7 @@ model parts {
   code        String?   @unique @db.VarChar(50)
   created_at  DateTime? @default(now()) @db.Timestamptz(6)
   updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+  part_variants part_variants[]
 
   @@schema("public")
 }
@@ -2438,9 +2523,613 @@ model parts_usage {
   variant_id  String?   @db.Uuid
   quantity    Int       @default(1)
   unit_price  Decimal   @db.Decimal(10, 2)
-  total_price Decimal?  @default(dbgenerated("((quantity)::numeric * unit_price)")) @db.Decimal(10, 2)
-  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  total_price Decimal?  @db.Decimal(10, 2)
+  created_at  DateTime?     @default(now()) @db.Timestamptz(6)
+  job_cards   job_cards?    @relation(fields: [job_card_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  part_variants part_variants? @relation(fields: [variant_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
+  @@schema("public")
+}
+
+model email_logs {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String?   @db.Uuid
+  email         String    @db.VarChar(255)
+  subject       String    @db.VarChar(255)
+  template      String?   @db.VarChar(100)
+  variables     Json?
+  status        String?   @default("pending") @db.VarChar(20)
+  provider      String?   @db.VarChar(50)
+  provider_id   String?   @db.VarChar(100)
+  error_message String?
+  opened_at     DateTime? @db.Timestamptz(6)
+  clicked_at    DateTime? @db.Timestamptz(6)
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+  sent_at       DateTime? @db.Timestamptz(6)
+  profiles      profiles? @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model loyalty_tiers {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String         @unique @db.VarChar(50)
+  min_points      Int
+  earn_multiplier Decimal?       @default(1.0) @db.Decimal(4, 2)
+  benefits        String[]
+  icon_url        String?
+  created_at      DateTime?      @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime?      @default(now()) @db.Timestamptz(6)
+  user_loyalty    user_loyalty[]
+
+  @@schema("public")
+}
+
+model notification_preferences {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id           String?   @unique @db.Uuid
+  push_enabled      Boolean?  @default(true)
+  sms_enabled       Boolean?  @default(true)
+  email_enabled     Boolean?  @default(true)
+  order_updates     Boolean?  @default(true)
+  payment_updates   Boolean?  @default(true)
+  service_updates   Boolean?  @default(true)
+  promotions        Boolean?  @default(true)
+  price_drops       Boolean?  @default(true)
+  back_in_stock     Boolean?  @default(true)
+  service_reminders Boolean?  @default(true)
+  quiet_hours_start DateTime? @db.Time(6)
+  quiet_hours_end   DateTime? @db.Time(6)
+  created_at        DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime? @default(now()) @db.Timestamptz(6)
+  profiles          profiles? @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model points_history {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String?   @db.Uuid
+  type           String    @db.VarChar(10)
+  points         Int
+  reason         String?   @db.VarChar(200)
+  reference_type String?   @db.VarChar(50)
+  reference_id   String?   @db.Uuid
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  profiles       profiles? @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model push_tokens {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String?   @db.Uuid
+  token        String
+  device_type  String?   @db.VarChar(20)
+  device_name  String?   @db.VarChar(100)
+  is_active    Boolean?  @default(true)
+  last_used_at DateTime? @db.Timestamptz(6)
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  profiles     profiles? @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, token])
+  @@schema("public")
+}
+
+model referrals {
+  id                                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  referrer_id                              String?   @db.Uuid
+  referred_id                              String?   @db.Uuid
+  referral_code                            String    @db.VarChar(20)
+  status                                   String?   @default("pending") @db.VarChar(20)
+  reward_points                            Int?      @default(0)
+  reward_claimed                           Boolean?  @default(false)
+  created_at                               DateTime? @default(now()) @db.Timestamptz(6)
+  completed_at                             DateTime? @db.Timestamptz(6)
+  profiles_referrals_referred_idToprofiles profiles? @relation("referrals_referred_idToprofiles", fields: [referred_id], references: [id], onUpdate: NoAction)
+  profiles_referrals_referrer_idToprofiles profiles? @relation("referrals_referrer_idToprofiles", fields: [referrer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model seo_metadata {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  entity_type    String    @db.VarChar(50)
+  entity_id      String    @db.Uuid
+  title          String?   @db.VarChar(200)
+  description    String?
+  keywords       String[]
+  og_title       String?   @db.VarChar(200)
+  og_description String?
+  og_image       String?
+  canonical_url  String?
+  is_indexed     Boolean?  @default(true)
+  updated_at     DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@unique([entity_type, entity_id])
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model service_feedback {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticket_id       String?          @unique @db.Uuid
+  user_id         String?          @db.Uuid
+  rating          Int?             @db.SmallInt
+  comment         String?
+  staff_rating    Int?             @db.SmallInt
+  timing_rating   Int?             @db.SmallInt
+  created_at      DateTime?        @default(now()) @db.Timestamptz(6)
+  service_tickets service_tickets? @relation(fields: [ticket_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles        profiles?        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model service_history {
+  id                       String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vehicle_id               String?           @db.Uuid
+  ticket_id                String?           @db.Uuid
+  job_card_id              String?           @db.Uuid
+  service_date             DateTime          @db.Date
+  mileage                  Int?
+  total_cost               Decimal?          @db.Decimal(12, 2)
+  summary                  String?
+  next_service_due_date    DateTime?         @db.Date
+  next_service_due_mileage Int?
+  created_at               DateTime?         @default(now()) @db.Timestamptz(6)
+  job_cards                job_cards?        @relation(fields: [job_card_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  service_tickets          service_tickets?  @relation(fields: [ticket_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  service_vehicles         service_vehicles? @relation(fields: [vehicle_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([vehicle_id], map: "idx_service_history_vehicle_id")
+  @@schema("public")
+}
+
+model service_packages {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String    @db.VarChar(100)
+  description    String?
+  base_price     Decimal   @db.Decimal(10, 2)
+  included_tasks String[]
+  is_active      Boolean?  @default(true)
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@schema("public")
+}
+
+model service_tasks {
+  id                     String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job_card_id            String?        @db.Uuid
+  name                   String         @db.VarChar(200)
+  description            String?
+  estimated_time_minutes Int?
+  actual_time_minutes    Int?
+  status                 String?        @default("pending") @db.VarChar(30)
+  assigned_staff_id      String?        @db.Uuid
+  created_at             DateTime?      @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime?      @default(now()) @db.Timestamptz(6)
+  service_staff          service_staff? @relation(fields: [assigned_staff_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  job_cards              job_cards?     @relation(fields: [job_card_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([job_card_id], map: "idx_service_tasks_job_card_id")
+  @@schema("public")
+}
+
+model sms_logs {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String?   @db.Uuid
+  phone         String    @db.VarChar(20)
+  message       String
+  type          String?   @db.VarChar(50)
+  status        String?   @default("pending") @db.VarChar(20)
+  provider      String?   @db.VarChar(50)
+  provider_id   String?   @db.VarChar(100)
+  error_message String?
+  cost          Decimal?  @db.Decimal(6, 4)
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+  sent_at       DateTime? @db.Timestamptz(6)
+  delivered_at  DateTime? @db.Timestamptz(6)
+  profiles      profiles? @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model special_tools {
+  id                 String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String       @db.VarChar(100)
+  code               String?      @unique @db.VarChar(50)
+  description        String?
+  quantity           Int?         @default(1)
+  available_quantity Int?         @default(1)
+  status             String?      @default("available") @db.VarChar(20)
+  created_at         DateTime?    @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?    @default(now()) @db.Timestamptz(6)
+  tool_usage         tool_usage[]
+
+  @@schema("public")
+}
+
+model tool_usage {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tool_id       String?        @db.Uuid
+  job_card_id   String?        @db.Uuid
+  staff_id      String?        @db.Uuid
+  borrowed_at   DateTime?      @default(now()) @db.Timestamptz(6)
+  returned_at   DateTime?      @db.Timestamptz(6)
+  notes         String?
+  job_cards     job_cards?     @relation(fields: [job_card_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  service_staff service_staff? @relation(fields: [staff_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  special_tools special_tools? @relation(fields: [tool_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model user_loyalty {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id          String?        @unique @db.Uuid
+  tier_id          String?        @db.Uuid
+  current_points   Int?           @default(0)
+  lifetime_points  Int?           @default(0)
+  points_to_expire Int?           @default(0)
+  next_expiry_date DateTime?      @db.Date
+  created_at       DateTime?      @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime?      @default(now()) @db.Timestamptz(6)
+  loyalty_tiers    loyalty_tiers? @relation(fields: [tier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  profiles         profiles?      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model payment_logs {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  payment_id    String?   @db.Uuid
+  event_type    String?   @db.VarChar(50)
+  request_data  Json?
+  response_data Json?
+  ip_address    String?   @db.Inet
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+  payments      payments? @relation(fields: [payment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model payment_methods {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String    @db.VarChar(50)
+  code               String    @unique @db.VarChar(20)
+  type               String?   @db.VarChar(20)
+  icon_url           String?
+  is_active          Boolean?  @default(true)
+  is_default         Boolean?  @default(false)
+  min_amount         Decimal?  @db.Decimal(10, 2)
+  max_amount         Decimal?  @db.Decimal(12, 2)
+  processing_fee     Decimal?  @default(0) @db.Decimal(5, 2)
+  processing_percent Decimal?  @default(0) @db.Decimal(4, 2)
+  config             Json?
+  instructions       String?
+  position           Int?      @default(0)
+  created_at         DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@schema("public")
+}
+
+model return_items {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  return_request_id String?          @db.Uuid
+  order_item_id     String?          @db.Uuid
+  quantity          Int              @default(1)
+  received_quantity Int?             @default(0)
+  condition         String?          @db.VarChar(30)
+  inspection_notes  String?
+  refund_amount     Decimal?         @db.Decimal(10, 2)
+  restock           Boolean?         @default(true)
+  order_items       order_items?     @relation(fields: [order_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  return_requests   return_requests? @relation(fields: [return_request_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model return_policies {
+  id                 String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String      @db.VarChar(100)
+  category_id        String?     @db.Uuid
+  return_window_days Int         @default(7)
+  refund_percent     Decimal?    @default(100) @db.Decimal(5, 2)
+  conditions         String[]
+  non_returnable     Boolean?    @default(false)
+  is_active          Boolean?    @default(true)
+  created_at         DateTime?   @default(now()) @db.Timestamptz(6)
+  categories         categories? @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model return_requests {
+  id                                              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  return_number                                   String         @unique @db.VarChar(30)
+  order_id                                        String?        @db.Uuid
+  user_id                                         String?        @db.Uuid
+  reason                                          String         @db.VarChar(50)
+  reason_details                                  String?
+  images                                          String[]
+  video_url                                       String?
+  status                                          String?        @default("pending") @db.VarChar(30)
+  refund_method                                   String?        @db.VarChar(20)
+  refund_amount                                   Decimal?       @db.Decimal(12, 2)
+  restocking_fee                                  Decimal?       @default(0) @db.Decimal(8, 2)
+  pickup_address                                  Json?
+  pickup_date                                     DateTime?      @db.Date
+  admin_notes                                     String?
+  rejection_reason                                String?
+  processed_by                                    String?        @db.Uuid
+  processed_at                                    DateTime?      @db.Timestamptz(6)
+  created_at                                      DateTime?      @default(now()) @db.Timestamptz(6)
+  updated_at                                      DateTime?      @default(now()) @db.Timestamptz(6)
+  return_items                                    return_items[]
+  orders                                          orders?        @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles_return_requests_processed_byToprofiles profiles?      @relation("return_requests_processed_byToprofiles", fields: [processed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  profiles_return_requests_user_idToprofiles      profiles?      @relation("return_requests_user_idToprofiles", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model shipment_tracking {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shipment_id String?    @db.Uuid
+  status      String     @db.VarChar(50)
+  location    String?    @db.VarChar(200)
+  description String?
+  event_time  DateTime   @db.Timestamptz(6)
+  source      String?    @default("manual") @db.VarChar(50)
+  raw_data    Json?
+  created_at  DateTime?  @default(now()) @db.Timestamptz(6)
+  shipments   shipments? @relation(fields: [shipment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model shipments {
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id           String?             @db.Uuid
+  carrier_id         String?             @db.Uuid
+  tracking_number    String?             @db.VarChar(100)
+  status             String?             @default("pending") @db.VarChar(30)
+  weight             Decimal?            @db.Decimal(8, 2)
+  dimensions         Json?
+  shipping_cost      Decimal?            @db.Decimal(8, 2)
+  cod_amount         Decimal?            @db.Decimal(10, 2)
+  pickup_address     Json?
+  delivery_address   Json?
+  estimated_delivery DateTime?           @db.Date
+  actual_delivery    DateTime?           @db.Timestamptz(6)
+  delivery_attempts  Int?                @default(0)
+  delivery_notes     String?
+  receiver_name      String?             @db.VarChar(100)
+  receiver_relation  String?             @db.VarChar(50)
+  proof_of_delivery  String?
+  created_at         DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?           @default(now()) @db.Timestamptz(6)
+  dealer_id          String?             @db.Uuid
+  shipment_tracking  shipment_tracking[]
+  shipping_carriers  shipping_carriers?  @relation(fields: [carrier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  dealers            dealers?            @relation(fields: [dealer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  orders             orders?             @relation(fields: [order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([dealer_id], map: "idx_shipments_dealer")
+  @@schema("public")
+}
+
+model shipping_carriers {
+  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String      @db.VarChar(100)
+  code         String      @unique @db.VarChar(20)
+  logo_url     String?
+  tracking_url String?
+  api_config   Json?
+  is_active    Boolean?    @default(true)
+  created_at   DateTime?   @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime?   @default(now()) @db.Timestamptz(6)
+  shipments    shipments[]
+
+  @@schema("public")
+}
+
+model shipping_zone_areas {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  zone_id        String?         @db.Uuid
+  division       String          @db.VarChar(50)
+  district       String          @db.VarChar(50)
+  upazila        String?         @db.VarChar(50)
+  post_code      String?         @db.VarChar(10)
+  shipping_zones shipping_zones? @relation(fields: [zone_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model user_wallets {
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id             String                @unique @db.Uuid
+  balance             Decimal               @default(0) @db.Decimal(12, 2)
+  lifetime_credited   Decimal?              @default(0) @db.Decimal(14, 2)
+  lifetime_debited    Decimal?              @default(0) @db.Decimal(14, 2)
+  is_active           Boolean?              @default(true)
+  created_at          DateTime?             @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?             @default(now()) @db.Timestamptz(6)
+  profiles            profiles              @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  wallet_transactions wallet_transactions[]
+
+  @@schema("public")
+}
+
+model wallet_transactions {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wallet_id      String?       @db.Uuid
+  type           String        @db.VarChar(10)
+  amount         Decimal       @db.Decimal(12, 2)
+  balance_before Decimal       @db.Decimal(12, 2)
+  balance_after  Decimal       @db.Decimal(12, 2)
+  reference_type String?       @db.VarChar(50)
+  reference_id   String?       @db.Uuid
+  description    String?
+  created_by     String?       @db.Uuid
+  created_at     DateTime?     @default(now()) @db.Timestamptz(6)
+  profiles       profiles?     @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_wallets   user_wallets? @relation(fields: [wallet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model technician_attendance {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  staff_id     String    @db.Uuid
+  clock_in     DateTime  @default(now()) @db.Timestamptz(6)
+  clock_out    DateTime? @db.Timestamptz(6)
+  gps_lat      Decimal?  @db.Decimal(10, 8)
+  gps_lng      Decimal?  @db.Decimal(11, 8)
+  device_id    String?   @db.VarChar(100)
+  status       String?   @default("present") @db.VarChar(20)
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime? @default(now()) @db.Timestamptz(6)
+  
+  service_staff service_staff @relation(fields: [staff_id], references: [id], onDelete: Cascade)
+
+  @@index([staff_id])
+  @@index([clock_in])
+  @@schema("public")
+}
+
+model technician_time_logs {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job_card_id  String?   @db.Uuid
+  staff_id     String    @db.Uuid
+  event_type   String    @db.VarChar(20) // start, pause, resume, complete
+  timestamp    DateTime  @default(now()) @db.Timestamptz(6)
+  device_id    String?   @db.VarChar(100)
+  gps_lat      Decimal?  @db.Decimal(10, 8)
+  gps_lng      Decimal?  @db.Decimal(11, 8)
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+
+  job_cards    job_cards?    @relation(fields: [job_card_id], references: [id], onDelete: Cascade)
+  service_staff service_staff @relation(fields: [staff_id], references: [id], onDelete: Cascade)
+  technician_breaks technician_breaks[]
+
+  @@index([job_card_id])
+  @@index([staff_id])
+  @@schema("public")
+}
+
+model technician_breaks {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  time_log_id  String    @db.Uuid // Links to the 'pause' event
+  break_type   String    @db.VarChar(50) // lunch, prayer, personal
+  start_time   DateTime  @default(now()) @db.Timestamptz(6)
+  end_time     DateTime? @db.Timestamptz(6)
+  duration_min Int?
+  notes        String?
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+
+  technician_time_logs technician_time_logs @relation(fields: [time_log_id], references: [id], onDelete: Cascade)
+
+  @@index([time_log_id])
+  @@schema("public")
+}
+
+model service_checklist_templates {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String    @db.VarChar(100)
+  bike_model_id String?   @db.Uuid
+  service_type  String?   @db.VarChar(50)
+  description   String?
+  items         Json      // Array of checklist items structure
+  is_active     Boolean?  @default(true)
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime? @default(now()) @db.Timestamptz(6)
+
+  bike_models   bike_models? @relation(fields: [bike_model_id], references: [id], onDelete: SetNull)
+
+  @@schema("public")
+}
+
+model service_checklist_items {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job_card_id      String    @db.Uuid
+  template_item_id String?   @db.VarChar(100)
+  name             String    @db.VarChar(200)
+  category         String?   @db.VarChar(100)
+  is_completed     Boolean?  @default(false)
+  condition        String?   @db.VarChar(20) // ok, fair, bad, na
+  notes            String?
+  photo_url        String?
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime? @default(now()) @db.Timestamptz(6)
+
+  job_cards        job_cards @relation(fields: [job_card_id], references: [id], onDelete: Cascade)
+
+  @@index([job_card_id])
+  @@schema("public")
+}
+
+model job_photos {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job_card_id   String    @db.Uuid
+  staff_id      String    @db.Uuid
+  image_url     String
+  thumbnail_url String?
+  tag           String    @db.VarChar(20) // before, during, after
+  caption       String?
+  file_size     Int?
+  mime_type     String?   @db.VarChar(50)
+  metadata      Json?
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+
+  job_cards     job_cards     @relation(fields: [job_card_id], references: [id], onDelete: Cascade)
+  service_staff service_staff @relation(fields: [staff_id], references: [id], onDelete: Cascade)
+
+  @@index([job_card_id])
+  @@index([staff_id])
+  @@schema("public")
+}
+
+model technician_issue_reports {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job_card_id String?   @db.Uuid
+  staff_id    String    @db.Uuid
+  category    String    @db.VarChar(50) // equipment, safety, vehicle
+  description String
+  severity    String?   @default("medium") @db.VarChar(20) // low, medium, high, critical
+  images      String[]
+  status      String?   @default("open") @db.VarChar(20)
+  resolved_at DateTime? @db.Timestamptz(6)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+
+  job_cards     job_cards?    @relation(fields: [job_card_id], references: [id], onDelete: SetNull)
+  service_staff service_staff @relation(fields: [staff_id], references: [id], onDelete: Cascade)
+
+  @@index([staff_id])
+  @@schema("public")
+}
+
+model qc_requests {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job_card_id  String    @db.Uuid
+  requested_by String    @db.Uuid
+  reviewer_id  String?   @db.Uuid
+  status       String?   @default("pending") @db.VarChar(20) // pending, passed, failed
+  notes        String?
+  reviewed_at  DateTime? @db.Timestamptz(6)
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime? @default(now()) @db.Timestamptz(6)
+
+  job_cards    job_cards @relation(fields: [job_card_id], references: [id], onDelete: Cascade)
+  requester    profiles  @relation("QcRequester", fields: [requested_by], references: [id], onDelete: NoAction)
+  reviewer     profiles? @relation("QcReviewer", fields: [reviewer_id], references: [id], onDelete: SetNull)
+
+  @@index([job_card_id])
+  @@index([status])
   @@schema("public")
 }
 

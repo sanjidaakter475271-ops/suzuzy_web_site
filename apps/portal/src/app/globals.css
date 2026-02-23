@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "tw-animate-css";
+@import "../../node_modules/tw-animate-css/dist/tw-animate.css";
 
 /* ═══════════════════════════════════════════════════════════
    DESIGN TOKENS (Inlined from tokens.css)
@@ -34,23 +34,56 @@
 
 :root {
   /* ═══════════════════════════════════════════════════════════
-     LUXURY AUTOMOTIVE PALETTE - Charcoal & Gold
+     LUXURY AUTOMOTIVE PALETTE & SERVICE BRAND
      ═══════════════════════════════════════════════════════════ */
   --background-hex: #0D0D0F;
   --foreground-hex: #F8F8F8;
 
-  /* Champagne Gold */
+  /* Champagne Gold (Primary) */
   --primary-500: #D4AF37;
   --primary-600: #C5A028;
   --primary-700: #A6851F;
+
+  /* Service Brand (Orange/Rust) */
+  --brand-hex: #C75B12;
+  --brand-hover: #C5A021;
+  /* Golden on hover for harmony */
+  --brand-light: #E7B089;
+  --brand-soft: #F7E6D8;
+
+  /* Surface Colors (Service Project) */
+  --surface-page: #FAF7F2;
+  --surface-card: #FFF9F1;
+  --surface-sidebar: #F3E6D8;
+  --surface-hover: #EAD3BE;
+  --surface-border: #E6DDD4;
+
+  /* Dark Mode Colors (Black/Premium Midnight) */
+  --dark-page: #0A0A0A;
+  --dark-card: #121212;
+  --dark-sidebar: #0F0F0F;
+  --dark-border: #2A241F;
+
+  /* Typography / Ink (Service Project) */
+  --ink-heading: #2E1F14;
+  --ink-body: #5F5147;
+  --ink-muted: #8A7B6E;
 
   /* Pearl White / Surface */
   --secondary-500: #F8F8F8;
   --surface: #1A1A1C;
 
-  /* Racing Red */
+  /* Racing Red / Status */
   --accent-500: #DC2626;
   --accent-600: #B91C1C;
+  --success-color: #1F9D55;
+  --danger-color: #D64545;
+  --warning-color: #C5A021;
+
+  /* Status Backgrounds */
+  --success-bg: #E6F4EA;
+  --danger-bg: #FCE8E8;
+  --warning-bg: #FEF7E0;
 
   /* Gradients */
   --gradient-gold: linear-gradient(135deg, #D4AF37 0%, #F8E4A0 50%, #D4AF37 100%);
@@ -60,6 +93,8 @@
   /* Refined Shadows */
   --shadow-premium: 0 4px 20px -5px rgba(212, 175, 55, 0.2);
   --shadow-glow: 0 0 15px rgba(212, 175, 55, 0.4);
+  --shadow-service-card: 0 6px 20px rgba(0, 0, 0, 0.4);
+  --shadow-service-hover: 0 10px 30px rgba(197, 160, 33, 0.3);
 
   /* Shadcn standard mapping - defaulting to Dark Mode Luxury */
   --background: var(--background-hex);
@@ -83,6 +118,22 @@
 .dark {
   --background: var(--background-hex);
   --foreground: var(--foreground-hex);
+
+  /* Reset Service Surface Colors for Dark Mode */
+  --surface-page: var(--dark-page);
+  --surface-card: var(--dark-card);
+  --surface-sidebar: var(--dark-sidebar);
+  --surface-hover: rgba(255, 255, 255, 0.05);
+  --surface-border: var(--dark-border);
+
+  --ink-heading: #F3F1EF;
+  --ink-body: #E8E4E1;
+  --ink-muted: #8A7B6E;
+
+  /* Status Backgrounds (Dark Mode) */
+  --success-bg: rgba(31, 157, 85, 0.15);
+  --danger-bg: rgba(214, 69, 69, 0.15);
+  --warning-bg: rgba(197, 160, 33, 0.15);
 }
 
 @theme {
@@ -99,6 +150,39 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
+  /* Service Unique Colors */
+  --color-brand: var(--brand-hex);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-light: var(--brand-light);
+  --color-brand-soft: var(--brand-soft);
+
+  --color-surface-page: var(--surface-page);
+  --color-surface-card: var(--surface-card);
+  --color-surface-sidebar: var(--surface-sidebar);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-border: var(--surface-border);
+
+  /* Dark Mode Specific Tokens */
+  --color-dark-page: var(--dark-page);
+  --color-dark-card: var(--dark-card);
+  --color-dark-sidebar: var(--dark-sidebar);
+  --color-dark-border: var(--dark-border);
+
+  --color-ink-heading: var(--ink-heading);
+  --color-ink-body: var(--ink-body);
+  --color-ink-muted: var(--ink-muted);
+
+  --color-success: var(--success-color);
+  --color-danger: var(--danger-color);
+  --color-warning: var(--warning-color);
+  --color-success-bg: var(--success-bg);
+  --color-danger-bg: var(--danger-bg);
+  --color-warning-bg: var(--warning-bg);
+
+  /* Shadows */
+  --shadow-card-glow: var(--shadow-service-card);
+  --shadow-hover-gold: var(--shadow-service-hover);
 
   --font-sans: var(--font-dmsans), ui-sans-serif, system-ui;
   --font-display: var(--font-playfair), ui-serif, Georgia;
@@ -218,5 +302,29 @@
 
   .btn-shine:hover::after {
     @apply left-full;
+  }
+
+  /* Nazmul Unique Utilities */
+  .hover-golden:hover {
+    box-shadow: 0 10px 40px rgba(197, 160, 33, 0.35) !important;
+    border-color: #C5A021 !important;
+    transform: translateY(-2px);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade {
+    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
 }

@@ -61,25 +61,15 @@ export default function DealerDetailPage() {
         async function fetchDealerData() {
             setLoading(true);
             try {
-                const [
-                    { data: dealerData, error: dealerError },
-                    { count: productCount },
-                    { count: orderCount },
-                    { data: revenueData }
-                ] = await Promise.all([
-                    supabase.from('dealers').select('*, profiles:owner_user_id(full_name)').eq('id', id).single(),
-                    supabase.from('products').select('*', { count: 'exact', head: true }).eq('dealer_id', id),
-                    supabase.from('sub_orders').select('*', { count: 'exact', head: true }).eq('dealer_id', id),
-                    supabase.from('sub_orders').select('dealer_amount').eq('dealer_id', id).eq('payment_status', 'paid').returns<{ dealer_amount: number | null }[]>()
-                ]);
+                const res = await fetch(`/api/super-admin/dealers/${id}`);
+                if (!res.ok) throw new Error("Dealer registry retrieval failure");
+                const data = await res.json();
 
-                if (dealerError) throw dealerError;
-
-                setDealer((dealerData as unknown) as DealerDetail);
+                setDealer(data);
                 setStats({
-                    productCount: productCount || 0,
-                    orderCount: orderCount || 0,
-                    totalRevenue: revenueData?.reduce((acc: number, curr: { dealer_amount: number | null }) => acc + (Number(curr.dealer_amount) || 0), 0) || 0
+                    productCount: data.productCount || 0,
+                    orderCount: data.orderCount || 0,
+                    totalRevenue: data.totalRevenue || 0
                 });
             } catch (error) {
                 console.error("Error fetching dealer details:", error);

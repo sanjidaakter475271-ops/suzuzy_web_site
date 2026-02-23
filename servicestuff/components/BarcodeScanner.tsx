@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
+import { BarcodeScanner, LensFacing } from '@capacitor-mlkit/barcode-scanning';
 import { X, Camera, Zap } from 'lucide-react';
 
 interface ScannerProps {
@@ -13,19 +13,24 @@ export const BarcodeScannerComponent: React.FC<ScannerProps> = ({ onScan, onClos
     const startScan = async () => {
         try {
             // Check/request permission
-            const status = await BarcodeScanner.checkPermission({ force: true });
+            const { camera } = await BarcodeScanner.requestPermissions();
 
-            if (status.granted) {
-                // Hide WebView background to show camera
-                await BarcodeScanner.hideBackground();
+            if (camera === 'granted' || camera === 'limited') {
+                // Prepare UI
                 document.body.classList.add('scanner-active');
 
-                const result = await BarcodeScanner.startScan();
+                // Add listener
+                const listener = await BarcodeScanner.addListener('barcodesScanned', async (result) => {
+                    if (result.barcodes.length > 0) {
+                        await listener.remove();
+                        await stopScan();
+                        onScan(result.barcodes[0].displayValue);
+                    }
+                });
 
-                if (result.hasContent) {
-                    document.body.classList.remove('scanner-active');
-                    onScan(result.content);
-                }
+                await BarcodeScanner.startScan({
+                    lensFacing: LensFacing.Back
+                });
             } else {
                 setError("Camera permission denied");
             }
@@ -36,8 +41,12 @@ export const BarcodeScannerComponent: React.FC<ScannerProps> = ({ onScan, onClos
     };
 
     const stopScan = async () => {
-        await BarcodeScanner.showBackground();
-        await BarcodeScanner.stopScan();
+        try {
+            await BarcodeScanner.stopScan();
+            await BarcodeScanner.removeAllListeners();
+        } catch (e) {
+            console.error("Error stopping scan:", e);
+        }
         document.body.classList.remove('scanner-active');
         onClose();
     };

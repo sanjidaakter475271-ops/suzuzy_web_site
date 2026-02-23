@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GlassCard } from "@/components/ui/premium/GlassCard";
-import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -38,23 +37,13 @@ export default function NewDealerPage() {
         setLoading(true);
 
         try {
-            // In a real scenario, we might also create a user account for the owner
-            // For this implementation, we register the dealer entity
-            const { data, error } = await supabase
-                .from('dealers')
-                .insert([{
-                    business_name: formData.business_name,
-                    email: formData.email,
-                    phone: formData.phone,
-                    address_line1: formData.address_line1,
-                    city: formData.city,
-                    status: 'active', // Manually added dealers are active by default
-                    subscription_status: 'active'
-                }])
-                .select()
-                .single();
+            const res = await fetch('/api/super-admin/dealers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
 
-            if (error) throw error;
+            if (!res.ok) throw new Error("Deployment failure");
 
             toast.success("Consortia Enlisted Successfully");
             router.push("/super-admin/dealers");

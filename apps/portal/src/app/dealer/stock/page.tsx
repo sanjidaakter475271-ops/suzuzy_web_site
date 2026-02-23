@@ -14,8 +14,9 @@ import {
     SearchX
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
+import { useSocket } from "@/hooks/useSocket";
+import { toast } from "sonner";
 import { GlassCard } from "@/components/ui/premium/GlassCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -60,68 +61,45 @@ export default function StockOverviewPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [filter, setFilter] = useState<'all' | 'low' | 'out'>('all');
 
+    // Socket.io integration
+    const { socket } = useSocket();
+
     useEffect(() => {
         if (profile?.dealer_id) {
             fetchStockData();
         }
-    }, [profile]);
+    }, [profile?.dealer_id]);
+
+    // Realtime listener
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleUpdate = (data: any) => {
+            console.log("Realtime inventory update received:", data);
+            toast.info("Inventory Change", { description: "Stock levels updated in real-time" });
+            fetchStockData();
+        };
+
+        socket.on('inventory:changed', handleUpdate);
+        return () => {
+            socket.off('inventory:changed', handleUpdate);
+        };
+    }, [socket]);
 
     const fetchStockData = async () => {
         try {
             setLoading(true);
+            const res = await fetch('/api/v1/dealer/stock');
+            if (!res.ok) throw new Error("Failed to fetch stock data");
 
-            // 1. Fetch Variants with current stock
-            const { data: stockData, error: stockErr } = await supabase
-                .from("product_variants")
-                .select(`
-                    id,
-                    product_id,
-                    sku,
-                    stock_quantity,
-                    low_stock_threshold,
-                    price,
-                    products!inner (
-                        name,
-                        product_images(image_url),
-                        categories:categories!products_category_id_fkey (name),
-                        sub_categories:categories!products_sub_category_id_fkey (name),
-                        brands (name)
-                    )
-                `)
-                .eq("products.dealer_id", profile?.dealer_id);
-
-            if (stockErr) throw stockErr;
-            setStock(stockData as any || []);
-
-            // 2. Fetch Expiring Batches (within next 30 days)
-            const thirtyDaysFromNow = format(addDays(new Date(), 30), 'yyyy-MM-dd');
-            const { data: batchData, error: batchErr } = await supabase
-                .from("inventory_batches")
-                .select(`
-                    id,
-                    batch_number,
-                    expiry_date,
-                    current_quantity,
-                    variant_id,
-                    product_variants (
-                        sku,
-                        products (name)
-                    )
-                `)
-                .eq("dealer_id", profile?.dealer_id)
-                .gt("current_quantity", 0)
-                .lte("expiry_date", thirtyDaysFromNow)
-                .order("expiry_date", { ascending: true })
-                .limit(5);
-
-            if (batchErr) throw batchErr;
-            setExpiringBatches(batchData as any || []);
-
+            const result = await res.json();
+            if (result.success && result.data) {
+                setStock(result.data.stock || []);
+                setExpiringBatches(result.data.expiringBatches || []);
+            }
         } catch (error: any) {
-            console.error("Error fetching stock data FULL:", JSON.stringify(error, null, 2));
-            console.error("Error object:", error);
-            if (error?.message) console.error("Error Message:", error.message);
-            if (error?.details) console.error("Error Details:", error.details);
+            console.error("Error fetching stock data:", error);
+            toast.error("Sync Error", { description: "Could not refresh inventory data" });
         } finally {
             setLoading(false);
         }

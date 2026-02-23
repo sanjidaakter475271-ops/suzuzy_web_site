@@ -1,0 +1,7 @@
+{
+  "name": "suzuky-root",
+  "private": true,
+  "dependencies": {
+    "expo": "^54.0.33"
+  }
+}

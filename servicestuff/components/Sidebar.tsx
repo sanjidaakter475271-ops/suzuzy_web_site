@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Home, Settings, LogOut, Wrench } from 'lucide-react';
+import { X, Home, Settings, LogOut, Wrench, Clock, Wallet, LayoutDashboard } from 'lucide-react';
 import { RoutePath } from '../types';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -24,7 +24,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onLogout, use
   return (
     <>
       {/* Overlay */}
-      <div 
+      <div
         className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={onClose}
       />
@@ -42,7 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onLogout, use
         </div>
 
         <nav className="p-4 space-y-2">
-          <button 
+          <button
             onClick={() => handleNavigate(RoutePath.DASHBOARD)}
             className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors ${isActive(RoutePath.DASHBOARD) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
           >
@@ -50,7 +50,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onLogout, use
             <span className="font-medium">Dashboard</span>
           </button>
 
-          <button 
+          <button
+            onClick={() => handleNavigate(RoutePath.MY_JOBS)}
+            className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors ${isActive(RoutePath.MY_JOBS) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+          >
+            <Home size={20} className="mr-3 rotate-90" />
+            <span className="font-medium">My Jobs</span>
+          </button>
+
+          <button
             onClick={() => handleNavigate(RoutePath.ASSISTANT)}
             className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors ${isActive(RoutePath.ASSISTANT) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
           >
@@ -58,7 +66,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onLogout, use
             <span className="font-medium">AI Mechanic Helper</span>
           </button>
 
-          <button 
+          <button
+            onClick={() => handleNavigate(RoutePath.ATTENDANCE)}
+            className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors ${isActive(RoutePath.ATTENDANCE) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+          >
+            <Clock size={20} className="mr-3" />
+            <span className="font-medium">Attendance</span>
+          </button>
+
+
+
+          <button
+            onClick={() => handleNavigate(RoutePath.PROFILE)}
+            className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors ${isActive(RoutePath.PROFILE) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+          >
+            <LogOut size={20} className="mr-3 rotate-180" />
+            <span className="font-medium">My Profile</span>
+          </button>
+
+          <button
             onClick={() => handleNavigate(RoutePath.SETTINGS)}
             className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors ${isActive(RoutePath.SETTINGS) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
           >
@@ -68,7 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onLogout, use
         </nav>
 
         <div className="absolute bottom-0 w-full p-4 border-t border-gray-100 dark:border-slate-800">
-          <button 
+          <button
             onClick={onLogout}
             className="flex items-center w-full px-4 py-3 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
           >
