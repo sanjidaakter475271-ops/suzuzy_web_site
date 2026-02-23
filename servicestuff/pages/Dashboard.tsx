@@ -55,10 +55,12 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
     };
 
     socket.on('order:update', handleUpdate);
+    socket.on('job_cards:changed', handleUpdate);
     socket.on('inventory:changed', handleUpdate);
 
     return () => {
       socket.off('order:update', handleUpdate);
+      socket.off('job_cards:changed', handleUpdate);
       socket.off('inventory:changed', handleUpdate);
     };
   }, []);

@@ -44,30 +44,22 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
     fetchWorkshopData: async () => {
         set({ isLoading: true, error: null });
         try {
-            // Fetch all necessary entities
-            const [cardsRes, ticketsRes, rampsRes, staffRes, tasksRes] = await Promise.all([
-                fetch('/api/v1/job_cards?limit=100').then(r => r.json()),
-                fetch('/api/v1/service_tickets?limit=100').then(r => r.json()),
-                fetch('/api/v1/service_ramps?limit=100').then(r => r.json()),
-                fetch('/api/v1/service_staff?limit=100').then(r => r.json()),
-                fetch('/api/v1/service_tasks?limit=100').then(r => r.json())
-            ]);
+            const res = await fetch('/api/v1/workshop/overview');
+            const result = await res.json();
 
-            const tickets = ticketsRes.success ? ticketsRes.data : [];
-            const staff = staffRes.success ? staffRes.data : [];
-            const rampsRaw = rampsRes.success ? rampsRes.data : [];
-            const cardsRaw = cardsRes.success ? cardsRes.data : [];
-            const tasksRaw = tasksRes.success ? tasksRes.data : [];
+            if (!result.success) throw new Error(result.error || "Failed to fetch data");
 
-            // Map Service Types (Tasks)
-            const serviceTypes: ServiceType[] = tasksRaw.map((t: any) => ({
+            const { jobCards: cardsRaw, ramps: rampsRaw, staff, serviceTasks } = result.data;
+
+            // 1. Map Service Types
+            const serviceTypes: ServiceType[] = serviceTasks.map((t: any) => ({
                 id: t.id,
                 name: t.name,
                 laborRate: Number(t.rate) || 0,
                 estimatedTime: t.estimated_hours ? `${t.estimated_hours}h` : '1h'
             }));
 
-            // Map Technicians
+            // 2. Map Technicians
             const technicians: Technician[] = staff.map((s: any) => ({
                 id: s.id,
                 name: s.name,
@@ -77,13 +69,11 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
                 status: s.status === 'active' || s.status === 'approved' ? 'active' : s.status === 'pending' ? 'pending' : 'busy'
             }));
 
-            // Map Job Cards
+            // 3. Map Job Cards
             const jobCards: JobCard[] = cardsRaw.map((card: any) => {
-                const ticket = tickets.find((t: any) => t.id === card.ticket_id);
+                const ticket = card.service_tickets;
                 const vehicle = ticket?.service_vehicles;
                 const customer = ticket?.profiles;
-
-                // Find assigned ramp
                 const assignedRamp = rampsRaw.find((r: any) => r.current_ticket_id === card.ticket_id);
 
                 return {
@@ -92,13 +82,14 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
                     jobNo: ticket?.service_number || 'J-' + card.id.substr(0, 4),
                     customerId: customer?.id || '',
                     customerName: customer?.full_name || 'Unknown',
-                    customerPhone: customer?.phone || '',
+                    customerPhone: customer?.phone || ticket?.service_vehicles?.phone_number || '',
+                    customerAddress: ticket?.service_vehicles?.district_city || '',
                     vehicleId: vehicle?.id || '',
                     vehicleModel: vehicle?.bike_models?.name || 'Unknown Model',
                     vehicleRegNo: vehicle?.engine_number || 'Unknown',
                     complaints: ticket?.service_description || '',
                     complaintChecklist: [],
-                    items: [], // Tasks are usually seperate
+                    items: [],
                     status: mapJobStatus(card.status),
                     assignedTechnicianId: card.technician_id,
                     assignedRampId: assignedRamp?.id,
@@ -112,28 +103,20 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
                 };
             });
 
-            // Map Ramps
-            const ramps: Ramp[] = rampsRaw.map((ramp: any) => ({
-                id: ramp.id,
-                name: `Ramp-${ramp.ramp_number}`,
-                status: ramp.status === 'idle' ? 'available' : ramp.status,
-                dedicatedTechnicianId: ramp.staff_id,
-                currentJobCardId: undefined, // Filled below
-                assignedTechnicianId: ramp.staff_id // Default to dedicated
-            }));
+            // 4. Map Ramps
+            const ramps: Ramp[] = rampsRaw.map((ramp: any) => {
+                const ticket = ramp.service_tickets_service_ramps_current_ticket_idToservice_tickets;
+                const card = cardsRaw.find((c: any) => c.ticket_id === ramp.current_ticket_id);
 
-            // Fix Ramp job card mapping
-            ramps.forEach(r => {
-                const rampRaw = rampsRaw.find((raw: any) => raw.id === r.id);
-                if (rampRaw?.current_ticket_id) {
-                    const card = cardsRaw.find((c: any) => c.ticket_id === rampRaw.current_ticket_id);
-                    if (card) r.currentJobCardId = card.id;
-
-                    const ticket = tickets.find((t: any) => t.id === rampRaw.current_ticket_id);
-                    if (ticket?.service_vehicles) {
-                        r.vehicleRegNo = ticket.service_vehicles.engine_number;
-                    }
-                }
+                return {
+                    id: ramp.id,
+                    name: `Ramp-${ramp.ramp_number}`,
+                    status: ramp.status === 'idle' ? 'available' : ramp.status,
+                    dedicatedTechnicianId: ramp.staff_id,
+                    currentJobCardId: card?.id,
+                    assignedTechnicianId: ramp.staff_id,
+                    vehicleRegNo: ticket?.service_vehicles?.engine_number
+                };
             });
 
             set({ jobCards, technicians, ramps, serviceTypes, isLoading: false });
@@ -144,27 +127,42 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
         }
     },
 
-    addJobCard: async (jobCard) => {
+    addJobCard: async (jobCard: any) => {
         set({ isLoading: true });
         try {
-            // Assume jobCard has ticketId
+            // Option B: Send full data chain
             const payload = {
-                ticket_id: jobCard.ticketId,
-                technician_id: jobCard.assignedTechnicianId,
-                status: 'pending',
-                notes: jobCard.complaints
+                customer_name: jobCard.customerName,
+                customer_phone: jobCard.customerPhone,
+                customer_address: jobCard.customerAddress,
+                vehicle_reg_no: jobCard.vehicleRegNo,
+                vehicle_model: jobCard.vehicleModel,
+                vehicle_chassis_no: jobCard.chassisNo,
+                vehicle_mileage: jobCard.vehicleMileage,
+                service_type: jobCard.serviceType,
+                complaints: jobCard.complaints,
+                custom_complaint: jobCard.customComplaint,
+                estimated_completion: jobCard.estimatedCompletion,
+                ramp_id: jobCard.assignedRampId,
+                technician_id: jobCard.assignedTechnicianId
             };
 
-            const res = await fetch('/api/v1/job_cards', {
+            const res = await fetch('/api/v1/workshop/create-job', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if (!res.ok) throw new Error('Failed to create job card');
 
-            await get().fetchWorkshopData(); // Refresh all
+            if (!res.ok) {
+                const error = await res.json();
+                throw new Error(error.error || 'Failed to create job card');
+            }
+
+            await get().fetchWorkshopData(); // Refresh all to include new data
         } catch (error: any) {
+            console.error("Add Job Error:", error);
             set({ error: error.message, isLoading: false });
+            throw error;
         }
     },
 

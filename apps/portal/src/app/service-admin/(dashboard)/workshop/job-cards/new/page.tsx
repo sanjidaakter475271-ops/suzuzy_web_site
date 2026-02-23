@@ -18,6 +18,7 @@ const CreateJobCard = () => {
     const [vehicle, setVehicle] = useState({ regNo: '', model: '', chassisNo: '', mileage: '' });
     const [serviceType, setServiceType] = useState('Paid Service');
     const [deliveryDate, setDeliveryDate] = useState<Date | null>(new Date());
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const complaintsList = [
         "Engine Noise", "Brake Issue", "Oil Change", "General Service", "Starting Problem", "Mileage Drop"
@@ -35,40 +36,32 @@ const CreateJobCard = () => {
         }
     };
 
-    const handleConfirm = () => {
-        const newJobNo = Math.floor(1000 + Math.random() * 9000).toString();
-        const newId = 'JC' + newJobNo;
+    const handleConfirm = async () => {
+        setIsSubmitting(true);
+        try {
+            await addJobCard({
+                customerName: customer.name,
+                customerPhone: customer.mobile,
+                customerAddress: customer.address,
+                vehicleRegNo: vehicle.regNo,
+                vehicleModel: vehicle.model,
+                chassisNo: vehicle.chassisNo,
+                vehicleMileage: vehicle.mileage,
+                serviceType: serviceType,
+                complaints: selectedComplaints.join(', '),
+                customComplaint: customComplaint,
+                estimatedCompletion: deliveryDate?.toISOString(),
+                assignedRampId: availableRamp?.id,
+                assignedTechnicianId: availableRamp?.assignedTechnicianId || availableRamp?.dedicatedTechnicianId,
+            });
 
-        const newJobCard: JobCard = {
-            id: newId,
-            jobNo: newJobNo,
-            customerId: customer.mobile, // Mock ID
-            customerName: customer.name,
-            customerPhone: customer.mobile,
-            vehicleId: vehicle.regNo,
-            vehicleModel: vehicle.model,
-            vehicleRegNo: vehicle.regNo,
-            chassisNo: vehicle.chassisNo,
-            complaints: customComplaint || selectedComplaints[0] || 'Regular Checkup',
-            complaintChecklist: selectedComplaints,
-            items: selectedComplaints.map(c => ({ description: c, status: 'pending', cost: 0 })),
-            status: 'received',
-            laborCost: 0,
-            partsCost: 0,
-            discount: 0,
-            total: 0,
-            warrantyType: serviceType.toLowerCase().includes('warranty') ? 'warranty' :
-                serviceType.toLowerCase().includes('free') ? 'free-service' : 'paid',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            estimatedCompletion: deliveryDate?.toISOString(),
-        };
-
-        addJobCard(newJobCard);
-        autoAssignRamp(newId);
-
-        // Success redirect
-        router.push('/service-admin/workshop/job-cards');
+            // Success redirect
+            router.push('/service-admin/workshop/job-cards');
+        } catch (error: any) {
+            alert(error.message || "Failed to create job card. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -332,9 +325,10 @@ const CreateJobCard = () => {
                             <Button
                                 variant="primary"
                                 onClick={handleConfirm}
-                                className="px-10 h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 font-black uppercase text-xs tracking-[0.2em] gap-3 shadow-xl shadow-emerald-600/30 active:scale-95 transition-all"
+                                disabled={isSubmitting}
+                                className={`px-10 h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 font-black uppercase text-xs tracking-[0.2em] gap-3 shadow-xl shadow-emerald-600/30 active:scale-95 transition-all ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                CREATE & ASSIGN <Save size={20} />
+                                {isSubmitting ? 'CREATING...' : 'CREATE & ASSIGN'} <Save size={20} />
                             </Button>
                         )}
                     </div>

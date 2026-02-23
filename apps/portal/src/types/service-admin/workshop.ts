@@ -5,6 +5,7 @@ export interface JobCard {
     customerId: string;
     customerName: string;
     customerPhone: string;
+    customerAddress?: string;
     vehicleId: string;
     vehicleModel: string;
     vehicleRegNo: string;

@@ -69,10 +69,12 @@ export const JobCardDetail: React.FC = () => {
         };
 
         socket.on('order:update', handleUpdate);
+        socket.on('job_cards:changed', handleUpdate);
         socket.on('inventory:changed', fetchCategories); // Refresh parts if inventory changed
 
         return () => {
             socket.off('order:update', handleUpdate);
+            socket.off('job_cards:changed', handleUpdate);
             socket.off('inventory:changed', fetchCategories);
         };
     }, [id]);
