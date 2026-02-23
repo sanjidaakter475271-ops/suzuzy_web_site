@@ -9,8 +9,11 @@ export interface JobCard {
     vehicleId: string;
     vehicleModel: string;
     vehicleRegNo: string;
+    vehicleMileage?: string;
     chassisNo?: string;
+    serviceType?: string;
     complaints: string;
+    customComplaint?: string;
     complaintChecklist: string[];
     assignedRampId?: string;
     photos?: string[];
