@@ -8,32 +8,47 @@ if (!process.env.DATABASE_URL) {
     console.warn("WARNING: DATABASE_URL is not defined in environment variables");
 }
 
-// Build connection string with proper SSL mode
+// Build connection string
 const connectionString = process.env.DATABASE_URL || "";
 
-const pool = new Pool({
-    connectionString,
-    ssl: process.env.NODE_ENV === "production"
-        ? { rejectUnauthorized: false }
-        : false, // Disable SSL for local development on Windows
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000, // Increased timeout
-});
+// Use native Prisma driver by default for better performance and stability on Linux/Render
+// The adapter is only used if specified or for specific compatibility needs
+const useAdapter = process.env.PRISMA_USE_ADAPTER === "true";
 
-// Log pool errors
-pool.on('error', (err) => {
-    console.error('Unexpected error on idle client', err);
-});
+let prismaInstance: PrismaClient;
 
-const adapter = new PrismaPg(pool);
+if (useAdapter) {
+    const pool = new Pool({
+        connectionString,
+        ssl: process.env.NODE_ENV === "production"
+            ? { rejectUnauthorized: false }
+            : false,
+        max: 10,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 15000,
+    });
 
-// Use native Prisma driver instead of pg adapter to fix Windows TLS issue
-export const prisma =
-    globalForPrisma.prisma ||
-    new PrismaClient({
+    pool.on('error', (err) => {
+        console.error('Unexpected error on idle client', err);
+    });
+
+    const adapter = new PrismaPg(pool);
+    prismaInstance = new PrismaClient({
         adapter,
         log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
     });
+} else {
+    // Standard native driver
+    prismaInstance = new PrismaClient({
+        log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+        datasources: {
+            db: {
+                url: connectionString,
+            },
+        },
+    });
+}
+
+export const prisma = globalForPrisma.prisma || prismaInstance;
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
