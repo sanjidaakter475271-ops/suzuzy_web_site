@@ -12,7 +12,10 @@ export async function GET(req: NextRequest) {
         // Fetch everything in parallel
         const [cards, tickets, ramps, staff, tasks] = await Promise.all([
             prisma.job_cards.findMany({
-                where: { status: { not: 'delivered' } },
+                where: {
+                    status: { not: 'delivered' },
+                    ...(user.dealerId ? { dealer_id: user.dealerId } : {})
+                },
                 include: {
                     service_tickets: {
                         include: {
@@ -33,7 +36,10 @@ export async function GET(req: NextRequest) {
                 take: 100
             }),
             prisma.service_tickets.findMany({
-                where: { status: { not: 'closed' } }, // Simple filter
+                where: {
+                    status: { not: 'closed' },
+                    ...(user.dealerId ? { profiles: { dealer_id: user.dealerId } } : {})
+                },
                 take: 50
             }),
             prisma.service_ramps.findMany({
@@ -46,7 +52,10 @@ export async function GET(req: NextRequest) {
                 orderBy: { ramp_number: 'asc' }
             }),
             prisma.service_staff.findMany({
-                where: { is_active: true },
+                where: {
+                    is_active: true,
+                    ...(user.dealerId ? { dealer_id: user.dealerId } : {})
+                },
                 include: { profiles: true }
             }),
             prisma.service_tasks.findMany({

@@ -208,7 +208,17 @@ export async function handleCreate(entity: string, body: any) {
 
     // Inject dealer_id if required
     if (config.scopeBy && user.dealerId) {
-        body[config.scopeBy] = user.dealerId;
+        if (config.scopeBy.includes('.')) {
+            // For creation, we might not want to inject nested paths directly into 'data'
+            // unless we handle nested creates. For now, let's at least ensure we don't
+            // break the top-level 'body' with dot-keyed properties that Prisma doesn't know.
+            // If the model has a direct dealer_id, use it. Otherwise, assume the link happens elsewhere.
+            if ((prisma as any)[config.model].fields?.dealer_id) {
+                body.dealer_id = user.dealerId;
+            }
+        } else {
+            body[config.scopeBy] = user.dealerId;
+        }
     }
 
     try {
@@ -243,7 +253,7 @@ export async function handleCreate(entity: string, body: any) {
         return NextResponse.json({ success: true, data }, { status: 201 });
     } catch (error: any) {
         console.error(`Creation error for ${entity}:`, error);
-        return NextResponse.json({ error: `Failed to register ${entity} asset` }, { status: 500 });
+        return NextResponse.json({ error: `Failed to register ${entity} asset: ${error.message}` }, { status: 500 });
     }
 }
 
@@ -258,7 +268,17 @@ export async function handleRead(entity: string, id: string) {
 
     const where: any = { id };
     if (config.scopeBy && user.dealerId) {
-        where[config.scopeBy] = user.dealerId;
+        if (config.scopeBy.includes('.')) {
+            const parts = config.scopeBy.split('.');
+            let current = where;
+            for (let i = 0; i < parts.length - 1; i++) {
+                current[parts[i]] = current[parts[i]] || {};
+                current = current[parts[i]];
+            }
+            current[parts[parts.length - 1]] = user.dealerId;
+        } else {
+            where[config.scopeBy] = user.dealerId;
+        }
     }
 
     try {
@@ -303,7 +323,17 @@ export async function handleUpdate(entity: string, id: string, body: any) {
     // Security: Ensure user only updates records they own
     const ownershipWhere: any = { id };
     if (config.scopeBy && user.dealerId) {
-        ownershipWhere[config.scopeBy] = user.dealerId;
+        if (config.scopeBy.includes('.')) {
+            const parts = config.scopeBy.split('.');
+            let current = ownershipWhere;
+            for (let i = 0; i < parts.length - 1; i++) {
+                current[parts[i]] = current[parts[i]] || {};
+                current = current[parts[i]];
+            }
+            current[parts[parts.length - 1]] = user.dealerId;
+        } else {
+            ownershipWhere[config.scopeBy] = user.dealerId;
+        }
     }
 
     try {
@@ -327,11 +357,7 @@ export async function handleUpdate(entity: string, id: string, body: any) {
                     where: { job_card_id: id }
                 });
                 const partsTotal = parts.reduce((acc, p) => acc + Number(p.total_price || 0), 0);
-
-                // Assuming labor cost is sum of actual_time_minutes from tasks * rate? 
-                // Or just the provided total if already calculated.
-                // For now, let's keep it simple.
-                const totalAmount = partsTotal; // + labor...
+                const totalAmount = partsTotal;
 
                 // 2. Create Transaction
                 if (totalAmount > 0 && data.service_tickets?.profiles?.dealer_id) {
@@ -356,7 +382,7 @@ export async function handleUpdate(entity: string, id: string, body: any) {
                             vehicle_id: data.service_tickets.vehicle_id,
                             job_card_id: id,
                             service_date: new Date(),
-                            mileage: 0, // Should be fetched from ticket
+                            mileage: 0,
                             total_cost: totalAmount,
                             summary: body.notes || 'Service completed'
                         }
@@ -373,7 +399,7 @@ export async function handleUpdate(entity: string, id: string, body: any) {
         return NextResponse.json({ success: true, data });
     } catch (error: any) {
         console.error(`Update error for ${entity}:`, error);
-        return NextResponse.json({ error: `Modification failure for ${entity}` }, { status: 500 });
+        return NextResponse.json({ error: `Modification failure for ${entity}: ${error.message}` }, { status: 500 });
     }
 }
 
@@ -388,7 +414,17 @@ export async function handleDelete(entity: string, id: string) {
 
     const ownershipWhere: any = { id };
     if (config.scopeBy && user.dealerId) {
-        ownershipWhere[config.scopeBy] = user.dealerId;
+        if (config.scopeBy.includes('.')) {
+            const parts = config.scopeBy.split('.');
+            let current = ownershipWhere;
+            for (let i = 0; i < parts.length - 1; i++) {
+                current[parts[i]] = current[parts[i]] || {};
+                current = current[parts[i]];
+            }
+            current[parts[parts.length - 1]] = user.dealerId;
+        } else {
+            ownershipWhere[config.scopeBy] = user.dealerId;
+        }
     }
 
     try {
@@ -397,9 +433,39 @@ export async function handleDelete(entity: string, id: string) {
             return NextResponse.json({ error: "Unauthorized or missing resource" }, { status: 404 });
         }
 
-        await (prisma as any)[config.model].delete({
-            where: { id }
-        });
+        try {
+            // Attempt hardware delete
+            await (prisma as any)[config.model].delete({
+                where: { id }
+            });
+        } catch (deleteError: any) {
+            // Check if it's a foreign key constraint error (Prisma Error Code P2003)
+            if (deleteError.code === 'P2003') {
+                console.warn(`Hard delete failed for ${entity}:${id} due to constraints. Attempting soft-delete.`);
+
+                // Fallback to soft delete if status column exists
+                const modelInfo = (prisma as any)[config.model];
+                const fields = modelInfo?.fields || {}; // In Prisma 5+, this might not be directly available this way
+
+                // We'll just try to update. If it fails, then it truly can't be deleted or deactivated.
+                const updateData: any = {};
+                if (entity === 'profiles') updateData.status = 'inactive';
+                else if (entity === 'service_staff') updateData.is_active = false;
+                else throw deleteError; // Re-throw if no soft-delete policy
+
+                await (prisma as any)[config.model].update({
+                    where: { id },
+                    data: updateData
+                });
+
+                return NextResponse.json({
+                    success: true,
+                    message: `${entity} deactivated due to existing records`,
+                    softDeleted: true
+                });
+            }
+            throw deleteError;
+        }
 
         // Trigger real-time update
         await broadcast(`${entity}:purged`, { id, action: 'delete' });
@@ -407,6 +473,6 @@ export async function handleDelete(entity: string, id: string) {
         return NextResponse.json({ success: true, message: `${entity} purged successfully` });
     } catch (error: any) {
         console.error(`Delete error for ${entity}:`, error);
-        return NextResponse.json({ error: `Purge failure for ${entity}` }, { status: 500 });
+        return NextResponse.json({ error: `Purge failure for ${entity}: ${error.message}` }, { status: 500 });
     }
 }

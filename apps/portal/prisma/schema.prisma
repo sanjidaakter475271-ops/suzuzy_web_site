@@ -2313,6 +2313,7 @@ model service_ramps {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model service_staff {
   id                       String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dealer_id                String?                    @db.Uuid
   name                     String
   phone                    String?
   is_active                Boolean?                   @default(true)
@@ -2441,6 +2442,7 @@ model business_units {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model job_cards {
   id                       String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dealer_id                String?                    @db.Uuid
   ticket_id                String?                    @db.Uuid
   technician_id            String?                    @db.Uuid
   status                   String?                    @default("in_progress") @db.VarChar(50)

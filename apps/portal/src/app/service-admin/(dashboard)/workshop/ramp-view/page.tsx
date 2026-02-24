@@ -19,11 +19,12 @@ const RampManagementPage = () => {
     const occupiedCount = ramps.filter(r => r.status === 'occupied').length;
     const activeTechs = technicians.filter(t => t.status === 'active' || t.status === 'busy').length;
 
-    const completedJobs = jobCards.filter(j => j.status === 'delivered');
+    const completedJobs = jobCards.filter(j => j.status === 'delivered' && j.createdAt && j.updatedAt);
     const avgServiceTime = completedJobs.length > 0
         ? Math.round(completedJobs.reduce((acc, j) => {
             const start = new Date(j.createdAt).getTime();
             const end = new Date(j.updatedAt).getTime();
+            if (isNaN(start) || isNaN(end)) return acc;
             return acc + (end - start);
         }, 0) / completedJobs.length / (1000 * 60))
         : 0;

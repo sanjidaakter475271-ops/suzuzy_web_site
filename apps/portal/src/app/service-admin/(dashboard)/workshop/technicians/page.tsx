@@ -11,7 +11,8 @@ import {
     Phone,
     TrendingUp,
     MoreVertical,
-    Plus
+    Plus,
+    Trash2
 } from 'lucide-react';
 import Breadcrumb from '@/components/service-admin/Breadcrumb';
 import { Card, CardContent } from '@/components/service-admin/ui';
@@ -178,6 +179,18 @@ const TechnicianWorkloadPage = () => {
                                                 <button className="flex-1 bg-white dark:bg-dark-card border border-surface-border dark:border-white/10 text-ink-heading dark:text-white py-2.5 rounded-lg font-black text-[10px] uppercase tracking-tighter hover:border-brand transition-all flex items-center justify-center gap-1.5 active:scale-95 group/btn">
                                                     <Mail size={12} className="text-brand group-hover/btn:scale-110" />
                                                     Mail
+                                                </button>
+                                                <button
+                                                    onClick={async () => {
+                                                        if (confirm(`Are you sure you want to remove ${tech.name}?`)) {
+                                                            const { deleteTechnician } = useWorkshopStore.getState();
+                                                            await deleteTechnician(tech.id);
+                                                        }
+                                                    }}
+                                                    className="p-2.5 bg-danger/5 text-danger border border-danger/10 hover:bg-danger hover:text-white rounded-lg transition-all active:scale-90"
+                                                    title="Remove Technician"
+                                                >
+                                                    <Trash2 size={14} />
                                                 </button>
                                             </div>
                                         </>

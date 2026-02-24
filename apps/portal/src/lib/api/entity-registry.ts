@@ -64,7 +64,7 @@ export const ENTITY_REGISTRY: Record<string, EntityConfig> = {
     },
     service_staff: {
         model: 'service_staff',
-        scopeBy: 'profiles.dealer_id',
+        scopeBy: 'dealer_id',
         includes: { profiles: true }
     },
     service_ramps: {
@@ -79,6 +79,7 @@ export const ENTITY_REGISTRY: Record<string, EntityConfig> = {
     },
     job_cards: {
         model: 'job_cards',
+        scopeBy: 'dealer_id',
         includes: {
             service_tasks: true,
             service_history: true,
@@ -232,6 +233,7 @@ export const ENTITY_REGISTRY: Record<string, EntityConfig> = {
     },
     profiles: {
         model: 'profiles',
+        scopeBy: 'dealer_id',
         includes: { roles: true }
     }
 };
