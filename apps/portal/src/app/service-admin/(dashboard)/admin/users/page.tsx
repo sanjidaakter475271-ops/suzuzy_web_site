@@ -15,8 +15,12 @@ import { useAuthStore } from '@/stores/service-admin/authStore';
 import { cn } from '@/lib/utils';
 
 const UserManagementPage = () => {
-    const { users, deleteUser } = useAuthStore();
+    const { users, fetchUsers, deleteUser } = useAuthStore();
     const [searchQuery, setSearchQuery] = useState('');
+
+    React.useEffect(() => {
+        fetchUsers();
+    }, []);
 
     const filteredUsers = users.filter(user =>
         user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

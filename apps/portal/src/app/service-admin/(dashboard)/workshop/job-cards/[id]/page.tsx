@@ -16,9 +16,13 @@ import { cn } from '@/lib/utils';
 const JobCardDetailPage = () => {
     const { id } = useParams();
     const router = useRouter();
-    const { jobCards, updateJobCardStatus } = useWorkshopStore();
+    const { jobCards, updateJobCardStatus, fetchWorkshopData } = useWorkshopStore();
 
     const job = jobCards.find(j => j.id === id);
+
+    const handleRefresh = async () => {
+        await fetchWorkshopData();
+    };
 
     if (!job) return (
         <div className="p-8 text-center">
@@ -36,7 +40,14 @@ const JobCardDetailPage = () => {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => router.back()}
+                        onClick={() => {
+                            // If history is empty (e.g. direct link), go to list page
+                            if (window.history.length <= 1) {
+                                router.push('/service-admin/workshop/job-cards');
+                            } else {
+                                router.back();
+                            }
+                        }}
                         className="p-3 bg-surface-card dark:bg-dark-card border border-surface-border dark:border-dark-border rounded-2xl text-ink-muted hover:text-brand transition-all"
                     >
                         <ArrowLeft size={20} />
@@ -44,6 +55,13 @@ const JobCardDetailPage = () => {
                     <Breadcrumb items={[{ label: 'Workshop', href: '/service-admin/workshop/job-cards' }, { label: job.jobNo }]} />
                 </div>
                 <div className="flex gap-3">
+                    <Button
+                        variant="outline"
+                        onClick={handleRefresh}
+                        className="rounded-xl flex items-center gap-2"
+                    >
+                        <RefreshCcw size={18} /> Refresh
+                    </Button>
                     <Button variant="outline" className="rounded-xl flex items-center gap-2">
                         <Printer size={18} /> Print Job Card
                     </Button>

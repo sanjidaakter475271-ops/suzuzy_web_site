@@ -317,7 +317,11 @@ const CreateJobCard = () => {
                             <Button
                                 variant="primary"
                                 onClick={() => setStep(step + 1)}
-                                className="px-10 h-14 rounded-2xl font-black uppercase text-xs tracking-[0.2em] gap-3 shadow-lg shadow-brand/20"
+                                disabled={
+                                    (step === 1 && (!customer.mobile || !customer.name || !vehicle.regNo || !vehicle.model)) ||
+                                    (step === 2 && !deliveryDate)
+                                }
+                                className="px-10 h-14 rounded-2xl font-black uppercase text-xs tracking-[0.2em] gap-3 shadow-lg shadow-brand/20 disabled:opacity-50 disabled:grayscale transition-all"
                             >
                                 CONTINUE <ArrowRight size={20} />
                             </Button>

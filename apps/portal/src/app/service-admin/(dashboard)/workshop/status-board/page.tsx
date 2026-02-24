@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import { JobCard } from '@/types/service-admin/workshop';
 
 const StatusBoardPage = () => {
-    const { jobCards, fetchWorkshopData } = useWorkshopStore();
+    const { jobCards, technicians, fetchWorkshopData } = useWorkshopStore();
     const { socket, isConnected } = useSocket();
 
     // Fetch initial data
@@ -74,13 +74,16 @@ const StatusBoardPage = () => {
                         </div>
                     )}
                     <div className="flex -space-x-2">
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="w-8 h-8 rounded-full border-2 border-white dark:border-dark-page bg-brand-soft text-[10px] font-bold flex items-center justify-center text-brand">
-                                T{i}
-                            </div>
+                        {technicians.slice(0, 3).map(tech => (
+                            <img
+                                key={tech.id}
+                                src={tech.avatar}
+                                className="w-8 h-8 rounded-full border-2 border-white dark:border-dark-page object-cover"
+                                alt={tech.name}
+                            />
                         ))}
                     </div>
-                    <span className="text-xs font-bold text-ink-muted">3 Technicians Online</span>
+                    <span className="text-xs font-bold text-ink-muted">{technicians.length} Technicians Online</span>
                 </div>
             </div>
 

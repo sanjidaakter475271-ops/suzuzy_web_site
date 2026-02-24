@@ -150,7 +150,7 @@ const JobCardListPage = () => {
                                             <p className="text-[8px] font-black text-ink-muted uppercase tracking-widest">Bill Amount</p>
                                             <p className="text-lg font-black text-ink-heading dark:text-white">৳{job.total.toLocaleString()}</p>
                                         </div>
-                                        <Link href={`/workshop/job-cards/${job.id}`}>
+                                        <Link href={`/service-admin/workshop/job-cards/${job.id}`}>
                                             <button className="h-10 px-4 bg-brand/5 text-brand rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-brand hover:text-white transition-all duration-300">
                                                 Manage
                                                 <ChevronRight size={14} />

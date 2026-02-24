@@ -18,7 +18,7 @@ import { useWorkshopStore } from '@/stores/service-admin/workshopStore';
 import { cn } from '@/lib/utils';
 
 const ServiceTypesPage = () => {
-    const { serviceTypes } = useWorkshopStore();
+    const { serviceTypes, jobCards } = useWorkshopStore();
     const [searchQuery, setSearchQuery] = useState('');
 
     const filteredTypes = serviceTypes.filter(type =>
@@ -94,7 +94,9 @@ const ServiceTypesPage = () => {
                             </div>
 
                             <div className="bg-surface-page dark:bg-dark-page/50 px-6 py-3 flex items-center justify-between border-t border-surface-border dark:border-dark-border/50">
-                                <span className="text-[10px] font-black uppercase text-ink-muted">42 Jobs completed this month</span>
+                                <span className="text-[10px] font-black uppercase text-ink-muted">
+                                    {jobCards.filter(j => j.serviceType === type.name && j.status === 'delivered').length} Jobs completed
+                                </span>
                                 <button className="text-brand text-xs font-black uppercase tracking-wider flex items-center gap-1 hover:gap-1.5 transition-all">
                                     History
                                     <Play size={10} fill="currentColor" />

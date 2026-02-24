@@ -31,6 +31,9 @@ interface WorkshopState {
     autoAssignRamp: (jobCardId: string) => Promise<void>;
     updateJobCardItems: (id: string, items: any[]) => Promise<void>;
     approveTechnician: (id: string) => Promise<void>;
+    addTechnician: (data: Partial<Technician>) => Promise<void>;
+    deleteTechnician: (id: string) => Promise<void>;
+    addRamp: (data: Partial<Ramp>) => Promise<void>;
 }
 
 export const useWorkshopStore = create<WorkshopState>((set, get) => ({
@@ -107,7 +110,8 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
                     laborCost: 0,
                     partsCost: card.service_requisitions?.reduce((acc: number, r: any) => acc + Number(r.total_price || 0), 0) || 0,
                     discount: 0,
-                    total: 0,
+                    total: (card.service_tasks?.reduce((acc: number, t: any) => acc + Number(t.rate || 0), 0) || 0) +
+                        (card.service_requisitions?.reduce((acc: number, r: any) => acc + Number(r.total_price || 0), 0) || 0),
                     warrantyType: 'paid',
                     createdAt: card.created_at,
                     updatedAt: card.updated_at
@@ -200,6 +204,9 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
             set(state => ({
                 jobCards: state.jobCards.map(c => c.id === id ? { ...c, status } : c)
             }));
+
+            // Sync with server for full data consistency (like updatedAt)
+            await get().fetchWorkshopData();
         } catch (error: any) {
             console.error(error);
         }
@@ -320,6 +327,55 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
             }
 
             await get().fetchWorkshopData(); // Refresh list
+        } catch (error: any) {
+            console.error(error);
+            set({ error: error.message });
+        }
+    },
+
+    addTechnician: async (data: any) => {
+        try {
+            const res = await fetch('/api/v1/service_staff', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (!res.ok) throw new Error('Failed to add technician');
+            await get().fetchWorkshopData();
+        } catch (error: any) {
+            console.error(error);
+            set({ error: error.message });
+        }
+    },
+
+    deleteTechnician: async (id: string) => {
+        try {
+            const res = await fetch(`/api/v1/service_staff/${id}`, {
+                method: 'PATCH', // Using PATCH for soft delete or PUT/DELETE if supported
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_active: false })
+            });
+            if (!res.ok) throw new Error('Failed to delete technician');
+            await get().fetchWorkshopData();
+        } catch (error: any) {
+            console.error(error);
+            set({ error: error.message });
+        }
+    },
+
+    addRamp: async (data: any) => {
+        try {
+            const res = await fetch('/api/v1/service_ramps', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ramp_number: get().ramps.length + 1,
+                    status: 'idle',
+                    ...data
+                })
+            });
+            if (!res.ok) throw new Error('Failed to add ramp');
+            await get().fetchWorkshopData();
         } catch (error: any) {
             console.error(error);
             set({ error: error.message });

@@ -21,7 +21,7 @@ import { QC_CHECKLIST_TEMPLATE } from '@/constants/service-admin/workshopData';
 import { cn } from '@/lib/utils';
 
 const QCChecklistPage = () => {
-    const { jobCards } = useWorkshopStore();
+    const { jobCards, technicians } = useWorkshopStore();
     const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
     const [checklist, setChecklist] = useState(QC_CHECKLIST_TEMPLATE);
 
@@ -82,7 +82,7 @@ const QCChecklistPage = () => {
                                     </div>
                                     <div className="flex items-center gap-1">
                                         <Clock size={12} />
-                                        12m ago
+                                        {Math.floor((Date.now() - new Date(job.updatedAt).getTime()) / 60000)}m ago
                                     </div>
                                 </div>
                             </CardContent>
@@ -116,10 +116,15 @@ const QCChecklistPage = () => {
                                         <div className="flex items-center gap-2">
                                             <div className="text-right hidden md:block">
                                                 <p className="text-[10px] font-black text-ink-muted uppercase">Assigned Tech</p>
-                                                <p className="text-sm font-bold text-ink-heading dark:text-white">Rafiq Ahmed</p>
+                                                <p className="text-sm font-bold text-ink-heading dark:text-white">
+                                                    {technicians.find(t => t.id === selectedJob.assignedTechnicianId)?.name || 'Unassigned'}
+                                                </p>
                                             </div>
                                             <div className="w-10 h-10 rounded-full bg-brand-soft border-2 border-brand/20 overflow-hidden">
-                                                <img src="https://i.pravatar.cc/150?u=T1" alt="avatar" />
+                                                <img
+                                                    src={technicians.find(t => t.id === selectedJob.assignedTechnicianId)?.avatar || "https://ui-avatars.com/api/?name=U&background=random"}
+                                                    alt="avatar"
+                                                />
                                             </div>
                                         </div>
                                     </div>

@@ -14,8 +14,12 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/service-admin/ui';
 import Breadcrumb from '@/components/service-admin/Breadcrumb';
+import { useWorkshopStore } from '@/stores/service-admin/workshopStore';
 
 const WorkshopOverviewPage = () => {
+    const { jobCards } = useWorkshopStore();
+    const activeJobsCount = jobCards.filter(j => ['in-service', 'in-diagnosis', 'waiting-parts'].includes(j.status)).length;
+
     const menuItems = [
         { title: "Job Card List", icon: ClipboardList, path: "/service-admin/workshop/job-cards", color: "bg-brand", desc: "View and manage all service job cards." },
         { title: "Status Board", icon: LayoutPanelTop, path: "/service-admin/workshop/status-board", color: "bg-info", desc: "Live view of service progress (Kanban)." },
@@ -40,7 +44,7 @@ const WorkshopOverviewPage = () => {
                     </div>
                     <div>
                         <p className="text-[10px] font-bold text-ink-muted uppercase">Active Jobs</p>
-                        <p className="text-lg font-black text-ink-heading dark:text-white">12</p>
+                        <p className="text-lg font-black text-ink-heading dark:text-white">{activeJobsCount}</p>
                     </div>
                 </div>
             </div>

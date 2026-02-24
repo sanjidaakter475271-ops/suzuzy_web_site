@@ -36,11 +36,15 @@ const WarrantyTrackingPage = () => {
                 <div className="flex items-center gap-4">
                     <Card className="p-3 border-brand/20 bg-brand/5 min-w-[140px]">
                         <p className="text-[10px] font-black uppercase text-brand">Current Claims</p>
-                        <p className="text-xl font-black text-ink-heading dark:text-white">08</p>
+                        <p className="text-xl font-black text-ink-heading dark:text-white">
+                            {jobCards.filter(j => j.warrantyType === 'warranty').length.toString().padStart(2, '0')}
+                        </p>
                     </Card>
                     <Card className="p-3 border-success/20 bg-success-bg min-w-[140px]">
                         <p className="text-[10px] font-black uppercase text-success">Free Services</p>
-                        <p className="text-xl font-black text-ink-heading dark:text-white">24</p>
+                        <p className="text-xl font-black text-ink-heading dark:text-white">
+                            {jobCards.filter(j => j.warrantyType === 'free-service').length.toString().padStart(2, '0')}
+                        </p>
                     </Card>
                 </div>
             </div>

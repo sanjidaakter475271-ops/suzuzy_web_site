@@ -101,26 +101,35 @@ export default function DashboardPage() {
             {/* KPI Cards */}
             {isLoading ? (
                 <KPISkeletons />
+            ) : !data ? (
+                <div className="bg-white dark:bg-dark-card rounded-[2rem] p-12 text-center border-2 border-dashed border-surface-border dark:border-dark-border">
+                    <AlertCircle className="mx-auto text-amber-500 mb-4" size={48} />
+                    <h2 className="text-xl font-black text-ink-heading dark:text-white uppercase">Data Load Postponed</h2>
+                    <p className="text-ink-muted mt-2 mb-6 font-bold">We couldn't reach the live statistics server at the moment.</p>
+                    <Button onClick={refetch} className="px-8 rounded-xl">Retry Connection</Button>
+                </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {data?.kpis.map((kpi, index) => (
-                        <KPICard key={index} kpi={kpi} />
-                    ))}
-                </div>
-            )}
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {data.kpis.map((kpi, index) => (
+                            <KPICard key={index} kpi={kpi} />
+                        ))}
+                    </div>
 
-            {/* Workshop Realtime Widgets */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="h-full">
-                    <ActiveRampsWidget apiData={data?.ramps} />
-                </div>
-                <div className="h-full">
-                    <QueuedVehiclesWidget apiData={data?.queuedVehicles} />
-                </div>
-                <div className="h-full">
-                    <CustomerRequestsWidget apiData={data?.customerRequests} />
-                </div>
-            </div>
+                    {/* Workshop Realtime Widgets */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="h-full">
+                            <ActiveRampsWidget apiData={data.ramps} />
+                        </div>
+                        <div className="h-full">
+                            <QueuedVehiclesWidget apiData={data.queuedVehicles} />
+                        </div>
+                        <div className="h-full">
+                            <CustomerRequestsWidget apiData={data.customerRequests} />
+                        </div>
+                    </div>
+                </>
+            )}
 
             {/* Workshop Performance Section */}
             <div className="bg-brand text-white rounded-[2.5rem] p-8 lg:p-12 shadow-2xl shadow-brand/20 relative overflow-hidden group">

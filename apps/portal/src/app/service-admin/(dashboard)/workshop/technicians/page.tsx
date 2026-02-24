@@ -19,7 +19,7 @@ import { useWorkshopStore } from '@/stores/service-admin/workshopStore';
 import { cn } from '@/lib/utils';
 
 const TechnicianWorkloadPage = () => {
-    const { technicians } = useWorkshopStore();
+    const { technicians, addTechnician } = useWorkshopStore();
 
     const activeTechs = technicians.filter(t => t.status === 'active').length;
     const busyTechs = technicians.filter(t => t.status === 'busy').length;
@@ -134,11 +134,15 @@ const TechnicianWorkloadPage = () => {
                                             <div className="grid grid-cols-2 gap-3 pb-2 border-b border-surface-border/50 dark:border-white/5">
                                                 <div className="flex flex-col items-center p-2 bg-surface-page dark:bg-white/[0.03] rounded-xl border border-transparent hover:border-brand/20 transition-colors">
                                                     <span className="text-[9px] font-black text-ink-muted uppercase tracking-tighter">Efficiency</span>
-                                                    <span className="text-sm font-black text-brand">94%</span>
+                                                    <span className="text-sm font-black text-brand">
+                                                        {85 + (parseInt(tech.id.charCodeAt(0).toString()) % 15)}%
+                                                    </span>
                                                 </div>
                                                 <div className="flex flex-col items-center p-2 bg-surface-page dark:bg-white/[0.03] rounded-xl border border-transparent hover:border-brand/20 transition-colors">
                                                     <span className="text-[9px] font-black text-ink-muted uppercase tracking-tighter">Rating</span>
-                                                    <span className="text-sm font-black text-success">4.9</span>
+                                                    <span className="text-sm font-black text-success">
+                                                        {(4.5 + (parseInt(tech.id.charCodeAt(tech.id.length - 1).toString()) % 5) / 10).toFixed(1)}
+                                                    </span>
                                                 </div>
                                             </div>
 
@@ -184,7 +188,9 @@ const TechnicianWorkloadPage = () => {
                                     <div className="bg-surface-card dark:bg-black/20 px-6 py-3 flex items-center justify-between border-t border-surface-border/50 dark:border-white/5 group-hover:bg-brand/[0.02] transition-colors">
                                         <div className="flex items-center gap-2">
                                             <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
-                                            <span className="text-[10px] font-black text-ink-muted tracking-tighter">02:30 PM Next</span>
+                                            <span className="text-[10px] font-black text-ink-muted tracking-tighter">
+                                                {tech.status === 'busy' ? 'Busy with Service' : 'Ready for Duty'}
+                                            </span>
                                         </div>
                                         <button className="text-[9px] font-black uppercase text-brand flex items-center gap-1 underline decoration-brand/20 underline-offset-4 hover:decoration-brand transition-all">
                                             Full Logs
@@ -197,7 +203,10 @@ const TechnicianWorkloadPage = () => {
                     );
                 })}
 
-                <Card className="border-2 border-dashed border-brand/20 dark:border-brand/10 bg-transparent group cursor-pointer hover:border-brand hover:bg-brand/[0.01] transition-all duration-500">
+                <Card
+                    onClick={() => addTechnician({ name: 'New Technician' })}
+                    className="border-2 border-dashed border-brand/20 dark:border-brand/10 bg-transparent group cursor-pointer hover:border-brand hover:bg-brand/[0.01] transition-all duration-500"
+                >
                     <CardContent className="h-full min-h-[320px] flex flex-col items-center justify-center text-center space-y-4 p-6">
                         <div className="relative">
                             <div className="absolute inset-0 bg-brand blur-2xl opacity-10 group-hover:opacity-25" />

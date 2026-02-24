@@ -10,7 +10,7 @@ import { useWorkshopStore } from '@/stores/service-admin/workshopStore';
 import { Ramp } from '@/types/service-admin/workshop';
 
 const RampManagementPage = () => {
-    const { ramps, technicians, jobCards } = useWorkshopStore();
+    const { ramps, technicians, jobCards, addRamp } = useWorkshopStore();
     const [selectedRamp, setSelectedRamp] = useState<Ramp | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -18,6 +18,15 @@ const RampManagementPage = () => {
     const availableCount = ramps.filter(r => r.status === 'available').length;
     const occupiedCount = ramps.filter(r => r.status === 'occupied').length;
     const activeTechs = technicians.filter(t => t.status === 'active' || t.status === 'busy').length;
+
+    const completedJobs = jobCards.filter(j => j.status === 'delivered');
+    const avgServiceTime = completedJobs.length > 0
+        ? Math.round(completedJobs.reduce((acc, j) => {
+            const start = new Date(j.createdAt).getTime();
+            const end = new Date(j.updatedAt).getTime();
+            return acc + (end - start);
+        }, 0) / completedJobs.length / (1000 * 60))
+        : 0;
 
     const handleRampClick = (ramp: Ramp) => {
         setSelectedRamp(ramp);
@@ -57,7 +66,10 @@ const RampManagementPage = () => {
                 ))}
 
                 {/* Add New Ramp Placehoder */}
-                <div className="border-2 border-dashed border-surface-border dark:border-dark-border rounded-[2.5rem] flex flex-col items-center justify-center p-8 gap-4 hover:border-brand/40 hover:bg-brand/5 transition-all cursor-pointer group">
+                <div
+                    onClick={() => addRamp({ name: `Ramp-${ramps.length + 1}` })}
+                    className="border-2 border-dashed border-surface-border dark:border-dark-border rounded-[2.5rem] flex flex-col items-center justify-center p-8 gap-4 hover:border-brand/40 hover:bg-brand/5 transition-all cursor-pointer group"
+                >
                     <div className="p-4 bg-surface-border dark:bg-dark-border rounded-full text-ink-muted group-hover:text-brand transition-all duration-500 group-hover:scale-110 group-hover:rotate-90">
                         <Plus size={24} />
                     </div>
@@ -79,7 +91,7 @@ const RampManagementPage = () => {
                     <div className="p-3 bg-brand-soft/50 text-brand-dark rounded-2xl group-hover:scale-110 transition-transform"><Clock size={24} /></div>
                     <div>
                         <p className="text-[10px] font-black text-ink-muted uppercase tracking-widest opacity-60">Avg. Service Time</p>
-                        <p className="text-2xl font-black text-ink-heading dark:text-white">45m</p>
+                        <p className="text-2xl font-black text-ink-heading dark:text-white">{avgServiceTime > 0 ? `${avgServiceTime}m` : '--'}</p>
                     </div>
                 </div>
                 <div className="w-px h-12 bg-surface-border dark:bg-dark-border hidden md:block"></div>
