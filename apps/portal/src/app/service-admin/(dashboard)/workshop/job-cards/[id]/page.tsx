@@ -16,7 +16,14 @@ import { cn } from '@/lib/utils';
 const JobCardDetailPage = () => {
     const { id } = useParams();
     const router = useRouter();
-    const { jobCards, updateJobCardStatus, fetchWorkshopData } = useWorkshopStore();
+    const { jobCards, updateJobCardStatus, fetchWorkshopData, deleteJobCard, addServiceTask } = useWorkshopStore();
+    const [showDeleteModal, setShowDeleteModal] = React.useState(false);
+    const [isDeleting, setIsDeleting] = React.useState(false);
+
+    const [showTaskModal, setShowTaskModal] = React.useState(false);
+    const [taskDescription, setTaskDescription] = React.useState('');
+    const [taskCost, setTaskCost] = React.useState(0);
+    const [isAddingTask, setIsAddingTask] = React.useState(false);
 
     const job = jobCards.find(j => j.id === id);
 
@@ -33,6 +40,36 @@ const JobCardDetailPage = () => {
 
     const handleStatusUpdate = (newStatus: any) => {
         updateJobCardStatus(job.id, newStatus);
+    };
+
+    const handleAddTask = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsAddingTask(true);
+        try {
+            await addServiceTask(job.id, taskDescription, taskCost);
+            setShowTaskModal(false);
+            setTaskDescription('');
+            setTaskCost(0);
+        } catch (error) {
+            console.error('Failed to add task', error);
+            alert('Failed to add task');
+        } finally {
+            setIsAddingTask(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        setIsDeleting(true);
+        try {
+            await deleteJobCard(job.id);
+            router.push('/service-admin/workshop/job-cards');
+        } catch (error) {
+            console.error('Failed to delete job card');
+            alert('Failed to delete job card.');
+        } finally {
+            setIsDeleting(false);
+            setShowDeleteModal(false);
+        }
     };
 
     return (
@@ -62,10 +99,10 @@ const JobCardDetailPage = () => {
                     >
                         <RefreshCcw size={18} /> Refresh
                     </Button>
-                    <Button variant="outline" className="rounded-xl flex items-center gap-2">
+                    <Button variant="outline" onClick={() => window.print()} className="rounded-xl flex items-center gap-2 print:hidden">
                         <Printer size={18} /> Print Job Card
                     </Button>
-                    <Button variant="danger" className="rounded-xl p-2.5">
+                    <Button variant="danger" onClick={() => setShowDeleteModal(true)} className="rounded-xl p-2.5 print:hidden">
                         <Trash2 size={18} />
                     </Button>
                 </div>
@@ -106,7 +143,7 @@ const JobCardDetailPage = () => {
                                 <h3 className="text-xl font-black text-ink-heading dark:text-white uppercase flex items-center gap-3 tracking-tight">
                                     <Wrench size={24} className="text-brand" /> Service Items & Tasks
                                 </h3>
-                                <Button variant="secondary" className="rounded-xl text-xs">Add Task</Button>
+                                <Button variant="secondary" onClick={() => setShowTaskModal(true)} className="rounded-xl text-xs">Add Task</Button>
                             </div>
 
                             <div className="space-y-4">
@@ -278,6 +315,95 @@ const JobCardDetailPage = () => {
                     </Card>
                 </div>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm print:hidden">
+                    <Card className="w-full max-w-sm rounded-[2rem] border-2 border-surface-border dark:border-dark-border bg-white dark:bg-dark-card shadow-2xl animate-fade-up">
+                        <CardContent className="p-8 text-center space-y-6">
+                            <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Trash2 size={32} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-ink-heading dark:text-white uppercase tracking-tight mb-2">Delete Job Card?</h3>
+                                <p className="text-sm font-bold text-slate-400">This action cannot be undone. All related data will be removed.</p>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                                <Button
+                                    variant="danger"
+                                    className="w-full h-12 rounded-2xl font-black uppercase tracking-widest text-xs"
+                                    onClick={handleDelete}
+                                    disabled={isDeleting}
+                                >
+                                    {isDeleting ? 'Deleting...' : 'Yes, Delete'}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="w-full h-12 rounded-2xl font-black uppercase tracking-widest text-xs border-2"
+                                    onClick={() => setShowDeleteModal(false)}
+                                    disabled={isDeleting}
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* Add Task Modal */}
+            {showTaskModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm print:hidden">
+                    <Card className="w-full max-w-md rounded-[2rem] border-2 border-surface-border dark:border-dark-border bg-white dark:bg-dark-card shadow-2xl animate-fade-up">
+                        <CardContent className="p-8 space-y-6">
+                            <h3 className="text-xl font-black text-ink-heading dark:text-white uppercase tracking-tight">Add New Task</h3>
+                            <form onSubmit={handleAddTask} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-black uppercase tracking-widest text-ink-muted mb-2">Description</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="w-full p-4 bg-surface-page dark:bg-black/20 rounded-2xl border-2 border-surface-border dark:border-white/5 outline-none focus:border-brand/30 transition-all font-bold text-ink-heading dark:text-white"
+                                        placeholder="E.g. Brake Pad Replacement..."
+                                        value={taskDescription}
+                                        onChange={(e) => setTaskDescription(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black uppercase tracking-widest text-ink-muted mb-2">Cost (৳)</label>
+                                    <input
+                                        type="number"
+                                        required
+                                        min="0"
+                                        className="w-full p-4 bg-surface-page dark:bg-black/20 rounded-2xl border-2 border-surface-border dark:border-white/5 outline-none focus:border-brand/30 transition-all font-bold text-ink-heading dark:text-white"
+                                        placeholder="E.g. 500"
+                                        value={taskCost}
+                                        onChange={(e) => setTaskCost(Number(e.target.value))}
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-3 pt-4">
+                                    <Button
+                                        type="submit"
+                                        className="w-full h-12 rounded-2xl font-black uppercase tracking-widest text-xs"
+                                        disabled={isAddingTask}
+                                    >
+                                        {isAddingTask ? 'Adding...' : 'Add Task'}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="w-full h-12 rounded-2xl font-black uppercase tracking-widest text-xs border-2"
+                                        onClick={() => setShowTaskModal(false)}
+                                        disabled={isAddingTask}
+                                    >
+                                        Cancel
+                                    </Button>
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
         </div>
     );
 };

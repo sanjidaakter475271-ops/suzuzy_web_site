@@ -1,12 +1,12 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["multiSchema", "partialIndexes", "driverAdapters"]
+  previewFeatures = ["driverAdapters", "multiSchema", "partialIndexes"]
   engineType      = "library"
 }
 
 datasource db {
-  provider  = "postgresql"
-  schemas   = ["auth", "public"]
+  provider = "postgresql"
+  schemas  = ["auth", "public"]
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -837,6 +837,7 @@ model dealers {
   import_logs                              import_logs[]
   inventory_batches                        inventory_batches[]
   inventory_movements                      inventory_movements[]
+  job_cards                                job_cards[]
   order_items                              order_items[]
   orders                                   orders[]
   payment_transactions                     payment_transactions[]
@@ -844,6 +845,8 @@ model dealers {
   profiles_profiles_dealer_idTodealers     profiles[]              @relation("profiles_dealer_idTodealers")
   purchase_orders                          purchase_orders[]
   sales                                    sales[]
+  service_appointments                     service_appointments[]
+  service_staff                            service_staff[]
   shipments                                shipments[]
   stock_adjustments                        stock_adjustments[]
   stock_locations                          stock_locations[]
@@ -1582,6 +1585,7 @@ model profiles {
   reviews                                                         reviews[]
   sales_sales_customer_idToprofiles                               sales[]                   @relation("sales_customer_idToprofiles")
   sales_sales_sold_byToprofiles                                   sales[]                   @relation("sales_sold_byToprofiles")
+  service_appointments                                            service_appointments[]
   service_feedback                                                service_feedback[]
   service_requisitions                                            service_requisitions[]
   service_staff                                                   service_staff[]
@@ -2313,7 +2317,6 @@ model service_ramps {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model service_staff {
   id                       String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  dealer_id                String?                    @db.Uuid
   name                     String
   phone                    String?
   is_active                Boolean?                   @default(true)
@@ -2328,10 +2331,12 @@ model service_staff {
   last_active_at           DateTime?                  @db.Timestamptz(6)
   latitude                 Decimal?                   @db.Decimal(10, 8)
   longitude                Decimal?                   @db.Decimal(11, 8)
+  dealer_id                String?                    @db.Uuid
   job_cards                job_cards[]
   job_photos               job_photos[]
   service_ramps            service_ramps[]
   service_requisitions     service_requisitions[]
+  dealers                  dealers?                   @relation(fields: [dealer_id], references: [id], onUpdate: NoAction)
   profiles                 profiles?                  @relation(fields: [profile_id], references: [id], onUpdate: NoAction)
   service_tasks            service_tasks[]
   service_tickets          service_tickets[]
@@ -2373,15 +2378,15 @@ model service_tickets {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model service_vehicles {
-  id                   String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  customer_id          String?           @db.Uuid
-  engine_number        String            @unique
-  chassis_number       String            @unique
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customer_id          String?                @db.Uuid
+  engine_number        String                 @unique
+  chassis_number       String                 @unique
   phone_number         String
-  model_id             String?           @db.Uuid
+  model_id             String?                @db.Uuid
   customer_name        String?
-  created_at           DateTime?         @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime?         @default(now()) @db.Timestamptz(6)
+  created_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?              @default(now()) @db.Timestamptz(6)
   color                String?
   customer_id_custom   String?
   division             String?
@@ -2393,18 +2398,19 @@ model service_vehicles {
   email                String?
   customer_nid         String?
   profession           String?
-  date_of_birth        DateTime?         @db.Date
-  weight_kgs           Decimal?          @db.Decimal
+  date_of_birth        DateTime?              @db.Date
+  weight_kgs           Decimal?               @db.Decimal
   gender               String?
   previous_bike_model  String?
   bike_driving_place   String?
   road_condition       String?
-  date_of_purchase     DateTime?         @db.Date
+  date_of_purchase     DateTime?              @db.Date
   purchase_from        String?
+  service_appointments service_appointments[]
   service_history      service_history[]
   service_tickets      service_tickets[]
-  profiles             profiles?         @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
-  bike_models          bike_models?      @relation(fields: [model_id], references: [id], onUpdate: NoAction)
+  profiles             profiles?              @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+  bike_models          bike_models?           @relation(fields: [model_id], references: [id], onUpdate: NoAction)
 
   @@schema("public")
 }
@@ -2442,7 +2448,6 @@ model business_units {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model job_cards {
   id                       String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  dealer_id                String?                    @db.Uuid
   ticket_id                String?                    @db.Uuid
   technician_id            String?                    @db.Uuid
   status                   String?                    @default("in_progress") @db.VarChar(50)
@@ -2452,6 +2457,8 @@ model job_cards {
   created_at               DateTime?                  @default(now()) @db.Timestamptz(6)
   updated_at               DateTime?                  @default(now()) @db.Timestamptz(6)
   estimated_completion_at  DateTime?                  @db.Timestamptz(6)
+  dealer_id                String?                    @db.Uuid
+  dealers                  dealers?                   @relation(fields: [dealer_id], references: [id], onUpdate: NoAction)
   service_staff            service_staff?             @relation(fields: [technician_id], references: [id], onUpdate: NoAction)
   service_tickets          service_tickets?           @relation(fields: [ticket_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   job_photos               job_photos[]
@@ -3131,6 +3138,25 @@ model qc_requests {
 
   @@index([job_card_id])
   @@index([status])
+  @@schema("public")
+}
+
+model service_appointments {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customer_id      String?           @db.Uuid
+  vehicle_id       String?           @db.Uuid
+  dealer_id        String?           @db.Uuid
+  appointment_date DateTime          @db.Date
+  time_slot        String            @db.VarChar(20)
+  service_type     String?           @db.VarChar(100)
+  notes            String?
+  status           String?           @default("pending") @db.VarChar(20)
+  created_at       DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime?         @default(now()) @db.Timestamptz(6)
+  profiles         profiles?         @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+  dealers          dealers?          @relation(fields: [dealer_id], references: [id], onUpdate: NoAction)
+  service_vehicles service_vehicles? @relation(fields: [vehicle_id], references: [id], onUpdate: NoAction)
+
   @@schema("public")
 }
 

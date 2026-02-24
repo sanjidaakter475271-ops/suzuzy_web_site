@@ -41,11 +41,6 @@ if (useAdapter) {
     // Standard native driver
     prismaInstance = new PrismaClient({
         log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
-        datasources: {
-            db: {
-                url: connectionString,
-            },
-        },
     });
 }
 

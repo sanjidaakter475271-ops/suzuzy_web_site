@@ -1,29 +1,79 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useWorkshopStore } from '@/stores/service-admin/workshopStore';
 import { Button, Card, CardContent } from '@/components/service-admin/ui';
 import {
     ChevronLeft, Bike, Hammer,
     CheckCircle2, Clock, AlertCircle,
-    User, MapPin, Phone
+    User, MapPin, Phone, Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const CustomerLiveTracking = () => {
     const { jobNo } = useParams();
     const router = useRouter();
-    const { jobCards } = useWorkshopStore();
+    const [job, setJob] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const job = jobCards.find(j => j.jobNo === jobNo);
+    useEffect(() => {
+        const fetchJob = async () => {
+            try {
+                const res = await fetch(`/api/v1/customer/track/${jobNo}`);
+                if (!res.ok) {
+                    if (res.status === 404) setError('Job not found');
+                    else setError('Failed to fetch job details');
+                    return;
+                }
+                const data = await res.json();
 
-    if (!job) return (
+                // Map API data to component state
+                const activeJobCard = data.job_cards?.[0] || {};
+
+                setJob({
+                    jobNo: data.service_number,
+                    status: mapStatus(data.status, activeJobCard.status),
+                    vehicleModel: data.service_vehicles?.bike_models?.name || 'Unknown Model',
+                    vehicleRegNo: data.service_vehicles?.engine_number || 'N/A',
+                    advisorName: data.service_staff?.name || 'Service Advisor',
+                    advisorPhone: data.service_staff?.phone || 'N/A',
+                    advisorRole: data.service_staff?.designation || 'Workshop Lead',
+                    items: activeJobCard.service_checklist_items?.map((item: any) => ({
+                        description: item.item_name,
+                        status: item.is_checked ? 'completed' : 'pending'
+                    })) || []
+                });
+            } catch (err: any) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (jobNo) fetchJob();
+    }, [jobNo]);
+
+    const mapStatus = (ticketStatus: string, jobCardStatus: string) => {
+        if (ticketStatus === 'delivered' || jobCardStatus === 'delivered') return 'delivered';
+        if (jobCardStatus === 'ready' || ticketStatus === 'ready') return 'ready';
+        if (jobCardStatus === 'completed' || jobCardStatus === 'qc_passed') return 'ready';
+        if (jobCardStatus === 'in_progress') return 'in-service';
+        return 'in-diagnosis'; // 'received' or 'pending'
+    };
+
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center">
+            <Loader2 className="animate-spin text-brand" size={48} />
+        </div>
+    );
+
+    if (error || !job) return (
         <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center space-y-6">
             <div className="p-6 bg-red-500/10 text-red-600 rounded-full"><AlertCircle size={64} /></div>
             <div>
                 <h1 className="text-3xl font-black uppercase tracking-tight">Job Not Found</h1>
-                <p className="text-ink-muted mt-2 max-w-sm font-bold">We couldn't find a service record for #{jobNo}. Please check your receipt.</p>
+                <p className="text-ink-muted mt-2 max-w-sm font-bold">{error || `We couldn't find a service record for #${jobNo}. Please check your receipt.`}</p>
             </div>
             <Button onClick={() => router.push('/service-admin/customer/portal')} variant="outline" className="rounded-2xl px-8 h-12 uppercase tracking-widest text-xs font-black">Go Back</Button>
         </div>
@@ -36,9 +86,9 @@ const CustomerLiveTracking = () => {
         { label: 'Ready', value: 'ready', desc: 'Finished and ready for pickup' }
     ];
 
-    const currentStepIdx = steps.findIndex(s => s.value === job.status) === -1 ?
-        (job.status === 'delivered' ? 4 : 0) :
-        steps.findIndex(s => s.value === job.status);
+    let currentStepIdx = steps.findIndex(s => s.value === job.status);
+    if (job.status === 'delivered') currentStepIdx = 4;
+    else if (currentStepIdx === -1) currentStepIdx = 0;
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-black/40">
@@ -119,7 +169,7 @@ const CustomerLiveTracking = () => {
                                 <Hammer size={14} /> Service Checklist
                             </h3>
                             <div className="space-y-4">
-                                {job.items.map((item, idx) => (
+                                {job.items.map((item: any, idx: number) => (
                                     <div key={idx} className="flex items-center justify-between group">
                                         <div className="flex items-center gap-3">
                                             <div className={cn(
@@ -148,16 +198,16 @@ const CustomerLiveTracking = () => {
                                         <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=advisor" className="rounded-full" alt="advisor" />
                                     </div>
                                     <div>
-                                        <p className="font-black text-xl tracking-tight">Tanvir Ahmed</p>
-                                        <p className="text-[10px] font-bold opacity-70 uppercase tracking-widest">Workshop Lead</p>
+                                        <p className="font-black text-xl tracking-tight">{job.advisorName}</p>
+                                        <p className="text-[10px] font-bold opacity-70 uppercase tracking-widest">{job.advisorRole}</p>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="space-y-4 pt-4 border-t border-white/10">
-                                <button className="w-full h-14 bg-white text-brand rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 shadow-lg">
+                                <a href={`tel:${job.advisorPhone}`} className="w-full h-14 bg-white text-brand rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 shadow-lg">
                                     <Phone size={18} /> Call Advisor
-                                </button>
+                                </a>
                                 <button className="w-full h-14 bg-white/10 backdrop-blur-md rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 hover:bg-white/20 transition-all">
                                     <MapPin size={18} /> Workshop Location
                                 </button>

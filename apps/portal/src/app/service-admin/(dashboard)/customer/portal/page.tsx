@@ -33,7 +33,7 @@ const CustomerPortalPage = () => {
                                 className="w-full bg-transparent border-0 focus:ring-0 text-xl font-black placeholder:text-white/40 pl-16 py-4 outline-none"
                             />
                         </div>
-                        <Link href={`/customer/portal/${jobNo}`}>
+                        <Link href={`/service-admin/customer/portal/${jobNo}`}>
                             <Button className="bg-white text-brand hover:bg-slate-100 px-12 h-full rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl">
                                 Track Live
                             </Button>
@@ -55,7 +55,9 @@ const CustomerPortalPage = () => {
                             <h3 className="text-2xl font-black text-ink-heading dark:text-white uppercase tracking-tight">My Vehicles</h3>
                             <p className="text-ink-muted mt-2 font-medium">Manage your registered bikes and service history.</p>
                         </div>
-                        <Button variant="outline" className="w-full rounded-2xl h-12 text-xs font-black uppercase tracking-widest border-2">Configure</Button>
+                        <Link href="/service-admin/customer/vehicles">
+                            <Button variant="outline" className="w-full rounded-2xl h-12 text-xs font-black uppercase tracking-widest border-2">Configure</Button>
+                        </Link>
                     </CardContent>
                 </Card>
 
@@ -69,7 +71,9 @@ const CustomerPortalPage = () => {
                             <h3 className="text-2xl font-black text-ink-heading dark:text-white uppercase tracking-tight">Records</h3>
                             <p className="text-ink-muted mt-2 font-medium">Download previous invoices and service certificates.</p>
                         </div>
-                        <Button variant="outline" className="w-full rounded-2xl h-12 text-xs font-black uppercase tracking-widest border-2">View Records</Button>
+                        <Link href="/service-admin/customer/records">
+                            <Button variant="outline" className="w-full rounded-2xl h-12 text-xs font-black uppercase tracking-widest border-2">View Records</Button>
+                        </Link>
                     </CardContent>
                 </Card>
 

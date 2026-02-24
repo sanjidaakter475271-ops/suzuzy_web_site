@@ -15,6 +15,23 @@ import { Card, CardContent } from '@/components/service-admin/ui';
 import Breadcrumb from '@/components/service-admin/Breadcrumb';
 
 const AppointmentsOverviewPage = () => {
+    const [todayCount, setTodayCount] = React.useState<number | null>(null);
+
+    React.useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await fetch('/api/v1/workshop/appointments/stats');
+                if (res.ok) {
+                    const data = await res.json();
+                    setTodayCount(data.count);
+                }
+            } catch (err) {
+                console.error("Failed to fetch appointment stats:", err);
+            }
+        };
+        fetchStats();
+    }, []);
+
     const menuItems = [
         { title: "New Appointment", icon: Plus, path: "/service-admin/appointments/new", color: "bg-brand", desc: "Book a new service appointment." },
         { title: "Today's Queue", icon: Users, path: "/service-admin/appointments/queue", color: "bg-success", desc: "View the live service queue." },
@@ -38,7 +55,9 @@ const AppointmentsOverviewPage = () => {
                     </div>
                     <div>
                         <p className="text-[10px] font-bold text-ink-muted uppercase">Today's Appointments</p>
-                        <p className="text-lg font-black text-ink-heading dark:text-white">5 Scheduled</p>
+                        <p className="text-lg font-black text-ink-heading dark:text-white">
+                            {todayCount === null ? '...' : todayCount} Scheduled
+                        </p>
                     </div>
                 </div>
             </div>

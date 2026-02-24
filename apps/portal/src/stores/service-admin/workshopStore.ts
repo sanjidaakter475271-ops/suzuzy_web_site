@@ -34,6 +34,8 @@ interface WorkshopState {
     addTechnician: (data: Partial<Technician>) => Promise<void>;
     deleteTechnician: (id: string) => Promise<void>;
     addRamp: (data: Partial<Ramp>) => Promise<void>;
+    deleteJobCard: (id: string) => Promise<void>;
+    addServiceTask: (jobCardId: string, description: string, cost: number) => Promise<void>;
 }
 
 export const useWorkshopStore = create<WorkshopState>((set, get) => ({
@@ -93,9 +95,9 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
                     complaints: ticket?.service_description || '',
                     complaintChecklist: [],
                     items: card.service_tasks?.map((t: any) => ({
-                        description: t.name,
-                        status: t.status,
-                        cost: 0 // Labor cost might be elsewhere or derived
+                        description: t.name || 'Additional Task',
+                        status: t.status || 'pending',
+                        cost: Number(t.description?.replace('Cost: ', '') || 0)
                     })) || [],
                     requisitions: card.service_requisitions?.map((r: any) => ({
                         id: r.id,
@@ -209,6 +211,39 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
             await get().fetchWorkshopData();
         } catch (error: any) {
             console.error(error);
+        }
+    },
+
+    deleteJobCard: async (id: string) => {
+        try {
+            const res = await fetch(`/api/v1/job_cards/${id}`, {
+                method: 'DELETE',
+            });
+            if (!res.ok) throw new Error('Failed to delete job card');
+
+            // Remove from local state
+            set(state => ({
+                jobCards: state.jobCards.filter(c => c.id !== id)
+            }));
+        } catch (error: any) {
+            console.error('[DELETE_JOB_CARD_ERROR]', error);
+            throw error;
+        }
+    },
+
+    addServiceTask: async (jobCardId: string, description: string, cost: number) => {
+        try {
+            const res = await fetch(`/api/v1/job_cards/${jobCardId}/tasks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ item_name: description, cost, is_checked: false }),
+            });
+            if (!res.ok) throw new Error('Failed to add task');
+
+            await get().fetchWorkshopData(); // Refetch to update data
+        } catch (error: any) {
+            console.error('[ADD_TASK_ERROR]', error);
+            throw error;
         }
     },
 
