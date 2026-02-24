@@ -2,83 +2,101 @@
 
 import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useWorkshopStore } from '@/stores/service-admin/workshopStore';
+import { usePOSStore } from '@/stores/service-admin/posStore';
 import Breadcrumb from '@/components/service-admin/Breadcrumb';
-import { Button, Card, CardContent } from '@/components/service-admin/ui';
+import { Button } from '@/components/service-admin/ui';
 import InvoicePreview from '@/components/service-admin/pos/InvoicePreview';
 import ProductSearchSlot from '@/components/service-admin/pos/ProductSearchSlot';
 import BillingSidebar from '@/components/service-admin/pos/BillingSidebar';
 import ProductGrid from '@/components/service-admin/pos/ProductGrid';
 import {
-    ArrowLeft, Send, Save, CreditCard,
+    ArrowLeft, Save, CreditCard,
     Banknote, QrCode, Smartphone,
-    Tag, Plus, Trash2, Edit3, CheckCircle, Printer, Grid, List, Barcode
+    Tag, Plus, CheckCircle, Printer, Edit3
 } from 'lucide-react';
 import { Product } from '@/types/service-admin/inventory';
-import { JobCard, JobCardItem } from '@/types/service-admin/workshop';
 import { cn } from '@/lib/utils';
+import { POSItem } from '@/types/service-admin/pos';
 
 const InvoiceGeneratorPage = () => {
     const { jobId } = useParams();
     const router = useRouter();
-    const { jobCards, updateJobCardStatus, updateJobCardItems } = useWorkshopStore();
+    const {
+        cart,
+        customer,
+        activeJob,
+        isLoading,
+        loadJobBilling,
+        addToCart: storeAddToCart,
+        removeFromCart,
+        updateQty,
+        discount,
+        checkout
+    } = usePOSStore();
 
-    const initialJob = jobCards.find(j => j.id === jobId);
-    const [job, setJob] = useState<JobCard | null>(initialJob || null);
     const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
     const [isFinalized, setIsFinalized] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mfs'>('cash');
+    const [saleData, setSaleData] = useState<any>(null);
 
-    if (!job) return <div className="p-8 text-center font-black uppercase text-ink-muted">Job not found</div>;
+    React.useEffect(() => {
+        if (jobId) {
+            loadJobBilling(jobId as string);
+        }
+    }, [jobId, loadJobBilling]);
 
-    const handleUpdateQty = (idx: number, newQty: number) => {
-        const newItems = [...job.items];
-        newItems[idx] = { ...newItems[idx], qty: newQty };
+    if (isLoading && !activeJob) return <div className="p-8 text-center font-black uppercase text-ink-muted animate-pulse">Loading Job Details...</div>;
+    if (!activeJob) return <div className="p-8 text-center font-black uppercase text-ink-muted">Job not found</div>;
 
-        // Recalculate totals
-        const partsCost = newItems.reduce((sum: number, item: JobCardItem) => sum + (item.cost * (item.qty || 1)), 0);
-        const total = partsCost + job.laborCost - ((partsCost + job.laborCost) * (job.discount || 0) / 100);
+    const partsCost = cart.reduce((sum: number, item: POSItem) => sum + (item.amount || (item.qty * item.price)), 0);
+    const laborCost = activeJob.laborCost || 0;
+    const subtotal = partsCost + laborCost;
+    const total = subtotal - (subtotal * (discount || 0) / 100);
 
-        const updatedJob = { ...job, items: newItems, partsCost, total };
-        setJob(updatedJob);
-        updateJobCardItems(job.id, newItems);
-    };
+    // Mock a Job-like object for Sidebar/Preview compatibility
+    const jobMock = {
+        id: activeJob.id,
+        jobNo: activeJob.jobNo,
+        customerName: customer || 'Unknown',
+        vehicleRegNo: activeJob.vehicleRegNo,
+        items: cart.map(item => ({
+            description: item.name,
+            cost: item.price,
+            qty: item.qty,
+            productId: item.productId,
+            requisitionId: item.requisitionId
+        })),
+        partsCost,
+        laborCost,
+        discount,
+        total
+    } as any;
 
-    const handleRemoveItem = (idx: number) => {
-        const newItems = job.items.filter((_: any, i: number) => i !== idx);
-
-        // Recalculate totals
-        const partsCost = newItems.reduce((sum: number, item: JobCardItem) => sum + (item.cost * (item.qty || 1)), 0);
-        const total = partsCost + job.laborCost - ((partsCost + job.laborCost) * (job.discount || 0) / 100);
-
-        const updatedJob = { ...job, items: newItems, partsCost, total };
-        setJob(updatedJob);
-        updateJobCardItems(job.id, newItems);
+    const handleFinalize = async () => {
+        const result = await checkout(activeJob.id, paymentMethod);
+        if (result) {
+            setSaleData(result);
+            setIsFinalized(true);
+            setViewMode('preview');
+        }
     };
 
     const handleAddProduct = (product: Product) => {
-        const newItem: JobCardItem = {
-            description: product.name,
-            status: 'completed',
-            cost: product.price,
-            qty: 1,
-            productId: product.id,
-            unit: product.unit
-        };
-
-        const newItems = [...job.items, newItem];
-        const partsCost = newItems.reduce((sum, item) => sum + (item.cost * (item.qty || 1)), 0);
-        const total = partsCost + job.laborCost - ((partsCost + job.laborCost) * (job.discount || 0) / 100);
-
-        const updatedJob = { ...job, items: newItems, partsCost, total };
-        setJob(updatedJob);
-        updateJobCardItems(job.id, newItems);
+        storeAddToCart(product);
     };
 
-    const handleFinalize = () => {
-        setIsFinalized(true);
-        setViewMode('preview');
-        updateJobCardStatus(job.id, 'delivered');
+    const handleUpdateQty = (idx: number, newQty: number) => {
+        const item = cart[idx];
+        if (item) {
+            updateQty(item.productId, newQty);
+        }
+    };
+
+    const handleRemoveItem = async (idx: number) => {
+        const item = cart[idx];
+        if (item) {
+            await removeFromCart(item.productId);
+        }
     };
 
     return (
@@ -94,10 +112,10 @@ const InvoiceGeneratorPage = () => {
                     </button>
                     <div>
                         <h1 className="text-sm font-black text-ink-heading dark:text-white uppercase tracking-tighter">
-                            {viewMode === 'edit' ? 'Billing Editor' : `Invoice #${job.jobNo}`}
+                            {viewMode === 'edit' ? 'Billing Editor' : `Invoice #${jobMock.jobNo}`}
                         </h1>
                         <p className="text-[10px] font-bold text-ink-muted uppercase tracking-widest leading-none mt-1">
-                            {job.customerName} | {job.vehicleRegNo}
+                            {jobMock.customerName} | {jobMock.vehicleRegNo}
                         </p>
                     </div>
                 </div>
@@ -164,7 +182,7 @@ const InvoiceGeneratorPage = () => {
                             <div className="flex-1 overflow-y-auto p-12 custom-scrollbar bg-slate-50 dark:bg-black/20">
                                 <div className="max-w-4xl mx-auto pb-24">
                                     <InvoicePreview
-                                        job={job}
+                                        job={jobMock}
                                         editable={false}
                                     />
 
@@ -228,16 +246,16 @@ const InvoiceGeneratorPage = () => {
                                 <div className="p-8 bg-surface-page dark:bg-black/30 rounded-[2rem] border border-surface-border dark:border-white/5 space-y-6 shadow-inner transition-all">
                                     <div className="flex justify-between items-center text-xs font-black text-ink-muted uppercase tracking-widest">
                                         <span>Subtotal</span>
-                                        <span className="text-sm text-ink-heading dark:text-white">৳{job.total.toLocaleString()}</span>
+                                        <span className="text-sm text-ink-heading dark:text-white">৳{subtotal.toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-xs font-black text-brand uppercase tracking-widest">
-                                        <div className="flex items-center gap-2"><Tag size={16} /> Discount ({job.discount}%)</div>
-                                        <span>-৳0</span>
+                                        <div className="flex items-center gap-2"><Tag size={16} /> Discount ({discount}%)</div>
+                                        <span>-৳{(subtotal * (discount || 0) / 100).toLocaleString()}</span>
                                     </div>
                                     <div className="h-px bg-surface-border dark:border-white/5" />
                                     <div className="flex justify-between items-end">
                                         <p className="text-[10px] font-black uppercase text-ink-muted tracking-[0.2em] leading-none mb-1">Total Receivable</p>
-                                        <p className="text-4xl font-black text-ink-heading dark:text-white tracking-tighter leading-none">৳{job.total.toLocaleString()}</p>
+                                        <p className="text-4xl font-black text-ink-heading dark:text-white tracking-tighter leading-none">৳{total.toLocaleString()}</p>
                                     </div>
                                 </div>
 
@@ -279,7 +297,7 @@ const InvoiceGeneratorPage = () => {
                 {/* Sidebar: Only in Edit Mode */}
                 {viewMode === 'edit' && (
                     <BillingSidebar
-                        job={job}
+                        job={jobMock}
                         onUpdateQty={handleUpdateQty}
                         onRemoveItem={handleRemoveItem}
                         onGenerate={handleFinalize}

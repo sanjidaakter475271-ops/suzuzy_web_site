@@ -21,6 +21,12 @@ export async function GET(req: NextRequest) {
                             },
                             profiles: true
                         }
+                    },
+                    service_tasks: true,
+                    service_requisitions: {
+                        include: {
+                            products: true
+                        }
                     }
                 },
                 orderBy: { created_at: 'desc' },

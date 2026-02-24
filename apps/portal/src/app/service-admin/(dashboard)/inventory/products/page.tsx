@@ -24,8 +24,12 @@ import { Product } from "@/types/service-admin/inventory";
 import Image from "next/image";
 
 export default function InventoryProductsPage() {
-    const { products, addProduct, updateProduct } = useInventoryStore();
+    const { products, addProduct, updateProduct, fetchProducts } = useInventoryStore();
     const [searchQuery, setSearchQuery] = useState('');
+
+    React.useEffect(() => {
+        fetchProducts();
+    }, [fetchProducts]);
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [panelMode, setPanelMode] = useState<'form' | 'import'>('form');

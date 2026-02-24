@@ -59,7 +59,7 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({
                         <h2 className="text-5xl font-black text-slate-200 uppercase tracking-tighter">INVOICE</h2>
                         <div className="space-y-1">
                             <p className="text-sm font-black uppercase tracking-widest">#INV-{job.jobNo}</p>
-                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Date: {new Date().toLocaleDateString()}</p>
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Date: {new Date(job.createdAt || Date.now()).toLocaleDateString()}</p>
                         </div>
                     </div>
                 </div>

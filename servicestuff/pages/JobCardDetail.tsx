@@ -22,8 +22,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase'; // Keeping for public/read-only inventory
 import { TechnicianAPI } from '../services/api';
-import { JobCard, Category, Part, PartVariant, RoutePath, ChecklistItem, JobPhoto, ServiceCondition } from '../types';
+import { JobCard, RoutePath, ChecklistItem, ServiceCondition, PartsRequest } from '../types';
 import { TopBar } from '../components/TopBar';
+import { PartsSelectionModal } from '../components/PartsSelectionModal';
 import { OfflineService } from '../services/offline';
 import { LocationService } from '../services/location';
 import { MediaService } from '../services/media';
@@ -42,12 +43,8 @@ export const JobCardDetail: React.FC = () => {
     const [isOnline, setIsOnline] = useState(offlineService.getOnlineStatus());
 
     // Parts State
-    const [categories, setCategories] = useState<Category[]>([]);
     const [showPartsSelector, setShowPartsSelector] = useState(false);
-    const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-    const [availableParts, setAvailableParts] = useState<Part[]>([]);
-    const [selectedPart, setSelectedPart] = useState<Part | null>(null);
-    const [availableVariants, setAvailableVariants] = useState<PartVariant[]>([]);
+    const [requisitions, setRequisitions] = useState<PartsRequest[]>([]);
 
     // Note State
     const [newNote, setNewNote] = useState('');
@@ -55,7 +52,7 @@ export const JobCardDetail: React.FC = () => {
     useEffect(() => {
         if (id) {
             fetchJobDetails();
-            fetchCategories();
+            fetchRequisitions();
         }
 
         // Listen for realtime updates
@@ -70,12 +67,16 @@ export const JobCardDetail: React.FC = () => {
 
         socket.on('order:update', handleUpdate);
         socket.on('job_cards:changed', handleUpdate);
-        socket.on('inventory:changed', fetchCategories); // Refresh parts if inventory changed
+        socket.on('requisition:created', () => fetchRequisitions());
+        socket.on('requisition:approved', () => fetchRequisitions());
+        socket.on('requisition:rejected', () => fetchRequisitions());
 
         return () => {
             socket.off('order:update', handleUpdate);
             socket.off('job_cards:changed', handleUpdate);
-            socket.off('inventory:changed', fetchCategories);
+            socket.off('requisition:created');
+            socket.off('requisition:approved');
+            socket.off('requisition:rejected');
         };
     }, [id]);
 
@@ -108,20 +109,20 @@ export const JobCardDetail: React.FC = () => {
         }
     };
 
-    const fetchCategories = async () => {
-        // Read-only public data
-        const { data } = await supabase.from('categories').select('*');
-        if (data) setCategories(data);
-    };
-
-    const fetchPartsByCategory = async (catId: string) => {
-        const { data } = await supabase.from('parts').select('*').eq('category_id', catId);
-        if (data) setAvailableParts(data);
-    };
-
-    const fetchVariantsByPart = async (partId: string) => {
-        const { data } = await supabase.from('part_variants').select('*').eq('part_id', partId);
-        if (data) setAvailableVariants(data);
+    const fetchRequisitions = async () => {
+        if (!id) return;
+        try {
+            const res = await TechnicianAPI.getPartsHistory();
+            if (res.data?.data) {
+                // Flatten items from all groups for this job
+                const allItems = res.data.data
+                    .filter((g: any) => g.job_card_id === id)
+                    .flatMap((g: any) => g.items || []);
+                setRequisitions(allItems);
+            }
+        } catch (err) {
+            console.error('Error fetching requisitions:', err);
+        }
     };
 
     const handleStatusUpdate = async (newStatus: string) => {
@@ -154,18 +155,8 @@ export const JobCardDetail: React.FC = () => {
         }
     };
 
-    const handleAddPart = async (variant: PartVariant) => {
-        if (!job) return;
-        try {
-            await TechnicianAPI.addPartUsage(job.id, variant.id, 1, variant.price);
-            setShowPartsSelector(false);
-            setSelectedCategory(null);
-            setSelectedPart(null);
-            fetchJobDetails();
-        } catch (err) {
-            console.error("Error adding part:", err);
-            alert("Failed to add part");
-        }
+    const handlePartsSuccess = () => {
+        fetchJobDetails();
     };
 
     const handleChecklistToggle = async (item: ChecklistItem) => {
@@ -553,15 +544,41 @@ export const JobCardDetail: React.FC = () => {
                             <div className="px-2">
                                 <h3 className="text-sm font-bold flex items-center gap-2 text-slate-500 uppercase tracking-widest">
                                     <Clock size={16} className="text-amber-500" />
-                                    Requisitions
+                                    Active Requisitions
                                 </h3>
                             </div>
 
                             <div className="space-y-3">
-                                {/* We would need to fetch requisitions separately or include in job card detail backend */}
-                                <p className="text-center py-4 bg-slate-900/20 rounded-2xl text-slate-600 text-xs italic">
-                                    Requisitions are managed by the store staff.
-                                </p>
+                                {requisitions && requisitions.length > 0 ? (
+                                    requisitions.map((req: any) => (
+                                        <div key={req.id} className="flex justify-between items-center p-4 bg-slate-900/40 border border-slate-800/50 rounded-2xl group">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center text-slate-500 group-hover:text-blue-500 transition-colors">
+                                                    <Package size={20} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-medium text-slate-200">{req.productName}</h4>
+                                                    <p className="text-[10px] text-slate-500 font-mono uppercase mt-1">Qty: {req.quantity}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className={`px-2 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-tighter ${req.status === 'approved' ? 'text-emerald-500 border-emerald-500/20 bg-emerald-500/10' :
+                                                    req.status === 'rejected' ? 'text-rose-500 border-rose-500/20 bg-rose-500/10' :
+                                                        'text-amber-500 border-amber-500/20 bg-amber-500/10'
+                                                    }`}>
+                                                    {req.status}
+                                                </div>
+                                                <p className="text-[10px] text-slate-600 mt-1">
+                                                    {new Date(req.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-6 bg-slate-900/20 rounded-2xl border border-dashed border-slate-800">
+                                        <p className="text-slate-600 text-[10px] uppercase font-bold tracking-widest">No pending requisitions</p>
+                                    </div>
+                                )}
                             </div>
                         </section>
                     </motion.div>
@@ -678,91 +695,14 @@ export const JobCardDetail: React.FC = () => {
                 ) : null}
             </div>
 
-            {/* Parts Selector Overlay (Reused Logic) */}
+            {/* Parts Selector Modal */}
             <AnimatePresence>
-                {showPartsSelector && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-slate-950 flex flex-col pt-safe"
-                    >
-                        <div className="flex items-center gap-4 p-6 border-b border-slate-900 bg-slate-950/50 backdrop-blur-xl sticky top-0">
-                            <button
-                                onClick={() => {
-                                    if (selectedPart) setSelectedPart(null);
-                                    else if (selectedCategory) setSelectedCategory(null);
-                                    else setShowPartsSelector(false);
-                                }}
-                                className="p-3 bg-slate-900 rounded-2xl text-slate-400"
-                            >
-                                <ChevronLeft size={24} />
-                            </button>
-                            <div>
-                                <h2 className="text-xl font-bold">
-                                    {!selectedCategory ? 'Select Category' : (selectedPart ? 'Select Variant' : 'Select Part')}
-                                </h2>
-                                <div className="flex gap-2 text-xs text-slate-500 font-medium">
-                                    {selectedCategory && <span>{selectedCategory.name}</span>}
-                                    {selectedPart && (
-                                        <>
-                                            <span className="text-slate-800">/</span>
-                                            <span className="text-blue-500">{selectedPart.name}</span>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                            {/* Categories */}
-                            {!selectedCategory && categories.map((cat) => (
-                                <motion.button
-                                    key={cat.id}
-                                    onClick={() => {
-                                        setSelectedCategory(cat);
-                                        fetchPartsByCategory(cat.id);
-                                    }}
-                                    className="w-full bg-slate-900/50 border border-slate-800 p-6 rounded-3xl flex items-center justify-between hover:border-blue-500/30 active:scale-95 transition-all text-left"
-                                >
-                                    <span className="font-bold text-lg">{cat.name}</span>
-                                    <ChevronLeft className="rotate-180 text-slate-700" size={20} />
-                                </motion.button>
-                            ))}
-
-                            {/* Parts */}
-                            {selectedCategory && !selectedPart && availableParts.map((p) => (
-                                <motion.button
-                                    key={p.id}
-                                    onClick={() => {
-                                        setSelectedPart(p);
-                                        fetchVariantsByPart(p.id);
-                                    }}
-                                    className="w-full bg-slate-900/50 border border-slate-800 p-5 rounded-3xl flex items-center justify-between active:scale-95 transition-all"
-                                >
-                                    <span className="font-semibold">{p.name}</span>
-                                    <ChevronLeft className="rotate-180 text-slate-700" size={20} />
-                                </motion.button>
-                            ))}
-
-                            {/* Variants */}
-                            {selectedPart && availableVariants.map((v) => (
-                                <motion.button
-                                    key={v.id}
-                                    onClick={() => handleAddPart(v)}
-                                    className="w-full bg-slate-900/80 border border-blue-500/20 p-5 rounded-3xl flex items-center justify-between active:scale-95 transition-all"
-                                >
-                                    <div className="flex flex-col text-left">
-                                        <span className="font-bold text-white">{v.brand}</span>
-                                        <span className="text-xs text-slate-500 font-mono uppercase tracking-widest">{v.sku}</span>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-lg font-bold text-blue-400">৳{v.price}</p>
-                                    </div>
-                                </motion.button>
-                            ))}
-                        </div>
-                    </motion.div>
+                {showPartsSelector && id && (
+                    <PartsSelectionModal
+                        jobId={id}
+                        onClose={() => setShowPartsSelector(false)}
+                        onSuccess={handlePartsSuccess}
+                    />
                 )}
             </AnimatePresence>
 

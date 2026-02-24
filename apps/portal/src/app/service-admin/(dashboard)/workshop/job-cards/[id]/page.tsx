@@ -112,6 +112,66 @@ const JobCardDetailPage = () => {
                                         <p className="font-black text-ink-heading dark:text-white">৳{item.cost}</p>
                                     </div>
                                 ))}
+                                {job.items.length === 0 && <p className="text-center py-6 text-ink-muted font-bold italic">No tasks assigned yet.</p>}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Parts Requisitions */}
+                    <Card className="rounded-[2.5rem]">
+                        <CardContent className="p-10 space-y-6">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-xl font-black text-ink-heading dark:text-white uppercase flex items-center gap-3 tracking-tight">
+                                    <ClipboardList size={24} className="text-brand" /> Parts Requisitions
+                                </h3>
+                                <div className="px-3 py-1 bg-brand/10 text-brand rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                    <RefreshCcw size={12} className="animate-spin-slow" /> Pending Sync
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                {job.requisitions?.map((req: any, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="p-5 bg-surface-page dark:bg-black/20 rounded-2xl border-2 border-surface-border dark:border-white/5 flex items-center justify-between group hover:border-brand/30 transition-all"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className={cn(
+                                                "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                                                req.status === 'approved' ? "bg-emerald-500/10 text-emerald-600" :
+                                                    req.status === 'rejected' ? "bg-red-500/10 text-red-600" :
+                                                        "bg-amber-500/10 text-amber-600"
+                                            )}>
+                                                {req.status === 'approved' ? <ShieldCheck size={20} /> : <ClipboardList size={20} />}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-ink-heading dark:text-white uppercase tracking-tight">{req.description}</p>
+                                                <div className="flex items-center gap-3 mt-1">
+                                                    <span className="text-[10px] font-black uppercase text-ink-muted tracking-widest">Qty: {req.qty}</span>
+                                                    <div className="w-1 h-1 rounded-full bg-ink-muted/30"></div>
+                                                    <span className={cn(
+                                                        "text-[10px] font-black uppercase tracking-widest",
+                                                        req.status === 'approved' ? "text-emerald-600" :
+                                                            req.status === 'rejected' ? "text-red-600" :
+                                                                "text-amber-600"
+                                                    )}>{req.status}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-black text-ink-heading dark:text-white">৳{req.cost}</p>
+                                            <p className="text-[9px] font-bold text-ink-muted uppercase mt-1">Total inclusive</p>
+                                        </div>
+                                    </div>
+                                ))}
+                                {(!job.requisitions || job.requisitions.length === 0) && (
+                                    <div className="py-10 text-center space-y-3 bg-surface-page/50 dark:bg-black/10 rounded-3xl border-2 border-dashed border-surface-border dark:border-white/5">
+                                        <div className="w-12 h-12 rounded-full bg-ink-muted/10 flex items-center justify-center mx-auto text-ink-muted">
+                                            <ClipboardList size={24} />
+                                        </div>
+                                        <p className="text-ink-muted font-bold text-sm italic">No parts have been requested for this job.</p>
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>

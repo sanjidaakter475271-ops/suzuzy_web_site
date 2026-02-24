@@ -18,6 +18,7 @@ export interface JobCard {
     assignedRampId?: string;
     photos?: string[];
     items: JobCardItem[];
+    requisitions?: any[];
     status: 'received' | 'in-diagnosis' | 'waiting-parts' | 'in-service' | 'qc-done' | 'ready' | 'delivered';
     assignedTechnicianId?: string;
     laborCost: number;
@@ -37,6 +38,7 @@ export interface JobCardItem {
     cost: number;
     qty?: number;
     productId?: string;
+    requisitionId?: string;
     unit?: string;
 }
 

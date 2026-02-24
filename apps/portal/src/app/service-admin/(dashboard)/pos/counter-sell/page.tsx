@@ -280,7 +280,7 @@ const CounterSellPage = () => {
                         </div>
 
                         <div className="grid grid-cols-1 gap-3 pt-2">
-                            <Button onClick={checkout} className="h-12 rounded-xl bg-brand hover:bg-brand-dark text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-brand/20">
+                            <Button onClick={() => checkout()} className="h-12 rounded-xl bg-brand hover:bg-brand-dark text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-brand/20">
                                 Complete Sale (Cash)
                             </Button>
                         </div>

@@ -218,13 +218,41 @@ export interface Notification {
   timestamp?: Date;
 }
 
+export interface ProductDetail {
+  id: string;
+  name: string;
+  sku: string;
+  brand: string;
+  base_price: number;
+  sale_price?: number;
+  stock_quantity: number;
+  image_url?: string;
+  category_id: string;
+}
+
+export interface RequisitionGroup {
+  id: string; // This is the requisition_group_id
+  job_card_id: string;
+  status: PartRequestStatus;
+  created_at: string;
+  items: PartsRequest[];
+}
+
 export interface PartsRequest {
   id: string;
   status: PartRequestStatus;
-  items: {
-    variant_id: string;
-    quantity: number;
-    part_name: string;
-  }[];
+  job_card_id: string;
+  ticket_id: string;
+  staff_id: string;
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  notes?: string;
+  requisition_group_id: string;
   created_at: string;
+  productName?: string; // Virtual field from API join
+  part_name?: string;   // Product name from API group response
+  sku?: string;         // Product SKU from API group response
+  brand?: string;       // Product brand from API group response
 }

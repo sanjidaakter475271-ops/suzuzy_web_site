@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/client';
 import { getCurrentTechnician } from '@/lib/auth/get-technician';
+import { broadcast } from '@/lib/socket-server';
 
 type Params = Promise<{ id: string }>;
 
@@ -61,6 +62,11 @@ export async function POST(req: NextRequest, { params }: { params: Params }) {
                 notes: updatedNotes,
                 updated_at: new Date(),
             },
+        });
+
+        await broadcast('job_cards:changed', {
+            id: id,
+            type: 'notes_update'
         });
 
         return NextResponse.json({ success: true, notes: updatedJob.notes });

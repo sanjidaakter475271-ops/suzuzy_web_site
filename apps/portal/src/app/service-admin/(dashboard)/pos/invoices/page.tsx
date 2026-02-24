@@ -14,12 +14,20 @@ import { Card, CardContent } from '@/components/service-admin/ui'; // Assuming d
 import { usePOSStore } from '@/stores/service-admin/posStore';
 import { cn } from '@/lib/utils'; // Assuming utils exists
 
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
 const InvoiceListPage = () => {
-    const { invoices } = usePOSStore();
+    const { invoices, fetchInvoices, isLoading } = usePOSStore();
+    const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
 
+    React.useEffect(() => {
+        fetchInvoices();
+    }, [fetchInvoices]);
+
     const filteredInvoices = invoices.filter(inv =>
-        inv.invoiceNo.includes(searchQuery) ||
+        (inv.invoiceNo || '').includes(searchQuery) ||
         (inv.customerId || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -81,7 +89,11 @@ const InvoiceListPage = () => {
                                     </td>
                                     <td className="p-4 text-right">
                                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button className="p-1.5 hover:bg-brand text-ink-muted hover:text-white rounded-lg transition-colors" title="View">
+                                            <button
+                                                onClick={() => router.push(`/service-admin/pos/invoices/${inv.id}`)}
+                                                className="p-1.5 hover:bg-brand text-ink-muted hover:text-white rounded-lg transition-colors"
+                                                title="View"
+                                            >
                                                 <Eye size={16} />
                                             </button>
                                             <button className="p-1.5 hover:bg-brand text-ink-muted hover:text-white rounded-lg transition-colors" title="Download PDF">

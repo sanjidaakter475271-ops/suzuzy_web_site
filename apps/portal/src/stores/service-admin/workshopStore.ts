@@ -89,12 +89,23 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
                     vehicleRegNo: vehicle?.engine_number || 'Unknown',
                     complaints: ticket?.service_description || '',
                     complaintChecklist: [],
-                    items: [],
+                    items: card.service_tasks?.map((t: any) => ({
+                        description: t.name,
+                        status: t.status,
+                        cost: 0 // Labor cost might be elsewhere or derived
+                    })) || [],
+                    requisitions: card.service_requisitions?.map((r: any) => ({
+                        id: r.id,
+                        description: r.products?.name || 'Unknown Part',
+                        qty: r.quantity,
+                        status: r.status,
+                        cost: Number(r.total_price || 0)
+                    })) || [],
                     status: mapJobStatus(card.status),
                     assignedTechnicianId: card.technician_id,
                     assignedRampId: assignedRamp?.id,
                     laborCost: 0,
-                    partsCost: 0,
+                    partsCost: card.service_requisitions?.reduce((acc: number, r: any) => acc + Number(r.total_price || 0), 0) || 0,
                     discount: 0,
                     total: 0,
                     warrantyType: 'paid',

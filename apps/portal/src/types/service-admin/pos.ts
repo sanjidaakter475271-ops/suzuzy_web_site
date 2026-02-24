@@ -19,6 +19,7 @@ export interface POSInvoice {
 
 export interface POSItem {
     productId: string;
+    requisitionId?: string;
     name: string;
     qty: number;
     price: number;

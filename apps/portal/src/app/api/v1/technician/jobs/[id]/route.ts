@@ -51,6 +51,14 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
                         created_at: 'desc'
                     },
                     take: 1
+                },
+                service_requisitions: {
+                    include: {
+                        products: true
+                    },
+                    orderBy: {
+                        created_at: 'desc'
+                    }
                 }
             },
         });
@@ -99,7 +107,14 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
                 id: p.id,
                 name: p.part_variants?.parts?.name || p.part_variants?.brand || 'Unknown Part',
                 quantity: p.quantity,
-                // status: p.status, // Removed as it doesn't exist in schema
+            })) || [],
+            requisitions: jobData.service_requisitions?.map((r: any) => ({
+                id: r.id,
+                productName: r.products?.name || 'Unknown',
+                quantity: r.quantity,
+                status: r.status,
+                notes: r.notes,
+                createdAt: r.created_at
             })) || [],
             photos: jobData.job_photos?.map((p: any) => ({
                 id: p.id,

@@ -163,6 +163,37 @@ io.on('connection', (socket) => {
         io.emit('technician:location:update', data);
     });
 
+    // Handle Requisition Events
+    socket.on('requisition:created', (data) => {
+        if (data.dealerId) {
+            io.to(`dealer:${data.dealerId}`).emit('requisition:created', data);
+        }
+        io.emit('requisition:created', data); // Backwards compatibility
+    });
+
+    socket.on('requisition:update', (data) => {
+        if (data.technicianId) {
+            io.to(`technician:${data.technicianId}`).emit('requisition:status_changed', data);
+        }
+        if (data.dealerId) {
+            io.to(`dealer:${data.dealerId}`).emit('requisition:status_changed', data);
+        }
+        // Also broadcast the specific status-locked events mentioned in Phase 7
+        if (data.status === 'approved') {
+            io.emit('requisition:approved', data);
+        } else if (data.status === 'rejected') {
+            io.emit('requisition:rejected', data);
+        }
+    });
+
+    // Handle Inventory Events
+    socket.on('inventory:adjust', (data) => {
+        if (data.dealerId) {
+            io.to(`dealer:${data.dealerId}`).emit('inventory:adjusted', data);
+        }
+        io.emit('inventory:adjusted', data);
+    });
+
     // Disconnect handling
     socket.on('disconnect', (reason) => {
         console.log(`[${new Date().toISOString()}] Client disconnected: ${socket.id} - ${reason}`);

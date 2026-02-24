@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["multiSchema"]
+  previewFeatures = ["multiSchema", "partialIndexes"]
   engineType      = "library"
 }
 
@@ -132,6 +132,7 @@ model mfa_factors {
   users                        users            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([user_id, phone], map: "unique_phone_factor_per_user")
+  @@unique([friendly_name, user_id], map: "mfa_factors_user_friendly_name_unique", where: raw("(TRIM(BOTH FROM friendly_name) <> ''::text)"))
   @@index([user_id, created_at], map: "factor_id_created_at_idx")
   @@index([user_id])
   @@schema("auth")
@@ -159,6 +160,7 @@ model oauth_authorizations {
   oauth_clients         oauth_clients              @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users                 users?                     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([expires_at], map: "oauth_auth_pending_exp_idx", where: raw("(status = 'pending'::auth.oauth_authorization_status)"))
   @@schema("auth")
 }
 
@@ -209,6 +211,8 @@ model oauth_consents {
 
   @@unique([user_id, client_id], map: "oauth_consents_user_client_unique")
   @@index([user_id, granted_at(sort: Desc)], map: "oauth_consents_user_order_idx")
+  @@index([client_id], map: "oauth_consents_active_client_idx", where: raw("(revoked_at IS NULL)"))
+  @@index([user_id, client_id], map: "oauth_consents_active_user_client_idx", where: raw("(revoked_at IS NULL)"))
   @@schema("auth")
 }
 
@@ -374,15 +378,15 @@ model users {
   id                          String                 @id @db.Uuid
   aud                         String?                @db.VarChar(255)
   role                        String?                @db.VarChar(255)
-  email                       String?                @db.VarChar(255)
+  email                       String?                @unique(map: "users_email_partial_key") @db.VarChar(255)
   encrypted_password          String?                @db.VarChar(255)
   email_confirmed_at          DateTime?              @db.Timestamptz(6)
   invited_at                  DateTime?              @db.Timestamptz(6)
-  confirmation_token          String?                @db.VarChar(255)
+  confirmation_token          String?                @unique(map: "confirmation_token_idx") @db.VarChar(255)
   confirmation_sent_at        DateTime?              @db.Timestamptz(6)
-  recovery_token              String?                @db.VarChar(255)
+  recovery_token              String?                @unique(map: "recovery_token_idx") @db.VarChar(255)
   recovery_sent_at            DateTime?              @db.Timestamptz(6)
-  email_change_token_new      String?                @db.VarChar(255)
+  email_change_token_new      String?                @unique(map: "email_change_token_new_idx") @db.VarChar(255)
   email_change                String?                @db.VarChar(255)
   email_change_sent_at        DateTime?              @db.Timestamptz(6)
   last_sign_in_at             DateTime?              @db.Timestamptz(6)
@@ -397,10 +401,10 @@ model users {
   phone_change_token          String?                @default("") @db.VarChar(255)
   phone_change_sent_at        DateTime?              @db.Timestamptz(6)
   confirmed_at                DateTime?              @default(dbgenerated("LEAST(email_confirmed_at, phone_confirmed_at)")) @db.Timestamptz(6)
-  email_change_token_current  String?                @default("") @db.VarChar(255)
+  email_change_token_current  String?                @unique(map: "email_change_token_current_idx") @default("") @db.VarChar(255)
   email_change_confirm_status Int?                   @default(0) @db.SmallInt
   banned_until                DateTime?              @db.Timestamptz(6)
-  reauthentication_token      String?                @default("") @db.VarChar(255)
+  reauthentication_token      String?                @unique(map: "reauthentication_token_idx") @default("") @db.VarChar(255)
   reauthentication_sent_at    DateTime?              @db.Timestamptz(6)
   is_sso_user                 Boolean                @default(false)
   deleted_at                  DateTime?              @db.Timestamptz(6)
@@ -450,19 +454,19 @@ model banners {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model bike_models {
-  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                String                @unique @db.VarChar(100)
-  cc                  String?               @db.VarChar(10)
-  engine_type         String?               @db.VarChar(100)
-  brand               String?               @default("Suzuki") @db.VarChar(50)
-  is_active           Boolean?              @default(true)
-  created_at          DateTime?             @default(now()) @db.Timestamptz(6)
-  updated_at          DateTime?             @default(now()) @db.Timestamptz(6)
-  code                String?               @unique @db.VarChar(50)
-  image_url           String?
-  product_bike_models product_bike_models[]
-  service_vehicles    service_vehicles[]
+  id                          String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                        String                        @unique @db.VarChar(100)
+  cc                          String?                       @db.VarChar(10)
+  engine_type                 String?                       @db.VarChar(100)
+  brand                       String?                       @default("Suzuki") @db.VarChar(50)
+  is_active                   Boolean?                      @default(true)
+  created_at                  DateTime?                     @default(now()) @db.Timestamptz(6)
+  updated_at                  DateTime?                     @default(now()) @db.Timestamptz(6)
+  code                        String?                       @unique @db.VarChar(50)
+  image_url                   String?
+  product_bike_models         product_bike_models[]
   service_checklist_templates service_checklist_templates[]
+  service_vehicles            service_vehicles[]
 
   @@schema("public")
 }
@@ -1566,6 +1570,8 @@ model profiles {
   purchase_orders_purchase_orders_received_byToprofiles           purchase_orders[]         @relation("purchase_orders_received_byToprofiles")
   push_subscriptions                                              push_subscriptions[]
   push_tokens                                                     push_tokens[]
+  qc_requests_requester                                           qc_requests[]             @relation("QcRequester")
+  qc_requests_reviewer                                            qc_requests[]             @relation("QcReviewer")
   referrals_referrals_referred_idToprofiles                       referrals[]               @relation("referrals_referred_idToprofiles")
   referrals_referrals_referrer_idToprofiles                       referrals[]               @relation("referrals_referrer_idToprofiles")
   refresh_tokens_public                                           refresh_tokens_public[]
@@ -1577,6 +1583,7 @@ model profiles {
   sales_sales_customer_idToprofiles                               sales[]                   @relation("sales_customer_idToprofiles")
   sales_sales_sold_byToprofiles                                   sales[]                   @relation("sales_sold_byToprofiles")
   service_feedback                                                service_feedback[]
+  service_requisitions                                            service_requisitions[]
   service_staff                                                   service_staff[]
   service_tickets                                                 service_tickets[]
   service_vehicles                                                service_vehicles[]
@@ -1591,10 +1598,7 @@ model profiles {
   user_wallets                                                    user_wallets?
   wallet_transactions                                             wallet_transactions[]
   wishlists                                                       wishlists[]
-  service_requisitions                                            service_requisitions[]
 
-  qc_requests_requester                           qc_requests[]             @relation("QcRequester")
-  qc_requests_reviewer                            qc_requests[]             @relation("QcReviewer")
   @@index([dealer_id], map: "idx_profiles_dealer")
   @@schema("public")
 }
@@ -2307,36 +2311,33 @@ model service_ramps {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model service_staff {
-  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                 String
-  phone                String?
-  is_active            Boolean?               @default(true)
-  created_at           DateTime?              @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime?              @default(now()) @db.Timestamptz(6)
-  profile_id           String?                @db.Uuid
-  staff_id             String?                @unique
-  nid                  String?
-  email                String?
-  status               String?                @default("approved")
-  designation          String?                @default("Technician")
-  latitude             Decimal?               @db.Decimal(10, 8)
-  longitude            Decimal?               @db.Decimal(11, 8)
-  last_active_at       DateTime?              @db.Timestamptz(6)
-  service_ramps        service_ramps[]
-  service_requisitions service_requisitions[]
-  profiles             profiles?              @relation(fields: [profile_id], references: [id], onUpdate: NoAction)
-  service_tasks        service_tasks[]
-  service_tickets      service_tickets[]
-  tool_usage           tool_usage[]
-  job_cards            job_cards[]
-  technician_attendance technician_attendance[]
-  technician_time_logs technician_time_logs[]
-  job_photos          job_photos[]
+  id                       String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                     String
+  phone                    String?
+  is_active                Boolean?                   @default(true)
+  created_at               DateTime?                  @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime?                  @default(now()) @db.Timestamptz(6)
+  profile_id               String?                    @db.Uuid
+  staff_id                 String?                    @unique
+  nid                      String?
+  email                    String?
+  status                   String?                    @default("approved")
+  designation              String?                    @default("Technician")
+  last_active_at           DateTime?                  @db.Timestamptz(6)
+  latitude                 Decimal?                   @db.Decimal(10, 8)
+  longitude                Decimal?                   @db.Decimal(11, 8)
+  job_cards                job_cards[]
+  job_photos               job_photos[]
+  service_ramps            service_ramps[]
+  service_requisitions     service_requisitions[]
+  profiles                 profiles?                  @relation(fields: [profile_id], references: [id], onUpdate: NoAction)
+  service_tasks            service_tasks[]
+  service_tickets          service_tickets[]
+  technician_attendance    technician_attendance[]
   technician_issue_reports technician_issue_reports[]
+  technician_time_logs     technician_time_logs[]
+  tool_usage               tool_usage[]
 
   @@schema("public")
 }
@@ -2356,6 +2357,7 @@ model service_tickets {
   staff_id                                                       String?                @db.Uuid
   admin_notes                                                    String?
   finalized_at                                                   DateTime?              @db.Timestamptz(6)
+  job_cards                                                      job_cards[]
   service_feedback                                               service_feedback?
   service_history                                                service_history[]
   service_ramps_service_ramps_current_ticket_idToservice_tickets service_ramps[]        @relation("service_ramps_current_ticket_idToservice_tickets")
@@ -2364,7 +2366,6 @@ model service_tickets {
   service_ramps_service_tickets_ramp_idToservice_ramps           service_ramps?         @relation("service_tickets_ramp_idToservice_ramps", fields: [ramp_id], references: [id], onUpdate: NoAction)
   service_staff                                                  service_staff?         @relation(fields: [staff_id], references: [id], onUpdate: NoAction)
   service_vehicles                                               service_vehicles?      @relation(fields: [vehicle_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  job_cards                                                      job_cards[]
 
   @@schema("public")
 }
@@ -2439,65 +2440,71 @@ model business_units {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model job_cards {
-  id                 String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  ticket_id          String?           @db.Uuid
-  technician_id      String?           @db.Uuid
-  status             String?           @default("in_progress") @db.VarChar(50)
-  notes              String?
-  service_start_time DateTime?         @default(now()) @db.Timestamptz(6)
-  service_end_time   DateTime?         @db.Timestamptz(6)
-  created_at         DateTime?         @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime?         @default(now()) @db.Timestamptz(6)
-  estimated_completion_at DateTime?      @db.Timestamptz(6)
-  service_history    service_history[]
-  service_tasks      service_tasks[]
-  tool_usage         tool_usage[]
-  parts_usage        parts_usage[]
-  technician_time_logs technician_time_logs[]
-  job_photos          job_photos[]
-  service_checklist_items service_checklist_items[]
+  id                       String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticket_id                String?                    @db.Uuid
+  technician_id            String?                    @db.Uuid
+  status                   String?                    @default("in_progress") @db.VarChar(50)
+  notes                    String?
+  service_start_time       DateTime?                  @default(now()) @db.Timestamptz(6)
+  service_end_time         DateTime?                  @db.Timestamptz(6)
+  created_at               DateTime?                  @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime?                  @default(now()) @db.Timestamptz(6)
+  estimated_completion_at  DateTime?                  @db.Timestamptz(6)
+  service_staff            service_staff?             @relation(fields: [technician_id], references: [id], onUpdate: NoAction)
+  service_tickets          service_tickets?           @relation(fields: [ticket_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  job_photos               job_photos[]
+  parts_usage              parts_usage[]
+  qc_requests              qc_requests[]
+  service_checklist_items  service_checklist_items[]
+  service_history          service_history[]
+  service_requisitions     service_requisitions[]
+  service_tasks            service_tasks[]
   technician_issue_reports technician_issue_reports[]
-  qc_requests         qc_requests[]
-  service_tickets    service_tickets?  @relation(fields: [ticket_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  service_staff      service_staff?    @relation(fields: [technician_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  technician_time_logs     technician_time_logs[]
+  tool_usage               tool_usage[]
 
   @@schema("public")
 }
 
 model service_requisitions {
-  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  ticket_id         String?          @db.Uuid
-  staff_id          String?          @db.Uuid
-  product_id        String?          @db.Uuid
-  quantity          Int              @default(1)
-  status            String?          @default("pending") @db.VarChar(30)
-  notes             String?
-  unit_price        Decimal?         @default(0) @db.Decimal
-  total_price       Decimal?         @default(0) @db.Decimal
-  approved_by       String?          @db.Uuid
-  approved_at       DateTime?        @db.Timestamptz(6)
-  created_at        DateTime?        @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime?        @default(now()) @db.Timestamptz(6)
-  
-  service_tickets   service_tickets? @relation(fields: [ticket_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  service_staff     service_staff?   @relation(fields: [staff_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  products          products?        @relation(fields: [product_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  profiles          profiles?        @relation(fields: [approved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticket_id            String?          @db.Uuid
+  staff_id             String?          @db.Uuid
+  product_id           String?          @db.Uuid
+  quantity             Int              @default(1)
+  status               String?          @default("pending") @db.VarChar(30)
+  notes                String?
+  created_at           DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?        @default(now()) @db.Timestamptz(6)
+  unit_price           Decimal?         @default(0) @db.Decimal
+  total_price          Decimal?         @default(0) @db.Decimal
+  approved_at          DateTime?        @db.Timestamptz(6)
+  approved_by          String?          @db.Uuid
+  job_card_id          String?          @db.Uuid
+  requisition_group_id String?          @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profiles             profiles?        @relation(fields: [approved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  job_cards            job_cards?       @relation(fields: [job_card_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  products             products?        @relation(fields: [product_id], references: [id], onUpdate: NoAction)
+  service_staff        service_staff?   @relation(fields: [staff_id], references: [id], onUpdate: NoAction)
+  service_tickets      service_tickets? @relation(fields: [ticket_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([requisition_group_id], map: "idx_requisitions_group")
+  @@index([job_card_id], map: "idx_requisitions_job_card")
+  @@index([status], map: "idx_requisitions_status")
   @@schema("public")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model part_variants {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  part_id        String?   @db.Uuid
-  parts          parts?    @relation(fields: [part_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  brand          String    @db.VarChar(100)
-  sku            String?   @unique @db.VarChar(100)
-  price          Decimal   @default(0) @db.Decimal(10, 2)
-  stock_quantity Int?      @default(0)
-  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  part_id        String?       @db.Uuid
+  brand          String        @db.VarChar(100)
+  sku            String?       @unique @db.VarChar(100)
+  price          Decimal       @default(0) @db.Decimal(10, 2)
+  stock_quantity Int?          @default(0)
+  created_at     DateTime?     @default(now()) @db.Timestamptz(6)
   updated_at     DateTime?     @default(now()) @db.Timestamptz(6)
+  parts          parts?        @relation(fields: [part_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   parts_usage    parts_usage[]
 
   @@schema("public")
@@ -2505,12 +2512,12 @@ model part_variants {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model parts {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String    @db.VarChar(255)
-  category_id String?   @db.Uuid
-  code        String?   @unique @db.VarChar(50)
-  created_at  DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String          @db.VarChar(255)
+  category_id   String?         @db.Uuid
+  code          String?         @unique @db.VarChar(50)
+  created_at    DateTime?       @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime?       @default(now()) @db.Timestamptz(6)
   part_variants part_variants[]
 
   @@schema("public")
@@ -2518,15 +2525,15 @@ model parts {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model parts_usage {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  job_card_id String?   @db.Uuid
-  variant_id  String?   @db.Uuid
-  quantity    Int       @default(1)
-  unit_price  Decimal   @db.Decimal(10, 2)
-  total_price Decimal?  @db.Decimal(10, 2)
-  created_at  DateTime?     @default(now()) @db.Timestamptz(6)
-  job_cards   job_cards?    @relation(fields: [job_card_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  part_variants part_variants? @relation(fields: [variant_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job_card_id   String?        @db.Uuid
+  variant_id    String?        @db.Uuid
+  quantity      Int            @default(1)
+  unit_price    Decimal        @db.Decimal(10, 2)
+  total_price   Decimal?       @db.Decimal(10, 2)
+  created_at    DateTime?      @default(now()) @db.Timestamptz(6)
+  job_cards     job_cards?     @relation(fields: [job_card_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  part_variants part_variants? @relation(fields: [variant_id], references: [id], onUpdate: NoAction)
 
   @@schema("public")
 }
@@ -2983,17 +2990,16 @@ model wallet_transactions {
 }
 
 model technician_attendance {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  staff_id     String    @db.Uuid
-  clock_in     DateTime  @default(now()) @db.Timestamptz(6)
-  clock_out    DateTime? @db.Timestamptz(6)
-  gps_lat      Decimal?  @db.Decimal(10, 8)
-  gps_lng      Decimal?  @db.Decimal(11, 8)
-  device_id    String?   @db.VarChar(100)
-  status       String?   @default("present") @db.VarChar(20)
-  created_at   DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at   DateTime? @default(now()) @db.Timestamptz(6)
-  
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  staff_id      String        @db.Uuid
+  clock_in      DateTime      @default(now()) @db.Timestamptz(6)
+  clock_out     DateTime?     @db.Timestamptz(6)
+  gps_lat       Decimal?      @db.Decimal(10, 8)
+  gps_lng       Decimal?      @db.Decimal(11, 8)
+  device_id     String?       @db.VarChar(100)
+  status        String?       @default("present") @db.VarChar(20)
+  created_at    DateTime?     @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime?     @default(now()) @db.Timestamptz(6)
   service_staff service_staff @relation(fields: [staff_id], references: [id], onDelete: Cascade)
 
   @@index([staff_id])
@@ -3002,19 +3008,18 @@ model technician_attendance {
 }
 
 model technician_time_logs {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  job_card_id  String?   @db.Uuid
-  staff_id     String    @db.Uuid
-  event_type   String    @db.VarChar(20) // start, pause, resume, complete
-  timestamp    DateTime  @default(now()) @db.Timestamptz(6)
-  device_id    String?   @db.VarChar(100)
-  gps_lat      Decimal?  @db.Decimal(10, 8)
-  gps_lng      Decimal?  @db.Decimal(11, 8)
-  created_at   DateTime? @default(now()) @db.Timestamptz(6)
-
-  job_cards    job_cards?    @relation(fields: [job_card_id], references: [id], onDelete: Cascade)
-  service_staff service_staff @relation(fields: [staff_id], references: [id], onDelete: Cascade)
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job_card_id       String?             @db.Uuid
+  staff_id          String              @db.Uuid
+  event_type        String              @db.VarChar(20)
+  timestamp         DateTime            @default(now()) @db.Timestamptz(6)
+  device_id         String?             @db.VarChar(100)
+  gps_lat           Decimal?            @db.Decimal(10, 8)
+  gps_lng           Decimal?            @db.Decimal(11, 8)
+  created_at        DateTime?           @default(now()) @db.Timestamptz(6)
   technician_breaks technician_breaks[]
+  job_cards         job_cards?          @relation(fields: [job_card_id], references: [id], onDelete: Cascade)
+  service_staff     service_staff       @relation(fields: [staff_id], references: [id], onDelete: Cascade)
 
   @@index([job_card_id])
   @@index([staff_id])
@@ -3022,15 +3027,14 @@ model technician_time_logs {
 }
 
 model technician_breaks {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  time_log_id  String    @db.Uuid // Links to the 'pause' event
-  break_type   String    @db.VarChar(50) // lunch, prayer, personal
-  start_time   DateTime  @default(now()) @db.Timestamptz(6)
-  end_time     DateTime? @db.Timestamptz(6)
-  duration_min Int?
-  notes        String?
-  created_at   DateTime? @default(now()) @db.Timestamptz(6)
-
+  id                   String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  time_log_id          String               @db.Uuid
+  break_type           String               @db.VarChar(50)
+  start_time           DateTime             @default(now()) @db.Timestamptz(6)
+  end_time             DateTime?            @db.Timestamptz(6)
+  duration_min         Int?
+  notes                String?
+  created_at           DateTime?            @default(now()) @db.Timestamptz(6)
   technician_time_logs technician_time_logs @relation(fields: [time_log_id], references: [id], onDelete: Cascade)
 
   @@index([time_log_id])
@@ -3038,17 +3042,16 @@ model technician_breaks {
 }
 
 model service_checklist_templates {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name          String    @db.VarChar(100)
-  bike_model_id String?   @db.Uuid
-  service_type  String?   @db.VarChar(50)
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String       @db.VarChar(100)
+  bike_model_id String?      @db.Uuid
+  service_type  String?      @db.VarChar(50)
   description   String?
-  items         Json      // Array of checklist items structure
-  is_active     Boolean?  @default(true)
-  created_at    DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime? @default(now()) @db.Timestamptz(6)
-
-  bike_models   bike_models? @relation(fields: [bike_model_id], references: [id], onDelete: SetNull)
+  items         Json
+  is_active     Boolean?     @default(true)
+  created_at    DateTime?    @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime?    @default(now()) @db.Timestamptz(6)
+  bike_models   bike_models? @relation(fields: [bike_model_id], references: [id])
 
   @@schema("public")
 }
@@ -3060,12 +3063,11 @@ model service_checklist_items {
   name             String    @db.VarChar(200)
   category         String?   @db.VarChar(100)
   is_completed     Boolean?  @default(false)
-  condition        String?   @db.VarChar(20) // ok, fair, bad, na
+  condition        String?   @db.VarChar(20)
   notes            String?
   photo_url        String?
   created_at       DateTime? @default(now()) @db.Timestamptz(6)
   updated_at       DateTime? @default(now()) @db.Timestamptz(6)
-
   job_cards        job_cards @relation(fields: [job_card_id], references: [id], onDelete: Cascade)
 
   @@index([job_card_id])
@@ -3073,18 +3075,17 @@ model service_checklist_items {
 }
 
 model job_photos {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  job_card_id   String    @db.Uuid
-  staff_id      String    @db.Uuid
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job_card_id   String        @db.Uuid
+  staff_id      String        @db.Uuid
   image_url     String
   thumbnail_url String?
-  tag           String    @db.VarChar(20) // before, during, after
+  tag           String        @db.VarChar(20)
   caption       String?
   file_size     Int?
-  mime_type     String?   @db.VarChar(50)
+  mime_type     String?       @db.VarChar(50)
+  created_at    DateTime?     @default(now()) @db.Timestamptz(6)
   metadata      Json?
-  created_at    DateTime? @default(now()) @db.Timestamptz(6)
-
   job_cards     job_cards     @relation(fields: [job_card_id], references: [id], onDelete: Cascade)
   service_staff service_staff @relation(fields: [staff_id], references: [id], onDelete: Cascade)
 
@@ -3094,19 +3095,18 @@ model job_photos {
 }
 
 model technician_issue_reports {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  job_card_id String?   @db.Uuid
-  staff_id    String    @db.Uuid
-  category    String    @db.VarChar(50) // equipment, safety, vehicle
-  description String
-  severity    String?   @default("medium") @db.VarChar(20) // low, medium, high, critical
-  images      String[]
-  status      String?   @default("open") @db.VarChar(20)
-  resolved_at DateTime? @db.Timestamptz(6)
-  created_at  DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
-
-  job_cards     job_cards?    @relation(fields: [job_card_id], references: [id], onDelete: SetNull)
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job_card_id   String?       @db.Uuid
+  staff_id      String        @db.Uuid
+  category      String        @db.VarChar(50)
+  description   String
+  severity      String?       @default("medium") @db.VarChar(20)
+  images        String[]
+  status        String?       @default("open") @db.VarChar(20)
+  resolved_at   DateTime?     @db.Timestamptz(6)
+  created_at    DateTime?     @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime?     @default(now()) @db.Timestamptz(6)
+  job_cards     job_cards?    @relation(fields: [job_card_id], references: [id])
   service_staff service_staff @relation(fields: [staff_id], references: [id], onDelete: Cascade)
 
   @@index([staff_id])
@@ -3118,15 +3118,14 @@ model qc_requests {
   job_card_id  String    @db.Uuid
   requested_by String    @db.Uuid
   reviewer_id  String?   @db.Uuid
-  status       String?   @default("pending") @db.VarChar(20) // pending, passed, failed
+  status       String?   @default("pending") @db.VarChar(20)
   notes        String?
   reviewed_at  DateTime? @db.Timestamptz(6)
   created_at   DateTime? @default(now()) @db.Timestamptz(6)
   updated_at   DateTime? @default(now()) @db.Timestamptz(6)
-
   job_cards    job_cards @relation(fields: [job_card_id], references: [id], onDelete: Cascade)
   requester    profiles  @relation("QcRequester", fields: [requested_by], references: [id], onDelete: NoAction)
-  reviewer     profiles? @relation("QcReviewer", fields: [reviewer_id], references: [id], onDelete: SetNull)
+  reviewer     profiles? @relation("QcReviewer", fields: [reviewer_id], references: [id])
 
   @@index([job_card_id])
   @@index([status])

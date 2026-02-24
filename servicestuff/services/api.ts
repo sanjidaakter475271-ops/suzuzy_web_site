@@ -67,9 +67,12 @@ export const TechnicianAPI = {
     // Parts
     addPartUsage: (jobId: string, variantId: string, quantity: number, unitPrice?: number) =>
         api.post(`/jobs/${jobId}/parts`, { variantId, quantity, unitPrice }),
-    requestParts: (jobId: string, items: { variantId: string; quantity: number }[]) =>
+    requestParts: (jobId: string, items: { productId: string; quantity: number; notes?: string }[]) =>
         api.post(`/requisitions`, { jobId, items }),
     getPartsHistory: () => api.get('/requisitions'),
+    getCategories: () => api.get('/categories'),
+    getProductsByCategory: (categoryId: string) => api.get(`/products?categoryId=${categoryId}`),
+    getProductVariants: (productId: string) => api.get(`/products/${productId}/variants`),
 
     // Photos
     uploadPhoto: (jobId: string, data: { url: string; tag: string; caption?: string }) =>

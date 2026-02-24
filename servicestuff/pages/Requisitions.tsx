@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TechnicianAPI } from '../services/api';
-import { PartsRequest } from '../types';
+import { RequisitionGroup } from '../types';
 import { TopBar } from '../components/TopBar';
 import {
     Package,
@@ -14,7 +14,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Requisitions: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
-    const [requisitions, setRequisitions] = useState<PartsRequest[]>([]);
+    const [requisitions, setRequisitions] = useState<RequisitionGroup[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
 

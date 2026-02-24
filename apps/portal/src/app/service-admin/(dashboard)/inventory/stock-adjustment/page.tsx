@@ -17,10 +17,15 @@ import { useInventoryStore } from '@/stores/service-admin/inventoryStore';
 import { cn } from '@/lib/utils';
 
 export default function StockAdjustmentPage() {
-    const { adjustments, products, updateStock } = useInventoryStore();
+    const { adjustments, products, updateStock, fetchProducts, fetchAdjustments } = useInventoryStore();
     const [filterType, setFilterType] = useState('all');
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [adjustmentType, setAdjustmentType] = useState<'in' | 'out'>('in');
+
+    React.useEffect(() => {
+        fetchProducts();
+        fetchAdjustments();
+    }, [fetchProducts, fetchAdjustments]);
 
     // Form State
     const [formData, setFormData] = useState({

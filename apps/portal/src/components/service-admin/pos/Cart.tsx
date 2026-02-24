@@ -93,7 +93,7 @@ const Cart = () => {
                 </div>
 
                 <button
-                    onClick={checkout}
+                    onClick={() => checkout()}
                     className="w-full bg-brand hover:bg-brand-hover text-white py-4 rounded-xl font-black uppercase tracking-widest text-lg shadow-xl shadow-brand/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                 >
                     Checkout

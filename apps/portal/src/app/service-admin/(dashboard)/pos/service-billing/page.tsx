@@ -93,7 +93,7 @@ const ServiceBillingPage = () => {
 
                             <div className="pt-6 border-t border-surface-border dark:border-dark-border/50 flex items-center gap-3">
                                 <Link
-                                    href={`/pos/service-billing/${job.id}`}
+                                    href={`/service-admin/pos/service-billing/${job.id}`}
                                     className="flex-1 bg-brand text-white hover:bg-brand-hover h-12 rounded-2xl flex items-center justify-center text-[10px] font-black uppercase tracking-widest gap-2 shadow-lg shadow-brand/20 transition-all"
                                 >
                                     <FileText size={18} />

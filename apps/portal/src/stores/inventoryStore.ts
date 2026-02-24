@@ -6,62 +6,166 @@ interface InventoryState {
     products: Product[];
     adjustments: StockAdjustment[];
     partsIssues: PartsIssue[];
+    isLoading: boolean;
+    error: string | null;
 
-    addProduct: (product: Product) => void;
-    updateProduct: (product: Product) => void;
-    updateStock: (productId: string, quantity: number, type: 'in' | 'out', reason: string) => void;
-    issueParts: (jobCardId: string, items: { productId: string; qty: number }[]) => void;
+    fetchProducts: () => Promise<void>;
+    fetchAdjustments: () => Promise<void>;
+    fetchRequisitions: () => Promise<void>;
+    approveRequisition: (id: string) => Promise<void>;
+    rejectRequisition: (id: string, reason: string) => Promise<void>;
+    addProduct: (product: any) => Promise<void>;
+    updateProduct: (product: any) => Promise<void>;
+    updateStock: (productId: string, quantity: number, type: 'in' | 'out', reason: string) => Promise<void>;
 }
 
-export const useInventoryStore = create<InventoryState>((set) => ({
-    products: MOCK_INVENTORY_PRODUCTS,
-    adjustments: MOCK_STOCK_ADJUSTMENTS,
-    partsIssues: MOCK_PARTS_ISSUES,
+export const useInventoryStore = create<InventoryState>((set, get) => ({
+    products: [],
+    adjustments: [],
+    partsIssues: [],
+    isLoading: false,
+    error: null,
 
-    addProduct: (product) => set((state) => ({ products: [...state.products, product] })),
-
-    updateProduct: (product) => set((state) => ({
-        products: state.products.map(p => p.id === product.id ? product : p)
-    })),
-
-    updateStock: (productId, quantity, type, reason) => set((state) => {
-        const newAdjustment: StockAdjustment = {
-            id: `ADJ${Date.now()}`,
-            productId,
-            type,
-            quantity,
-            reason,
-            date: new Date().toISOString().split('T')[0],
-            performedBy: 'Current User' // Mock user
-        };
-
-        const updatedProducts = state.products.map(p => {
-            if (p.id === productId) {
-                return {
-                    ...p,
-                    stock: type === 'in' ? p.stock + quantity : p.stock - quantity
-                };
+    fetchProducts: async () => {
+        set({ isLoading: true });
+        try {
+            const res = await fetch('/api/v1/workshop/inventory');
+            const data = await res.json();
+            if (data.success) {
+                set({ products: data.data, isLoading: false });
             }
-            return p;
-        });
+        } catch (error: any) {
+            set({ error: error.message, isLoading: false });
+        }
+    },
 
-        return {
-            products: updatedProducts,
-            adjustments: [newAdjustment, ...state.adjustments]
-        };
-    }),
+    addProduct: async (product: any) => {
+        try {
+            const res = await fetch('/api/v1/workshop/inventory', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(product)
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            await get().fetchProducts();
+        } catch (error: any) {
+            alert(error.message);
+        }
+    },
 
-    issueParts: (jobCardId, items) => set((state) => {
-        // Logic to decrease stock would need to iterate over items
-        // For simplicity here, we just record the issue
-        const newIssue: PartsIssue = {
-            id: `ISS${Date.now()}`,
-            jobCardId,
-            items,
-            issuedBy: 'Current User',
-            issuedAt: new Date().toISOString(),
-            status: 'pending'
-        };
-        return { partsIssues: [newIssue, ...state.partsIssues] };
-    })
+    updateProduct: async (product: any) => {
+        try {
+            const res = await fetch('/api/v1/workshop/inventory', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(product)
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            await get().fetchProducts();
+        } catch (error: any) {
+            alert(error.message);
+        }
+    },
+
+    fetchRequisitions: async () => {
+        set({ isLoading: true });
+        try {
+            const res = await fetch('/api/v1/workshop/requisitions?status=pending');
+            const result = await res.json();
+            if (result.success) {
+                const issues: PartsIssue[] = result.data.map((r: any) => ({
+                    id: r.id,
+                    jobCardId: r.job_card_id,
+                    items: [{
+                        productId: r.product_id,
+                        qty: r.quantity,
+                        productName: r.products?.name || 'Unknown'
+                    }],
+                    issuedBy: r.service_staff?.profiles?.full_name || 'Technician',
+                    issuedAt: r.created_at,
+                    status: r.status
+                }));
+                set({ partsIssues: issues, isLoading: false });
+            }
+        } catch (error: any) {
+            set({ error: error.message, isLoading: false });
+        }
+    },
+
+    approveRequisition: async (id: string) => {
+        try {
+            const res = await fetch(`/api/v1/workshop/requisitions/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'approved' })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+
+            await get().fetchRequisitions();
+        } catch (error: any) {
+            alert(error.message);
+        }
+    },
+
+    rejectRequisition: async (id: string, reason: string) => {
+        try {
+            const res = await fetch(`/api/v1/workshop/requisitions/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'rejected', reason })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+
+            await get().fetchRequisitions();
+        } catch (error: any) {
+            alert(error.message);
+        }
+    },
+
+    fetchAdjustments: async () => {
+        set({ isLoading: true });
+        try {
+            const res = await fetch('/api/v1/workshop/inventory?movements=true');
+            const data = await res.json();
+            if (data.success) {
+                const mappedAdjustments = data.data.map((m: any) => ({
+                    id: m.id,
+                    productId: m.product_id,
+                    productName: m.products?.name || 'Unknown',
+                    quantity: Math.abs(m.quantity_change),
+                    type: m.quantity_change > 0 ? 'in' : 'out',
+                    reason: m.reason || 'N/A',
+                    performedBy: m.profiles?.full_name || 'System',
+                    date: new Date(m.created_at).toLocaleDateString()
+                }));
+                set({ adjustments: mappedAdjustments, isLoading: false });
+            }
+        } catch (error: any) {
+            set({ error: error.message, isLoading: false });
+        }
+    },
+
+    updateStock: async (productId: string, quantity: number, type: 'in' | 'out', reason: string) => {
+        set({ isLoading: true });
+        try {
+            const res = await fetch('/api/v1/workshop/inventory', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId, quantity, type, reason })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+
+            await get().fetchProducts();
+            await get().fetchAdjustments();
+            set({ isLoading: false });
+        } catch (error: any) {
+            set({ error: error.message, isLoading: false });
+            alert(error.message);
+        }
+    }
 }));

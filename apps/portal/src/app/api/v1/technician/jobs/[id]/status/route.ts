@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/client';
 import { getCurrentTechnician } from '@/lib/auth/get-technician';
+import { broadcast } from '@/lib/socket-server';
 
 type Params = Promise<{ id: string }>;
 
@@ -72,6 +73,22 @@ export async function POST(req: NextRequest, { params }: { params: Params }) {
         }
 
         await prisma.$transaction(operations);
+
+        // Broadcast change for real-time dashboard updates
+        await broadcast('job_cards:changed', {
+            id: id,
+            status: status,
+            technicianId: technician.serviceStaffId
+        });
+
+        // Also broadcast to inventory if parts might be involved (optional but good)
+        if (status === 'paused') {
+            await broadcast('notifications:new', {
+                type: 'job_paused',
+                message: `Job #${id.substring(0, 8)} paused by technician.`,
+                userId: technician.userId
+            });
+        }
 
         return NextResponse.json({ success: true, status });
     } catch (error: any) {

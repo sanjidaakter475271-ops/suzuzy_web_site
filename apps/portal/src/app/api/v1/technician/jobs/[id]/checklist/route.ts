@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/client';
 import { getCurrentTechnician } from '@/lib/auth/get-technician';
+import { broadcast } from '@/lib/socket-server';
 
 type Params = Promise<{ id: string }>;
 
@@ -65,6 +66,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Params }) {
         );
 
         await prisma.$transaction(operations);
+
+        await broadcast('job_cards:changed', {
+            id: id,
+            type: 'checklist_update',
+            technicianId: technician.serviceStaffId
+        });
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
