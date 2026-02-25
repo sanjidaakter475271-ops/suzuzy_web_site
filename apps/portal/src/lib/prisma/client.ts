@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
@@ -6,15 +7,17 @@ if (!process.env.DATABASE_URL) {
     console.warn("WARNING: DATABASE_URL is not defined in environment variables");
 }
 
-let prismaInstance: PrismaClient;
+function createPrismaClient(): PrismaClient {
+    const adapter = new PrismaPg({
+        connectionString: process.env.DATABASE_URL || "",
+    });
 
-// Standard native driver - most reliable for Render (Linux/standard Node)
-// PRISMA_USE_ADAPTER and @prisma/adapter-pg are removed as they are not needed
-// in standard Node environments and were causing engine type mismatches on build.
-prismaInstance = new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
-});
+    return new PrismaClient({
+        adapter,
+        log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+    });
+}
 
-export const prisma = globalForPrisma.prisma || prismaInstance;
+export const prisma = globalForPrisma.prisma || createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
