@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
     let user: any;
     try {
         // 2. Find User
+        console.log(`[LOGIN] Attempting to find user: ${email}`);
         user = await prisma.profiles.findUnique({
             where: { email },
             include: {
@@ -53,10 +54,11 @@ export async function POST(req: NextRequest) {
             }
         });
     } catch (dbError: any) {
-        console.error("Database error finding user:", dbError?.message);
-        console.error("Database error stack:", dbError?.stack);
+        console.error(`[LOGIN ERROR] DB error finding user ${email}:`, dbError?.message);
         return NextResponse.json({ error: "Database connection error", details: dbError?.message }, { status: 500 });
     }
+
+    console.log(`[LOGIN] User found: ${!!user}, has password: ${!!user?.password_hash}`);
 
     if (!user || !user.password_hash) {
         return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
@@ -72,10 +74,11 @@ export async function POST(req: NextRequest) {
     let isValid = false;
     try {
         // 4. Verify Password
+        console.log(`[LOGIN] Verifying password for ${email}`);
         isValid = await verifyPassword(password, user.password_hash);
+        console.log(`[LOGIN] Password valid: ${isValid}`);
     } catch (passwordError: any) {
-        console.error("Password verification error:", passwordError?.message);
-        console.error("Password verification stack:", passwordError?.stack);
+        console.error(`[LOGIN ERROR] Password check failed for ${email}:`, passwordError?.message);
         return NextResponse.json({ error: "Password verification failed", details: passwordError?.message }, { status: 500 });
     }
 
@@ -117,6 +120,7 @@ export async function POST(req: NextRequest) {
 
     try {
         // 5. Success - Reset failed attempts
+        console.log(`[LOGIN] Resetting attempts for ${email}`);
         await prisma.profiles.update({
             where: { id: user.id },
             data: {
@@ -126,8 +130,9 @@ export async function POST(req: NextRequest) {
             } as any
         });
         await resetRateLimit(`login:${email}`);
+        console.log(`[LOGIN] Attempts reset successful`);
     } catch (resetError: any) {
-        console.error("Reset attempts error:", resetError?.message);
+        console.error(`[LOGIN ERROR] Failed to reset attempts for ${email}:`, resetError?.message);
         // Continue even if reset fails
     }
 
@@ -163,13 +168,14 @@ export async function POST(req: NextRequest) {
     let session: any;
     try {
         // 7. No MFA - Create session
+        console.log(`[LOGIN] Creating session for ${user.id}`);
         session = await createSession(user.id, payload, {
             ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
             userAgent: req.headers.get("user-agent") || "unknown",
         }, rememberMe);
+        console.log(`[LOGIN] Session created: ${!!session}`);
     } catch (sessionError: any) {
-        console.error("Session creation error:", sessionError?.message);
-        console.error("Session creation stack:", sessionError?.stack);
+        console.error(`[LOGIN ERROR] Session creation failed for ${user.id}:`, sessionError?.message);
         return NextResponse.json({ error: "Session creation failed", details: sessionError?.message }, { status: 500 });
     }
 
