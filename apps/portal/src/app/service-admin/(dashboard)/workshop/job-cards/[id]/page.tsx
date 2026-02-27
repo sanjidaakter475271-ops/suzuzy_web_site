@@ -25,6 +25,29 @@ const JobCardDetailPage = () => {
     const [taskCost, setTaskCost] = React.useState(0);
     const [isAddingTask, setIsAddingTask] = React.useState(false);
 
+    const [history, setHistory] = React.useState<any[]>([]);
+    const [isLoadingHistory, setIsLoadingHistory] = React.useState(true);
+
+    const fetchHistory = React.useCallback(async () => {
+        if (!id) return;
+        setIsLoadingHistory(true);
+        try {
+            const res = await fetch(`/api/v1/workshop/jobs/${id}/history`);
+            if (res.ok) {
+                const data = await res.json();
+                setHistory(data.history || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch history', error);
+        } finally {
+            setIsLoadingHistory(false);
+        }
+    }, [id]);
+
+    React.useEffect(() => {
+        fetchHistory();
+    }, [fetchHistory]);
+
     const job = jobCards.find(j => j.id === id);
 
     const handleRefresh = async () => {
@@ -38,8 +61,9 @@ const JobCardDetailPage = () => {
         </div>
     );
 
-    const handleStatusUpdate = (newStatus: any) => {
-        updateJobCardStatus(job.id, newStatus);
+    const handleStatusUpdate = async (newStatus: any) => {
+        await updateJobCardStatus(job.id, newStatus);
+        fetchHistory(); // Refresh history after status update
     };
 
     const handleAddTask = async (e: React.FormEvent) => {
@@ -133,6 +157,43 @@ const JobCardDetailPage = () => {
                             </div>
 
                             <JobCardTimeline status={job.status} />
+
+                            {/* Job History Feed */}
+                            <div className="mt-8 pt-8 border-t border-surface-border dark:border-dark-border/50">
+                                <h3 className="text-[10px] font-black uppercase text-brand tracking-widest mb-6">Status Log</h3>
+                                {isLoadingHistory ? (
+                                    <div className="flex items-center gap-2 text-ink-muted text-xs font-bold uppercase tracking-widest">
+                                        <RefreshCcw size={12} className="animate-spin" /> Fetching Log...
+                                    </div>
+                                ) : history.length > 0 ? (
+                                    <div className="space-y-0 relative before:absolute before:inset-y-0 before:left-[11px] before:w-px before:bg-surface-border dark:before:bg-dark-border">
+                                        {history.map((log, i) => (
+                                            <div key={i} className="relative flex gap-4 pb-6 last:pb-0 group">
+                                                <div className="w-6 h-6 rounded-full bg-surface-card dark:bg-dark-card border-2 border-brand flex-shrink-0 z-10 group-hover:scale-125 group-hover:bg-brand transition-all duration-300"></div>
+                                                <div className="flex-1 -mt-1 -translate-y-1">
+                                                    <p className="text-xs font-black text-ink-heading dark:text-white uppercase tracking-tight">
+                                                        Changed to <span className="text-brand">{log.to_state.replace(/_/g, ' ')}</span>
+                                                    </p>
+                                                    <div className="flex items-center gap-2 mt-1 text-[10px] text-ink-muted uppercase tracking-widest font-bold">
+                                                        <span className="flex items-center gap-1"><User size={10} /> {log.actor_name || 'System'}</span>
+                                                        <span>•</span>
+                                                        <span>{new Date(log.created_at).toLocaleString()}</span>
+                                                    </div>
+                                                    {log.notes && (
+                                                        <div className="mt-2 p-3 bg-surface-page dark:bg-black/20 rounded-xl border border-surface-border dark:border-white/5 border-l-2 border-l-brand">
+                                                            <p className="text-xs text-ink-muted font-bold">{log.notes}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="p-4 bg-surface-page/50 dark:bg-black/10 rounded-2xl border border-dashed border-surface-border dark:border-white/5 text-center">
+                                        <p className="text-xs text-ink-muted font-bold uppercase tracking-widest">No history recorded.</p>
+                                    </div>
+                                )}
+                            </div>
                         </CardContent>
                     </Card>
 

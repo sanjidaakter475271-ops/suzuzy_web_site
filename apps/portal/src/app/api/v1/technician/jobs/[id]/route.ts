@@ -4,11 +4,28 @@ import { getCurrentTechnician } from '@/lib/auth/get-technician';
 
 type Params = Promise<{ id: string }>;
 
+// Helper to convert Prisma Decimals to Numbers
+const serialize = (obj: any): any => {
+    if (obj === null || obj === undefined) return obj;
+    if (Array.isArray(obj)) return obj.map(serialize);
+    if (typeof obj === 'object') {
+        if (obj.constructor && obj.constructor.name === 'Decimal') {
+            return Number(obj);
+        }
+        const newObj: any = {};
+        for (const key in obj) {
+            newObj[key] = serialize(obj[key]);
+        }
+        return newObj;
+    }
+    return obj;
+};
+
 export async function GET(req: NextRequest, { params }: { params: Params }) {
     try {
         const technician = await getCurrentTechnician();
         if (!technician || !technician.serviceStaffId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
         const { id } = await params;
@@ -17,6 +34,7 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
             where: {
                 id,
                 technician_id: technician.serviceStaffId,
+                dealer_id: technician.dealerId // Enforce dealer scoping
             },
             include: {
                 service_tickets: {
@@ -64,8 +82,9 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
         });
 
         if (!job) {
-            return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+            return NextResponse.json({ success: false, error: 'Job not found or access denied' }, { status: 404 });
         }
+
         const ticket = job.service_tickets;
         const vehicle = ticket?.service_vehicles;
         const latestQC = job.qc_requests?.[0];
@@ -127,11 +146,11 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
             created_at: job.created_at,
         };
 
-        return NextResponse.json(formattedJob);
+        return NextResponse.json({ success: true, data: serialize(formattedJob) });
     } catch (error: unknown) {
         console.error('Error fetching job details:', error);
         return NextResponse.json(
-            { error: 'Internal server error' },
+            { success: false, error: 'Internal server error' },
             { status: 500 }
         );
     }

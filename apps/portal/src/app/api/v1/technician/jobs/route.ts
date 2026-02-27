@@ -2,6 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/client';
 import { getCurrentTechnician } from '@/lib/auth/get-technician';
 
+// Helper to convert Prisma Decimals to Numbers
+const serialize = (obj: any): any => {
+    if (obj === null || obj === undefined) return obj;
+    if (Array.isArray(obj)) return obj.map(serialize);
+    if (typeof obj === 'object') {
+        if (obj.constructor && obj.constructor.name === 'Decimal') {
+            return Number(obj);
+        }
+        const newObj: any = {};
+        for (const key in obj) {
+            newObj[key] = serialize(obj[key]);
+        }
+        return newObj;
+    }
+    return obj;
+};
+
 export async function GET(req: NextRequest) {
     try {
         const technician = await getCurrentTechnician();
@@ -17,6 +34,7 @@ export async function GET(req: NextRequest) {
 
         const query: any = {
             technician_id: technician.serviceStaffId,
+            dealer_id: technician.dealerId // Enforce dealer scoping
         };
 
         if (status && status !== 'all') {
@@ -66,7 +84,7 @@ export async function GET(req: NextRequest) {
                 service_number: ticket?.service_number,
                 vehicle: {
                     model_name: vehicle?.bike_models?.name || vehicle?.model_id || 'Unknown Model',
-                    license_plate: vehicle?.engine_number || 'N/A',
+                    license_plate: vehicle?.engine_number || 'N/A', // The original code uses engine_number for license_plate
                     customer_name: customer?.full_name || vehicle?.customer_name || 'Walk-in Customer',
                     issue_description: ticket?.service_description || 'No description provided',
                     color: vehicle?.color,
@@ -89,7 +107,7 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            data: formattedJobs,
+            data: serialize(formattedJobs),
             meta: {
                 total,
                 page,
