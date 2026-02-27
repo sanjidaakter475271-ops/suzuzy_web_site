@@ -42,6 +42,7 @@ RUN apk add --no-cache openssl libc6-compat
 ENV NEXT_TELEMETRY_DISABLED=1
 # Dummy URL for build-time generation only (Prisma 7 Config requires it)
 ENV DATABASE_URL="postgresql://dummy:5432/mydb"
+ENV DIRECT_URL="postgresql://dummy:5432/mydb"
 
 # Build the application
 RUN npx prisma generate
