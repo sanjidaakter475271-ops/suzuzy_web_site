@@ -6,18 +6,15 @@ export async function POST(req: NextRequest) {
     try {
         const technician = await getCurrentTechnician();
         if (!technician) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
         if (!technician.serviceStaffId) {
-            return NextResponse.json({ error: 'Service Staff profile not found for this user' }, { status: 403 });
+            return NextResponse.json({ success: false, error: 'Service Staff profile not found for this user' }, { status: 403 });
         }
 
         const { location, deviceId } = await req.json();
 
-        // Check if already clocked in for today without clock out
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
+        // Check if already clocked in
         const existing = await prisma.technician_attendance.findFirst({
             where: {
                 staff_id: technician.serviceStaffId,
@@ -26,7 +23,7 @@ export async function POST(req: NextRequest) {
         });
 
         if (existing) {
-            return NextResponse.json({ error: 'Already clocked in' }, { status: 400 });
+            return NextResponse.json({ success: false, error: 'Already clocked in' }, { status: 400 });
         }
 
         const attendance = await prisma.technician_attendance.create({
@@ -40,9 +37,9 @@ export async function POST(req: NextRequest) {
             },
         });
 
-        return NextResponse.json({ success: true, attendance });
+        return NextResponse.json({ success: true, data: attendance });
     } catch (error: any) {
         console.error('Error clocking in:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
     }
 }

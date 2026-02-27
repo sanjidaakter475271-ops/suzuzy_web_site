@@ -25,8 +25,10 @@ const WorkshopOverviewPage = () => {
         { title: "Status Board", icon: LayoutPanelTop, path: "/service-admin/workshop/status-board", color: "bg-info", desc: "Live view of service progress (Kanban)." },
         { title: "Technicians", icon: Users, path: "/service-admin/workshop/technicians", color: "bg-success", desc: "Monitor technician workload and capacity." },
         { title: "QC Checklist", icon: ClipboardCheck, path: "/service-admin/workshop/qc", color: "bg-warning", desc: "Quality control and delivery inspections." },
-        { title: "Service Types", icon: Wrench, path: "/service-admin/workshop/service-types", color: "bg-danger", desc: "Manage labor rates and service types." },
+        { title: "Service Billing", icon: ClipboardList, path: "/service-admin/workshop/billing", color: "bg-indigo-600", desc: "Generate invoices and manage payments." },
         { title: "Warranty Tracking", icon: ShieldCheck, path: "/service-admin/workshop/warranty", color: "bg-slate-800", desc: "Track free services and warranty claims." },
+        { title: "Scheduling", icon: Hammer, path: "/service-admin/workshop/scheduling", color: "bg-cyan-600", desc: "Staff roster and capacity management." },
+        { title: "Service Types", icon: Wrench, path: "/service-admin/workshop/service-types", color: "bg-danger", desc: "Manage labor rates and service types." },
     ];
 
     return (

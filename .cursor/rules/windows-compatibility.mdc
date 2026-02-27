@@ -1,0 +1,27 @@
+---
+description: Environment rules to ensure compatibility with Windows OS and PowerShell/CMD.
+globs: **/*
+alwaysApply: true
+---
+
+# WINDOWS ENVIRONMENT COMPATIBILITY RULES
+
+This workspace is running on **Windows**. All AI agents must adhere to the following rules to prevent environment-related errors.
+
+## 1. SHELL COMMANDS
+*   **NO `grep`:** Do not use `grep`. Use PowerShell `Select-String` instead.
+    *   *Example:* `Select-String -Path "path\to\file" -Pattern "search-term"`
+*   **NO `ls -la`:** Use `dir` or `Get-ChildItem`.
+*   **NO `touch`:** Use `New-Item -Path "file.txt" -ItemType File`.
+*   **Path separators:** Use backslashes `\` for paths in commands, or wrap paths in quotes if using forward slashes.
+
+## 2. TOOL USAGE
+*   **MCP Search:** When using `grep_search` MCP tool, be aware that it might fail on some Windows configurations. If it fails, fallback to `run_command` with PowerShell `Select-String`.
+*   **Prisma CLI:** Use `npx prisma validate` or `npx prisma format` to verify schema changes.
+
+## 3. FILE SYSTEM
+*   Always use **absolute paths** when calling tools.
+*   Be mindful of case-insensitivity in Windows file systems, but maintain consistent casing in code.
+
+## 4. ERROR PREVENTION
+*   If a command fails with "'command' is not recognized", verify if it is a Linux-specific utility and find the Windows equivalent.

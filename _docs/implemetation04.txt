@@ -1,0 +1,1990 @@
+🏗️ COMPLETE IMPLEMENTATION MASTER PLAN
+Service Workshop ERP — Full Project Blueprint
+📋 SECTION 1: EXECUTIVE SUMMARY
+🎯 Project Vision
+text
+
+একটি Complete Service Workshop Management System তৈরি করা
+যেটা Technician Management, Job Card Workflow, Inventory,
+Billing, Quality Control, Customer Experience — সবকিছু
+একটি Single Platform এ Handle করবে।
+
+Target: Mid-to-Enterprise level Automotive Service Centers
+Model: Multi-branch SaaS ready architecture
+🏆 Business Goals
+text
+
+┌────────────────────────────────────────────────────────────┐
+│                                                            │
+│  1. Workshop operational efficiency 40% increase           │
+│  2. Customer satisfaction score 4.5+ / 5                   │
+│  3. Technician productivity tracking 100% visibility       │
+│  4. Parts wastage reduction 25%                            │
+│  5. Revenue leakage prevention (warranty, billing)         │
+│  6. Paperless workshop operations                          │
+│  7. Real-time decision making capability                   │
+│  8. Multi-branch scalability                               │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
+📊 Current State vs Target State
+text
+
+CURRENT STATE (What exists)          TARGET STATE (What we build)
+━━━━━━━━━━━━━━━━━━━━━━━━━           ━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Technician attendance              🎯 Full HR/shift management
+✅ Basic tool tracking                🎯 Complete inventory system
+✅ Job photos                         🎯 Digital twin + timeline
+✅ QC requests                        🎯 Full QC workflow engine
+✅ Appointment booking                🎯 Smart scheduling + CRM
+✅ Issue reporting                    🎯 Escalation matrix
+✅ Time logging                       🎯 SLA + productivity analytics
+✅ Checklist system                   🎯 Configurable workflow engine
+❌ No RBAC                           🎯 Complete role system
+❌ No parts inventory                🎯 Full parts + vendor mgmt
+❌ No billing                        🎯 Invoice + payment system
+❌ No warranty                       🎯 Warranty claim management
+❌ No customer CRM                   🎯 Full CRM + loyalty
+❌ No notifications                  🎯 Omni-channel communication
+❌ No analytics                      🎯 Business intelligence
+❌ No document mgmt                  🎯 Paperless system
+📋 SECTION 2: SYSTEM ARCHITECTURE PLAN
+🏛️ Overall Architecture
+text
+
+┌─────────────────────────────────────────────────────────────────┐
+│                        CLIENT LAYER                             │
+├──────────┬──────────┬──────────┬──────────┬────────────────────┤
+│  Admin   │ Service  │Technician│ Customer │    Dealer          │
+│  Panel   │ Manager  │  App     │  App     │    Portal          │
+│  (Web)   │  (Web)   │ (Mobile) │ (Mobile) │    (Web)           │
+└────┬─────┴────┬─────┴────┬─────┴────┬─────┴──────┬─────────────┘
+     │          │          │          │             │
+┌────▼──────────▼──────────▼──────────▼─────────────▼─────────────┐
+│                      API GATEWAY                                 │
+│              (Authentication + Rate Limiting)                    │
+├─────────────────────────────────────────────────────────────────┤
+│                      RBAC MIDDLEWARE                             │
+│              (Role + Permission checking)                        │
+├──────────┬──────────┬──────────┬──────────┬────────────────────┤
+│  Auth    │  Core    │ Business │ Analytics│   Integration      │
+│ Service  │ Service  │ Service  │ Service  │   Service          │
+└────┬─────┴────┬─────┴────┬─────┴────┬─────┴──────┬─────────────┘
+     │          │          │          │             │
+┌────▼──────────▼──────────▼──────────▼─────────────▼─────────────┐
+│                      DATABASE LAYER                              │
+│                    (PostgreSQL + Redis)                           │
+├─────────────────────────────────────────────────────────────────┤
+│                    FILE STORAGE (S3/Supabase)                    │
+├─────────────────────────────────────────────────────────────────┤
+│                   NOTIFICATION ENGINE                            │
+│              (SMS + Email + WhatsApp + Push)                     │
+└─────────────────────────────────────────────────────────────────┘
+👥 User Roles Architecture
+text
+
+┌─────────────────────────────────────────────────────────────┐
+│                     ROLE HIERARCHY                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  SUPER ADMIN (Platform Owner)                                │
+│  ├── Full system access                                      │
+│  ├── Multi-dealer management                                 │
+│  ├── Platform configuration                                  │
+│  └── Financial overview                                      │
+│                                                              │
+│  DEALER ADMIN (Dealer Owner/GM)                              │
+│  ├── Own dealer full access                                  │
+│  ├── All branch oversight                                    │
+│  ├── Financial reports                                       │
+│  └── Staff management                                        │
+│                                                              │
+│  SERVICE MANAGER (Branch Head)                               │
+│  ├── Branch operations                                       │
+│  ├── Job card management                                     │
+│  ├── Staff supervision                                       │
+│  ├── Inventory oversight                                     │
+│  └── Customer escalation                                     │
+│                                                              │
+│  SERVICE ADVISOR (Front desk)                                │
+│  ├── Appointment booking                                     │
+│  ├── Job card creation                                       │
+│  ├── Customer communication                                  │
+│  ├── Estimate generation                                     │
+│  └── Vehicle check-in/out                                    │
+│                                                              │
+│  TEAM LEAD (Senior Technician)                               │
+│  ├── Job assignment                                          │
+│  ├── QC review                                               │
+│  ├── Team monitoring                                         │
+│  └── Issue resolution L1                                     │
+│                                                              │
+│  TECHNICIAN (Worker)                                         │
+│  ├── Job execution                                           │
+│  ├── Time logging                                            │
+│  ├── Photo upload                                            │
+│  ├── Tool request                                            │
+│  ├── Issue reporting                                         │
+│  └── Checklist completion                                    │
+│                                                              │
+│  QC INSPECTOR (Quality)                                      │
+│  ├── QC review                                               │
+│  ├── Approve/reject                                          │
+│  └── Quality reports                                         │
+│                                                              │
+│  PARTS MANAGER (Inventory)                                   │
+│  ├── Stock management                                        │
+│  ├── Purchase orders                                         │
+│  ├── Vendor management                                       │
+│  └── Parts issuance                                          │
+│                                                              │
+│  CASHIER / ACCOUNTS                                          │
+│  ├── Invoice generation                                      │
+│  ├── Payment collection                                      │
+│  ├── Warranty claims                                         │
+│  └── Financial reports                                       │
+│                                                              │
+│  CUSTOMER                                                    │
+│  ├── Appointment booking                                     │
+│  ├── Job status tracking                                     │
+│  ├── Invoice/payment                                         │
+│  ├── Feedback                                                │
+│  └── Service history                                         │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+📋 SECTION 3: MODULE BREAKDOWN (Total 20 Modules)
+🔵 MODULE 1: Authentication & RBAC
+text
+
+PURPOSE: User identity + access control
+
+SUB-FEATURES:
+├── User registration / login
+├── OTP based authentication
+├── Role assignment
+├── Permission matrix
+├── Multi-device session management
+├── Password policy enforcement
+├── Login history + audit
+├── Device whitelisting
+└── Token refresh mechanism
+
+DEPENDENCIES: None (Foundation module)
+
+DATA ENTITIES:
+├── users / profiles
+├── roles
+├── permissions
+├── role_permissions
+├── user_roles
+├── sessions
+├── login_logs
+└── device_registry
+
+ADMIN CAPABILITIES:
+├── Create/edit roles
+├── Assign permissions
+├── View login history
+├── Force logout
+├── Block/unblock user
+└── Device management
+🔵 MODULE 2: Branch & Dealer Management
+text
+
+PURPOSE: Multi-location infrastructure
+
+SUB-FEATURES:
+├── Dealer profile management
+├── Branch creation
+├── Branch-wise settings
+├── Operating hours configuration
+├── Bay/lift capacity setup
+├── Branch-wise staff mapping
+├── Branch-wise inventory isolation
+└── Inter-branch transfer
+
+DEPENDENCIES: Module 1 (RBAC)
+
+DATA ENTITIES:
+├── dealers
+├── branches
+├── branch_settings
+├── branch_capacity
+├── branch_staff
+└── branch_inventory_config
+
+ADMIN CAPABILITIES:
+├── Add/edit dealer
+├── Add/edit branch
+├── Configure capacity
+├── Set operating hours
+├── Branch performance comparison
+└── Inter-branch analytics
+🔵 MODULE 3: Staff & HR Management
+text
+
+PURPOSE: Complete workforce management
+
+SUB-FEATURES:
+├── Staff profile (personal + professional)
+├── Skill matrix mapping
+├── Shift template creation
+├── Roster planning (weekly/monthly)
+├── Attendance tracking (GPS + device)
+├── Leave management
+├── Overtime tracking
+├── Break monitoring
+├── Time log analytics
+├── Payroll data preparation
+└── Performance scoring
+
+DEPENDENCIES: Module 1, Module 2
+
+DATA ENTITIES:
+├── service_staff (existing)
+├── skill_matrix
+├── shift_templates
+├── staff_roster
+├── technician_attendance (existing)
+├── technician_time_logs (existing)
+├── technician_breaks (existing)
+├── leave_requests
+├── overtime_logs
+└── staff_performance_scores
+
+ADMIN CAPABILITIES:
+├── Staff onboarding
+├── Shift planning calendar
+├── Attendance dashboard
+├── Leave approval workflow
+├── Overtime approval
+├── Productivity reports
+├── GPS verification
+├── Device restriction
+├── Break policy enforcement
+└── Monthly attendance summary
+🔵 MODULE 4: Customer CRM
+text
+
+PURPOSE: Customer relationship lifecycle
+
+SUB-FEATURES:
+├── Customer profile
+├── Vehicle registration
+├── Service history
+├── Communication preferences
+├── Customer segmentation (VIP/Regular/New)
+├── Lifetime value calculation
+├── Satisfaction tracking
+├── Feedback collection
+├── Complaint management
+├── Next service prediction
+└── Birthday/anniversary wishes
+
+DEPENDENCIES: Module 1
+
+DATA ENTITIES:
+├── customer_profiles
+├── customer_vehicles
+├── service_history
+├── service_feedback
+├── customer_communications
+├── customer_segments
+└── customer_preferences
+
+ADMIN CAPABILITIES:
+├── Customer database
+├── 360° customer view
+├── Satisfaction dashboard
+├── Feedback analytics
+├── Complaint resolution tracking
+├── Segment-wise campaigns
+├── Revenue per customer
+└── Churn prediction data
+🔵 MODULE 5: Appointment & Scheduling
+text
+
+PURPOSE: Service booking + capacity management
+
+SUB-FEATURES:
+├── Online appointment booking
+├── Time slot management
+├── Bay/lift allocation
+├── Technician availability check
+├── Appointment confirmation
+├── Reminder notifications
+├── Walk-in registration
+├── Rescheduling
+├── Cancellation with reason
+├── No-show tracking
+├── Capacity utilization dashboard
+└── Dealer load balancing
+
+DEPENDENCIES: Module 2, Module 3, Module 4
+
+DATA ENTITIES:
+├── service_appointments (existing)
+├── time_slots
+├── bay_allocation
+├── appointment_reminders
+└── appointment_history
+
+ADMIN CAPABILITIES:
+├── Schedule board (calendar view)
+├── Slot configuration
+├── Capacity planning
+├── Peak hour analysis
+├── No-show analytics
+├── Auto reminder setup
+└── Walk-in management
+🔵 MODULE 6: Job Card Management (CORE)
+text
+
+PURPOSE: Service execution lifecycle
+
+SUB-FEATURES:
+├── Job card creation
+├── Vehicle check-in
+├── Multi-point inspection
+├── Diagnosis recording
+├── Estimate generation
+├── Customer approval
+├── Job assignment to technician
+├── Job state machine workflow
+├── Job splitting (multiple technicians)
+├── Job priority management
+├── Job timeline tracking
+├── Additional work request
+├── Customer authorization for extras
+├── Job completion
+├── Vehicle check-out
+└── Delivery confirmation
+
+JOB STATES:
+┌──────────────────────────────────────────────────┐
+│                                                   │
+│  CREATED ──► APPOINTED ──► CHECKED_IN            │
+│                                 │                 │
+│                            DIAGNOSED              │
+│                                 │                 │
+│                          ESTIMATE_SENT            │
+│                                 │                 │
+│                     CUSTOMER_APPROVED             │
+│                                 │                 │
+│                          IN_PROGRESS              │
+│                          ╱        ╲               │
+│              WAITING_PARTS    ADDITIONAL_WORK     │
+│                          ╲        ╱               │
+│                          IN_PROGRESS              │
+│                                 │                 │
+│                          QC_PENDING               │
+│                          ╱        ╲               │
+│                  QC_APPROVED    QC_REJECTED        │
+│                       │              │            │
+│                  COMPLETED     IN_PROGRESS        │
+│                       │                           │
+│                  INVOICED                         │
+│                       │                           │
+│                     PAID                          │
+│                       │                           │
+│                  DELIVERED                        │
+│                                                   │
+│  (Any state) ──► CANCELLED (with reason)         │
+│  (Any state) ──► ON_HOLD (with reason)           │
+│                                                   │
+└──────────────────────────────────────────────────┘
+
+DEPENDENCIES: Module 3, Module 4, Module 5
+
+DATA ENTITIES:
+├── job_cards
+├── job_card_items
+├── job_assignments
+├── job_state_history
+├── job_estimates
+├── job_approvals
+├── job_photos (existing)
+├── job_events (timeline)
+└── job_additional_work
+
+ADMIN CAPABILITIES:
+├── Job board (kanban view)
+├── Job assignment
+├── Priority management
+├── Real-time status tracking
+├── Bottleneck identification
+├── TAT monitoring
+├── Customer communication trigger
+├── Revenue tracking per job
+└── State transition audit
+🔵 MODULE 7: Service Checklist & SOP
+text
+
+PURPOSE: Standardized service process
+
+SUB-FEATURES:
+├── Template creation (per vehicle/service type)
+├── Checklist assignment to job
+├── Item-wise completion tracking
+├── Photo evidence per item
+├── Condition recording
+├── Notes/remarks
+├── Compliance scoring
+├── Template versioning
+└── Mandatory vs optional items
+
+DEPENDENCIES: Module 6
+
+DATA ENTITIES:
+├── service_checklist_templates (existing)
+├── service_checklist_items (existing)
+├── checklist_template_versions
+└── checklist_compliance_scores
+
+ADMIN CAPABILITIES:
+├── Template builder
+├── Compliance dashboard
+├── Technician adherence report
+├── SOP version control
+└── Audit trail
+🔵 MODULE 8: Quality Control
+text
+
+PURPOSE: Service quality assurance
+
+SUB-FEATURES:
+├── QC request creation
+├── QC reviewer assignment
+├── Multi-point QC checklist
+├── Approve / reject with notes
+├── Rejection reason categorization
+├── Re-work tracking
+├── QC photos
+├── Final QC sign-off
+├── QC metrics dashboard
+└── Technician quality score
+
+QC WORKFLOW:
+┌───────────────────────────────────────────┐
+│                                            │
+│  Technician completes job                  │
+│           │                                │
+│    QC Request created                      │
+│           │                                │
+│    Assigned to QC Inspector                │
+│           │                                │
+│    Physical inspection                     │
+│           │                                │
+│     ┌─────┴──────┐                         │
+│     │            │                         │
+│  APPROVE      REJECT                       │
+│     │            │                         │
+│  Complete    Rework note                   │
+│     │            │                         │
+│  Ready for   Back to                      │
+│  delivery    technician                    │
+│                  │                         │
+│            Fix + Re-submit                 │
+│                                            │
+└───────────────────────────────────────────┘
+
+DEPENDENCIES: Module 6
+
+DATA ENTITIES:
+├── qc_requests (existing)
+├── qc_checklist_items
+├── qc_results
+├── qc_rejection_reasons
+└── qc_metrics
+
+ADMIN CAPABILITIES:
+├── QC queue dashboard
+├── Rejection analytics
+├── Technician quality ranking
+├── First-time-right rate
+├── QC turnaround time
+└── Re-work cost tracking
+🔵 MODULE 9: Tool & Equipment Management
+text
+
+PURPOSE: Workshop tool lifecycle
+
+SUB-FEATURES:
+├── Tool inventory
+├── Tool categorization
+├── Tool check-out / check-in
+├── Job-wise tool mapping
+├── Overdue tool alerts
+├── Tool maintenance schedule
+├── Tool calibration tracking
+├── Lost/damaged tool reporting
+├── Tool utilization analytics
+└── Tool procurement requests
+
+DEPENDENCIES: Module 3, Module 6
+
+DATA ENTITIES:
+├── special_tools (existing)
+├── tool_usage (existing)
+├── tool_categories
+├── tool_maintenance_schedule
+├── tool_calibration_records
+└── tool_procurement_requests
+
+ADMIN CAPABILITIES:
+├── Tool inventory dashboard
+├── Utilization heatmap
+├── Overdue alerts
+├── Maintenance calendar
+├── Cost tracking
+└── Procurement planning
+🔵 MODULE 10: Parts & Spare Inventory
+text
+
+PURPOSE: Parts lifecycle management
+
+SUB-FEATURES:
+├── Parts master catalog
+├── Category/sub-category
+├── Stock level tracking
+├── Min/max stock levels
+├── Auto reorder alerts
+├── Parts issuance to job
+├── Parts return handling
+├── Batch/serial tracking
+├── Expiry management
+├── Price management (MRP, dealer, cost)
+├── Parts search (by vehicle compatibility)
+├── Stock adjustment
+├── Physical stock audit
+├── Inter-branch transfer
+└── Dead stock identification
+
+INVENTORY FLOW:
+┌───────────────────────────────────────────┐
+│                                            │
+│  Purchase Order ──► GRN (Goods Received)   │
+│                          │                 │
+│                    Stock Updated            │
+│                          │                 │
+│              ┌───────────┴──────────┐      │
+│              │                      │      │
+│        Job Issuance          Direct Sale    │
+│              │                      │      │
+│        Stock Reduced          Stock Reduced │
+│              │                      │      │
+│        ┌─────┴─────┐         Invoice       │
+│        │           │                       │
+│     Used       Returned                    │
+│        │           │                       │
+│     Consumed   Stock Back                  │
+│                                            │
+└───────────────────────────────────────────┘
+
+DEPENDENCIES: Module 2, Module 6
+
+DATA ENTITIES:
+├── parts_master
+├── parts_categories
+├── parts_inventory (branch-wise)
+├── parts_transactions
+├── job_parts_usage
+├── parts_returns
+├── stock_adjustments
+├── stock_audit_records
+├── reorder_rules
+└── inter_branch_transfers
+
+ADMIN CAPABILITIES:
+├── Stock dashboard
+├── Low stock alerts
+├── Dead stock report
+├── Consumption analytics
+├── Vehicle-wise parts mapping
+├── Cost analysis
+├── Vendor price comparison
+├── Audit trail
+└── Reorder automation
+🔵 MODULE 11: Vendor & Procurement
+text
+
+PURPOSE: Supply chain management
+
+SUB-FEATURES:
+├── Vendor database
+├── Vendor categorization
+├── Vendor rating system
+├── Purchase order creation
+├── PO approval workflow
+├── Goods receipt note (GRN)
+├── Invoice matching (3-way)
+├── Payment tracking
+├── Vendor performance analytics
+├── Price comparison
+├── Contract management
+└── Vendor communication log
+
+PO WORKFLOW:
+┌───────────────────────────────────────────┐
+│                                            │
+│  Indent/Request ──► PO Draft               │
+│                        │                   │
+│                   PO Approval              │
+│                        │                   │
+│                   PO to Vendor             │
+│                        │                   │
+│                   Vendor Confirms          │
+│                        │                   │
+│                   Goods Shipped            │
+│                        │                   │
+│                   GRN at Branch            │
+│                        │                   │
+│                   Quality Check            │
+│                        │                   │
+│               ┌────────┴────────┐          │
+│               │                 │          │
+│           Accepted          Rejected       │
+│               │                 │          │
+│          Stock Updated     Return to       │
+│               │             Vendor         │
+│          Invoice Match                     │
+│               │                            │
+│          Payment Due                       │
+│                                            │
+└───────────────────────────────────────────┘
+
+DEPENDENCIES: Module 10
+
+DATA ENTITIES:
+├── vendors
+├── vendor_contacts
+├── vendor_ratings
+├── purchase_orders
+├── po_items
+├── goods_receipt_notes
+├── grn_items
+├── vendor_invoices
+├── vendor_payments
+└── vendor_contracts
+
+ADMIN CAPABILITIES:
+├── Vendor directory
+├── PO management
+├── GRN processing
+├── Payment scheduling
+├── Vendor scorecard
+├── Price analytics
+└── Contract renewals
+🔵 MODULE 12: Billing & Financial
+text
+
+PURPOSE: Revenue management
+
+SUB-FEATURES:
+├── Estimate generation
+├── Proforma invoice
+├── Tax invoice (GST compliant)
+├── Multiple payment modes
+├── Partial payment
+├── Advance payment
+├── Credit note
+├── Discount management
+├── Tax calculation
+├── Payment receipt
+├── Outstanding tracking
+├── Revenue reports
+├── Daily collection summary
+└── Refund management
+
+BILLING FLOW:
+┌───────────────────────────────────────────┐
+│                                            │
+│  Job Card ──► Estimate ──► Customer OK     │
+│                                 │          │
+│                           Work Done        │
+│                                 │          │
+│                         Final Invoice      │
+│                          ╱    │    ╲       │
+│                     Labor  Parts  Other    │
+│                          ╲    │    ╱       │
+│                         Total + GST        │
+│                              │             │
+│                    ┌─────────┴──────────┐  │
+│                    │                    │   │
+│                Full Pay           Partial   │
+│                    │                    │   │
+│                 Receipt          Balance    │
+│                    │              Due       │
+│                Delivered              │     │
+│                              Follow up     │
+│                                            │
+└───────────────────────────────────────────┘
+
+DEPENDENCIES: Module 6, Module 10
+
+DATA ENTITIES:
+├── estimates
+├── estimate_items
+├── invoices
+├── invoice_items
+├── payments
+├── payment_receipts
+├── credit_notes
+├── tax_records
+├── discounts
+└── outstanding_ledger
+
+ADMIN CAPABILITIES:
+├── Invoice dashboard
+├── Collection tracking
+├── Outstanding report
+├── Revenue analytics
+├── Tax reports (GST)
+├── Discount approval
+├── Refund processing
+└── Daily cash summary
+🔵 MODULE 13: Warranty Management
+text
+
+PURPOSE: Warranty claim lifecycle
+
+SUB-FEATURES:
+├── Warranty policy database
+├── Vehicle warranty status check
+├── Claim submission
+├── Claim review workflow
+├── OEM claim forwarding
+├── Claim approval / rejection
+├── Parts coverage check
+├── Labor coverage check
+├── Claim amount calculation
+├── Settlement tracking
+├── Claim analytics
+└── Fraud detection
+
+CLAIM WORKFLOW:
+┌───────────────────────────────────────────┐
+│                                            │
+│  Vehicle arrives ──► Warranty check        │
+│                          │                 │
+│                   ┌──────┴──────┐          │
+│                   │             │          │
+│              In Warranty   Out of          │
+│                   │        Warranty        │
+│                   │             │          │
+│             Claim Created   Normal         │
+│                   │         Billing        │
+│             Evidence +                     │
+│             Photos                         │
+│                   │                        │
+│            Internal Review                 │
+│                   │                        │
+│           ┌───────┴───────┐                │
+│           │               │                │
+│       Approved        Rejected             │
+│           │               │                │
+│      OEM Submitted   Customer              │
+│           │           Informed             │
+│      OEM Decision                          │
+│           │                                │
+│      Settlement                            │
+│                                            │
+└───────────────────────────────────────────┘
+
+DEPENDENCIES: Module 6, Module 12
+
+DATA ENTITIES:
+├── warranty_policies
+├── vehicle_warranty_status
+├── warranty_claims
+├── claim_items
+├── claim_evidence
+├── claim_reviews
+├── oem_submissions
+└── claim_settlements
+
+ADMIN CAPABILITIES:
+├── Warranty check tool
+├── Claim tracker
+├── OEM submission management
+├── Settlement reconciliation
+├── Claim rejection analytics
+├── Revenue from warranty
+└── Fraud detection alerts
+🔵 MODULE 14: Notification & Communication
+text
+
+PURPOSE: Automated + manual communication
+
+SUB-FEATURES:
+├── Multi-channel (SMS, Email, WhatsApp, Push, In-App)
+├── Template management
+├── Auto-trigger on events
+├── Scheduled notifications
+├── Communication preferences
+├── DND / quiet hours
+├── Delivery tracking
+├── Communication history
+├── Bulk messaging
+└── Campaign messaging
+
+AUTO-TRIGGER EVENTS:
+├── Appointment confirmed
+├── Appointment reminder (24h, 2h)
+├── Vehicle checked in
+├── Estimate ready → customer approval
+├── Additional work found → approval
+├── Job completed
+├── QC passed
+├── Ready for delivery
+├── Invoice generated
+├── Payment received
+├── Feedback request (post delivery)
+├── Next service reminder
+├── Insurance/PUC expiry
+└── Recall/campaign notification
+
+DEPENDENCIES: Module 4, Module 6
+
+DATA ENTITIES:
+├── notification_templates
+├── notification_queue
+├── notification_logs
+├── communication_preferences
+└── scheduled_notifications
+
+ADMIN CAPABILITIES:
+├── Template builder
+├── Trigger configuration
+├── Delivery analytics
+├── Failed notification retry
+├── Channel performance
+└── Customer opt-out management
+🔵 MODULE 15: Issue & Escalation Management
+text
+
+PURPOSE: Problem tracking + resolution
+
+SUB-FEATURES:
+├── Issue creation (by technician/advisor/customer)
+├── Issue categorization
+├── Severity classification
+├── Auto-assignment based on category
+├── Escalation matrix (time-based)
+├── Response time tracking
+├── Resolution time tracking
+├── Root cause analysis
+├── Corrective action recording
+├── Issue analytics
+└── Recurring issue detection
+
+ESCALATION MATRIX:
+┌───────────────────────────────────────────────────────┐
+│                                                        │
+│  SEVERITY    L1 (15min)    L2 (30min)    L3 (1hr)     │
+│  ─────────   ──────────   ──────────    ─────────     │
+│  CRITICAL    Team Lead    Svc Manager   Dealer Head   │
+│  HIGH        Team Lead    Svc Manager   Dealer Head   │
+│  MEDIUM      Team Lead    Svc Manager   ---           │
+│  LOW         Team Lead    ---           ---           │
+│                                                        │
+│  CATEGORY    FIRST RESPONDER                          │
+│  ─────────   ────────────────                         │
+│  Technical   Team Lead                                │
+│  Parts       Parts Manager                            │
+│  Customer    Service Advisor                          │
+│  Safety      Service Manager (immediate)              │
+│  Equipment   Workshop Supervisor                      │
+│                                                        │
+└───────────────────────────────────────────────────────┘
+
+DEPENDENCIES: Module 3, Module 6
+
+DATA ENTITIES:
+├── technician_issue_reports (existing)
+├── escalation_matrix
+├── escalation_logs
+├── issue_resolution
+└── root_cause_analysis
+
+ADMIN CAPABILITIES:
+├── Issue dashboard
+├── Escalation monitoring
+├── SLA compliance report
+├── Root cause trends
+├── Recurring issue alerts
+└── Staff accountability
+🔵 MODULE 16: Training & Certification
+text
+
+PURPOSE: Workforce development
+
+SUB-FEATURES:
+├── Skill assessment
+├── Training program creation
+├── Training assignment
+├── Progress tracking
+├── Assessment / quiz
+├── Certification issuance
+├── Certification expiry tracking
+├── Skill-based job routing
+├── Training gap analysis
+└── Compliance tracking
+
+DEPENDENCIES: Module 3
+
+DATA ENTITIES:
+├── skill_matrix
+├── training_programs
+├── training_records
+├── assessments
+├── certifications
+└── training_compliance
+
+ADMIN CAPABILITIES:
+├── Skill matrix dashboard
+├── Training calendar
+├── Certification tracker
+├── Gap analysis report
+├── Compliance dashboard
+└── ROI on training
+🔵 MODULE 17: Recall & Campaign Management
+text
+
+PURPOSE: OEM recalls + service campaigns
+
+SUB-FEATURES:
+├── Campaign creation
+├── Affected vehicle identification
+├── Customer notification
+├── Appointment scheduling
+├── Execution tracking
+├── Completion reporting
+├── OEM reporting
+├── Cost tracking
+└── Compliance monitoring
+
+DEPENDENCIES: Module 4, Module 6, Module 14
+
+DATA ENTITIES:
+├── service_campaigns
+├── campaign_vehicles
+├── campaign_executions
+├── campaign_notifications
+└── campaign_reports
+
+ADMIN CAPABILITIES:
+├── Campaign dashboard
+├── Affected vehicle list
+├── Execution progress
+├── Completion rate
+├── OEM report generation
+└── Revenue from campaigns
+🔵 MODULE 18: Loyalty & Rewards
+text
+
+PURPOSE: Customer retention
+
+SUB-FEATURES:
+├── Points earning rules
+├── Points redemption
+├── Tier system (Silver/Gold/Platinum)
+├── Tier benefits configuration
+├── Points expiry
+├── Referral program
+├── Special offers
+├── Birthday rewards
+└── Loyalty analytics
+
+DEPENDENCIES: Module 4, Module 12
+
+DATA ENTITIES:
+├── loyalty_programs
+├── loyalty_points
+├── loyalty_tiers
+├── loyalty_redemptions
+├── referral_records
+└── special_offers
+
+ADMIN CAPABILITIES:
+├── Program configuration
+├── Points management
+├── Tier management
+├── Redemption tracking
+├── Program ROI
+└── Member analytics
+🔵 MODULE 19: Document Management
+text
+
+PURPOSE: Paperless workshop
+
+SUB-FEATURES:
+├── Document upload/storage
+├── Document categorization
+├── Digital signature capture
+├── Customer consent forms
+├── Insurance document storage
+├── Vehicle documents (RC, PUC)
+├── Invoice/estimate PDF
+├── Photo management
+├── Document sharing
+├── Retention policy
+└── Search & retrieval
+
+DEPENDENCIES: Module 4, Module 6
+
+DATA ENTITIES:
+├── documents
+├── digital_signatures
+├── document_categories
+├── document_sharing_logs
+└── retention_policies
+
+ADMIN CAPABILITIES:
+├── Document repository
+├── Storage analytics
+├── Expiry tracking
+├── Compliance verification
+└── Bulk document operations
+🔵 MODULE 20: Analytics & Business Intelligence
+text
+
+PURPOSE: Data-driven decision making
+
+DASHBOARDS:
+
+1. OPERATIONS DASHBOARD
+   ├── Active jobs count
+   ├── Jobs by status (pie chart)
+   ├── Average TAT
+   ├── Bay utilization
+   ├── Technician utilization
+   ├── Pending QC count
+   ├── Open issues count
+   └── Today's appointments
+
+2. FINANCIAL DASHBOARD
+   ├── Daily/weekly/monthly revenue
+   ├── Revenue by service type
+   ├── Parts revenue vs labor revenue
+   ├── Outstanding payments
+   ├── Warranty revenue
+   ├── Average invoice value
+   ├── Discount given
+   └── Profitability per job
+
+3. CUSTOMER DASHBOARD
+   ├── New vs repeat customers
+   ├── Satisfaction score trend
+   ├── NPS (Net Promoter Score)
+   ├── Complaint resolution rate
+   ├── Customer segment distribution
+   ├── Lifetime value trend
+   └── Churn risk
+
+4. STAFF DASHBOARD
+   ├── Attendance summary
+   ├── Productivity score
+   ├── Jobs per technician
+   ├── Average job time
+   ├── QC rejection rate per tech
+   ├── Training compliance
+   └── Overtime hours
+
+5. INVENTORY DASHBOARD
+   ├── Stock value
+   ├── Low stock items
+   ├── Dead stock
+   ├── Fast moving parts
+   ├── Vendor performance
+   ├── Purchase order status
+   └── Parts consumption trend
+
+6. MANAGEMENT DASHBOARD
+   ├── Branch comparison
+   ├── Month-over-month growth
+   ├── Target vs actual
+   ├── Top performing technicians
+   ├── Customer acquisition cost
+   ├── Revenue per bay
+   └── Forecasting
+
+DEPENDENCIES: All modules
+
+ADMIN CAPABILITIES:
+├── Custom report builder
+├── Export (PDF, Excel, CSV)
+├── Scheduled reports (email)
+├── Drill-down analytics
+├── Date range filters
+├── Branch/dealer filters
+└── Real-time refresh
+📋 SECTION 4: PHASED IMPLEMENTATION ROADMAP
+text
+
+╔══════════════════════════════════════════════════════════════════╗
+║                                                                  ║
+║                    PHASE 1: FOUNDATION                           ║
+║                    Duration: 6-8 Weeks                           ║
+║                    Priority: MUST HAVE                           ║
+║                                                                  ║
+╠══════════════════════════════════════════════════════════════════╣
+║                                                                  ║
+║  Week 1-2: Infrastructure Setup                                  ║
+║  ├── Database schema finalization                                ║
+║  ├── RBAC system implementation                                  ║
+║  ├── API architecture setup                                      ║
+║  ├── Authentication flow                                         ║
+║  └── Base admin panel structure                                  ║
+║                                                                  ║
+║  Week 3-4: Core Operations                                       ║
+║  ├── Job card state machine                                      ║
+║  ├── Job card CRUD + workflow                                    ║
+║  ├── Staff management basics                                     ║
+║  ├── Attendance enhancement                                      ║
+║  └── Existing feature stabilization                              ║
+║                                                                  ║
+║  Week 5-6: Service Execution                                     ║
+║  ├── Checklist system enhancement                                ║
+║  ├── QC workflow completion                                      ║
+║  ├── Tool management enhancement                                 ║
+║  ├── Job timeline/events                                         ║
+║  └── Photo management                                            ║
+║                                                                  ║
+║  Week 7-8: Testing & Stabilization                               ║
+║  ├── Integration testing                                         ║
+║  ├── Bug fixes                                                   ║
+║  ├── Performance optimization                                    ║
+║  ├── Admin panel completion                                      ║
+║  └── User acceptance testing                                     ║
+║                                                                  ║
+║  DELIVERABLES:                                                   ║
+║  ✅ Working RBAC system                                          ║
+║  ✅ Complete job card workflow                                    ║
+║  ✅ Enhanced existing features                                   ║
+║  ✅ Admin panel v1                                               ║
+║  ✅ Basic operational dashboard                                  ║
+║                                                                  ║
+╠══════════════════════════════════════════════════════════════════╣
+║                                                                  ║
+║                    PHASE 2: BUSINESS OPERATIONS                  ║
+║                    Duration: 6-8 Weeks                           ║
+║                    Priority: SHOULD HAVE                         ║
+║                                                                  ║
+╠══════════════════════════════════════════════════════════════════╣
+║                                                                  ║
+║  Week 9-10: Inventory System                                     ║
+║  ├── Parts master catalog                                        ║
+║  ├── Stock management                                            ║
+║  ├── Parts issuance to job                                       ║
+║  ├── Stock alerts                                                ║
+║  └── Basic inventory dashboard                                   ║
+║                                                                  ║
+║  Week 11-12: Billing System                                      ║
+║  ├── Estimate generation                                         ║
+║  ├── Invoice creation                                            ║
+║  ├── Payment processing                                          ║
+║  ├── Tax calculation (GST)                                       ║
+║  └── Payment receipts                                            ║
+║                                                                  ║
+║  Week 13-14: Customer Module                                     ║
+║  ├── Customer profiles                                           ║
+║  ├── Service history                                             ║
+║  ├── Feedback system                                             ║
+║  ├── Basic CRM features                                          ║
+║  └── Customer communication                                     ║
+║                                                                  ║
+║  Week 15-16: Notification System                                 ║
+║  ├── Notification engine                                         ║
+║  ├── Template management                                         ║
+║  ├── Auto-triggers                                               ║
+║  ├── SMS/Email integration                                       ║
+║  └── In-app notifications                                        ║
+║                                                                  ║
+║  DELIVERABLES:                                                   ║
+║  ✅ Complete inventory system                                    ║
+║  ✅ Billing & invoicing                                          ║
+║  ✅ Customer CRM v1                                              ║
+║  ✅ Automated notifications                                      ║
+║  ✅ Financial dashboard                                          ║
+║                                                                  ║
+╠══════════════════════════════════════════════════════════════════╣
+║                                                                  ║
+║                    PHASE 3: PROCESS EXCELLENCE                   ║
+║                    Duration: 6-8 Weeks                           ║
+║                    Priority: GOOD TO HAVE                        ║
+║                                                                  ║
+╠══════════════════════════════════════════════════════════════════╣
+║                                                                  ║
+║  Week 17-18: Vendor Management                                   ║
+║  ├── Vendor database                                             ║
+║  ├── Purchase order workflow                                     ║
+║  ├── GRN processing                                              ║
+║  └── Vendor analytics                                            ║
+║                                                                  ║
+║  Week 19-20: Warranty System                                     ║
+║  ├── Policy management                                           ║
+║  ├── Claim workflow                                              ║
+║  ├── OEM integration prep                                        ║
+║  └── Settlement tracking                                         ║
+║                                                                  ║
+║  Week 21-22: HR Enhancement                                      ║
+║  ├── Shift/roster management                                     ║
+║  ├── Leave management                                            ║
+║  ├── Overtime tracking                                           ║
+║  ├── Escalation matrix                                           ║
+║  └── Issue management enhancement                                ║
+║                                                                  ║
+║  Week 23-24: Cost & Profitability                                ║
+║  ├── Job costing                                                 ║
+║  ├── Cost center setup                                           ║
+║  ├── Revenue tracking                                            ║
+║  ├── Profitability reports                                       ║
+║  └── Management dashboard                                        ║
+║                                                                  ║
+║  DELIVERABLES:                                                   ║
+║  ✅ Supply chain management                                      ║
+║  ✅ Warranty handling                                            ║
+║  ✅ Complete HR module                                           ║
+║  ✅ Financial analytics                                          ║
+║  ✅ Management reporting                                         ║
+║                                                                  ║
+╠══════════════════════════════════════════════════════════════════╣
+║                                                                  ║
+║                    PHASE 4: GROWTH & ENGAGEMENT                  ║
+║                    Duration: 6-8 Weeks                           ║
+║                    Priority: NICE TO HAVE                        ║
+║                                                                  ║
+╠══════════════════════════════════════════════════════════════════╣
+║                                                                  ║
+║  Week 25-26: Customer Engagement                                 ║
+║  ├── Loyalty program                                             ║
+║  ├── Referral system                                             ║
+║  ├── Campaign management                                         ║
+║  └── Customer app features                                       ║
+║                                                                  ║
+║  Week 27-28: Training & Quality                                  ║
+║  ├── Skill matrix                                                ║
+║  ├── Training management                                         ║
+║  ├── Certification tracking                                      ║
+║  └── Skill-based routing                                         ║
+║                                                                  ║
+║  Week 29-30: Document & Communication                            ║
+║  ├── Document management system                                  ║
+║  ├── Digital signatures                                          ║
+║  ├── WhatsApp integration                                        ║
+║  └── Communication hub                                           ║
+║                                                                  ║
+║  Week 31-32: Multi-branch & Scaling                              ║
+║  ├── Branch management                                           ║
+║  ├── Inter-branch features                                       ║
+║  ├── Branch comparison analytics                                 ║
+║  └── Webhook/API hub                                             ║
+║                                                                  ║
+║  DELIVERABLES:                                                   ║
+║  ✅ Customer loyalty system                                      ║
+║  ✅ Training management                                          ║
+║  ✅ Paperless operations                                         ║
+║  ✅ Multi-branch ready                                           ║
+║  ✅ External integrations                                        ║
+║                                                                  ║
+╠══════════════════════════════════════════════════════════════════╣
+║                                                                  ║
+║                    PHASE 5: INTELLIGENCE                         ║
+║                    Duration: 8-12 Weeks                          ║
+║                    Priority: FUTURE VISION                       ║
+║                                                                  ║
+╠══════════════════════════════════════════════════════════════════╣
+║                                                                  ║
+║  Week 33-36: Advanced Analytics                                  ║
+║  ├── BI dashboard suite                                          ║
+║  ├── Custom report builder                                       ║
+║  ├── Predictive analytics                                        ║
+║  └── Forecasting models                                          ║
+║                                                                  ║
+║  Week 37-40: AI/ML Features                                      ║
+║  ├── Smart technician assignment                                 ║
+║  ├── Job duration prediction                                     ║
+║  ├── Parts demand forecasting                                    ║
+║  ├── Customer churn prediction                                   ║
+║  └── Anomaly detection                                           ║
+║                                                                  ║
+║  Week 41-44: Advanced Platform                                   ║
+║  ├── Vehicle digital twin                                        ║
+║  ├── Geofencing                                                  ║
+║  ├── Configurable workflow engine                                ║
+║  ├── Offline mode                                                ║
+║  └── Mobile app enhancement                                      ║
+║                                                                  ║
+║  DELIVERABLES:                                                   ║
+║  ✅ Business intelligence suite                                  ║
+║  ✅ AI-powered features                                          ║
+║  ✅ Advanced platform capabilities                               ║
+║  ✅ Enterprise-grade system                                      ║
+║                                                                  ║
+╚══════════════════════════════════════════════════════════════════╝
+📋 SECTION 5: TEAM STRUCTURE & RESOURCE PLAN
+text
+
+┌─────────────────────────────────────────────────────────────┐
+│                    TEAM STRUCTURE                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  CORE TEAM (Phase 1-2: Minimum viable)                      │
+│  ════════════════════════════════════                        │
+│                                                              │
+│  👤 Project Lead / Architect ────────── 1 person             │
+│     ├── System design decisions                              │
+│     ├── Schema design                                        │
+│     ├── Code review                                          │
+│     └── Sprint planning                                      │
+│                                                              │
+│  👤 Full-Stack Developer (Senior) ───── 1-2 persons          │
+│     ├── API development                                      │
+│     ├── Database queries                                     │
+│     ├── Business logic                                       │
+│     └── Admin panel                                          │
+│                                                              │
+│  👤 Frontend Developer ─────────────── 1 person              │
+│     ├── Admin panel UI                                       │
+│     ├── Customer facing UI                                   │
+│     └── Mobile responsiveness                                │
+│                                                              │
+│  👤 Mobile Developer ───────────────── 1 person              │
+│     ├── Technician app                                       │
+│     └── Customer app                                         │
+│                                                              │
+│  👤 QA / Tester ────────────────────── 1 person              │
+│     ├── Test case writing                                    │
+│     ├── Manual testing                                       │
+│     └── Bug reporting                                        │
+│                                                              │
+│  TOTAL CORE: 5-6 persons                                    │
+│                                                              │
+│  ─────────────────────────────────────────────────           │
+│                                                              │
+│  EXTENDED TEAM (Phase 3-5: Growth)                          │
+│  ════════════════════════════════                            │
+│                                                              │
+│  👤 Backend Developer (Additional) ─── 1-2 persons           │
+│  👤 DevOps Engineer ────────────────── 1 person              │
+│  👤 UI/UX Designer ─────────────────── 1 person              │
+│  👤 Data Analyst ───────────────────── 1 person              │
+│  👤 Technical Writer ───────────────── 1 person (part-time)  │
+│                                                              │
+│  TOTAL EXTENDED: 4-6 persons                                │
+│                                                              │
+│  GRAND TOTAL: 9-12 persons (at peak)                        │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+📅 Sprint Structure
+text
+
+SPRINT DURATION: 2 Weeks
+
+SPRINT CEREMONY:
+├── Monday (Day 1):      Sprint Planning (2 hours)
+├── Daily:               Standup (15 min)
+├── Wednesday (Week 2):  Mid-sprint review (30 min)
+├── Friday (Day 10):     Sprint Review + Demo (1 hour)
+└── Friday (Day 10):     Retrospective (30 min)
+
+VELOCITY TARGET:
+├── Phase 1:  40-50 story points / sprint
+├── Phase 2:  50-60 story points / sprint
+├── Phase 3+: 60-70 story points / sprint
+
+STORY POINT REFERENCE:
+├── 1 point:  Simple CRUD, minor UI change
+├── 2 points: Standard feature with validation
+├── 3 points: Feature with business logic
+├── 5 points: Complex feature with workflow
+├── 8 points: Major feature with integrations
+├── 13 points: Epic-level complex module
+📋 SECTION 6: TECH STACK RECOMMENDATION
+text
+
+┌─────────────────────────────────────────────────────────────┐
+│                    RECOMMENDED TECH STACK                     │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  FRONTEND (Admin Panel)                                      │
+│  ├── Next.js 14+ (App Router)                               │
+│  ├── TypeScript                                              │
+│  ├── Tailwind CSS                                            │
+│  ├── shadcn/ui components                                    │
+│  ├── React Query (data fetching)                            │
+│  ├── Zustand (state management)                             │
+│  ├── Recharts (analytics charts)                            │
+│  └── React Hook Form + Zod (forms + validation)            │
+│                                                              │
+│  MOBILE (Technician + Customer App)                         │
+│  ├── React Native / Flutter                                  │
+│  ├── Offline-first architecture                              │
+│  ├── GPS integration                                         │
+│  ├── Camera integration                                      │
+│  └── Push notification (FCM)                                 │
+│                                                              │
+│  BACKEND                                                     │
+│  ├── Node.js + Express / Next.js API routes                 │
+│  ├── TypeScript                                              │
+│  ├── Prisma ORM                                              │
+│  ├── Zod (validation)                                        │
+│  └── Bull/BullMQ (job queue)                                 │
+│                                                              │
+│  DATABASE                                                    │
+│  ├── PostgreSQL (primary)                                    │
+│  ├── Redis (caching + sessions + queues)                    │
+│  └── Supabase (if using Supabase ecosystem)                 │
+│                                                              │
+│  FILE STORAGE                                                │
+│  ├── Supabase Storage / AWS S3                              │
+│  └── CDN for images                                          │
+│                                                              │
+│  AUTHENTICATION                                              │
+│  ├── Supabase Auth / NextAuth                                │
+│  ├── JWT tokens                                              │
+│  └── OTP service (MSG91 / Twilio)                           │
+│                                                              │
+│  NOTIFICATIONS                                               │
+│  ├── SMS: MSG91 / Twilio                                     │
+│  ├── Email: SendGrid / Resend                               │
+│  ├── WhatsApp: WhatsApp Business API                        │
+│  ├── Push: Firebase Cloud Messaging                          │
+│  └── In-App: WebSocket / Server-Sent Events                 │
+│                                                              │
+│  MONITORING & LOGGING                                        │
+│  ├── Sentry (error tracking)                                 │
+│  ├── Vercel Analytics / PostHog                             │
+│  └── Pino / Winston (server logging)                        │
+│                                                              │
+│  DEPLOYMENT                                                  │
+│  ├── Vercel (frontend)                                       │
+│  ├── Railway / Render / AWS (backend)                       │
+│  ├── GitHub Actions (CI/CD)                                  │
+│  └── Docker (containerization)                               │
+│                                                              │
+│  PAYMENTS                                                    │
+│  ├── Razorpay                                                │
+│  ├── UPI integration                                         │
+│  └── Payment reconciliation                                  │
+│                                                              │
+│  PDF GENERATION                                              │
+│  ├── Puppeteer / React-PDF                                   │
+│  └── Invoice / estimate templates                            │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+📋 SECTION 7: RISK MANAGEMENT
+text
+
+┌──────────────────────────────────────────────────────────────────────┐
+│                         RISK REGISTER                                │
+├────┬──────────────────────┬──────────┬──────────┬───────────────────┤
+│ #  │ Risk                 │ Impact   │ Probability │ Mitigation      │
+├────┼──────────────────────┼──────────┼──────────┼───────────────────┤
+│ 1  │ Scope creep          │ 🔴 HIGH  │ 🔴 HIGH  │ Strict phase     │
+│    │                      │          │          │ boundaries +      │
+│    │                      │          │          │ change request    │
+│    │                      │          │          │ process           │
+├────┼──────────────────────┼──────────┼──────────┼───────────────────┤
+│ 2  │ Team bandwidth       │ 🔴 HIGH  │ 🟡 MED  │ Phased hiring +  │
+│    │ shortage             │          │          │ outsource non-    │
+│    │                      │          │          │ core tasks        │
+├────┼──────────────────────┼──────────┼──────────┼───────────────────┤
+│ 3  │ Data migration       │ 🟡 MED   │ 🟡 MED  │ Early migration  │
+│    │ complexity           │          │          │ planning +        │
+│    │                      │          │          │ parallel run      │
+├────┼──────────────────────┼──────────┼──────────┼───────────────────┤
+│ 4  │ User adoption        │ 🔴 HIGH  │ 🟡 MED  │ Training program  │
+│    │ resistance           │          │          │ + gradual rollout │
+│    │                      │          │          │ + champion users  │
+├────┼──────────────────────┼──────────┼──────────┼───────────────────┤
+│ 5  │ Performance issues   │ 🟡 MED   │ 🟢 LOW  │ Load testing +   │
+│    │ at scale             │          │          │ DB optimization + │
+│    │                      │          │          │ caching strategy  │
+├────┼──────────────────────┼──────────┼──────────┼───────────────────┤
+│ 6  │ Third-party API      │ 🟡 MED   │ 🟡 MED  │ Fallback plans + │
+│    │ dependency           │          │          │ queue-based       │
+│    │                      │          │          │ retry mechanism   │
+├────┼──────────────────────┼──────────┼──────────┼───────────────────┤
+│ 7  │ Security breach      │ 🔴 HIGH  │ 🟢 LOW  │ Security audit +  │
+│    │                      │          │          │ RBAC + encryption │
+│    │                      │          │          │ + regular patches │
+├────┼──────────────────────┼──────────┼──────────┼───────────────────┤
+│ 8  │ Feature complexity   │ 🟡 MED   │ 🟡 MED  │ MVP approach +   │
+│    │ underestimation      │          │          │ buffer in         │
+│    │                      │          │          │ estimates         │
+├────┼──────────────────────┼──────────┼──────────┼───────────────────┤
+│ 9  │ Offline mode         │ 🟡 MED   │ 🟡 MED  │ Progressive      │
+│    │ challenges           │          │          │ implementation +  │
+│    │                      │          │          │ sync conflict     │
+│    │                      │          │          │ resolution        │
+├────┼──────────────────────┼──────────┼──────────┼───────────────────┤
+│ 10 │ Regulatory           │ 🟢 LOW   │ 🟢 LOW  │ GST compliance   │
+│    │ compliance           │          │          │ built-in +        │
+│    │                      │          │          │ legal review      │
+└────┴──────────────────────┴──────────┴──────────┴───────────────────┘
+📋 SECTION 8: SUCCESS METRICS & KPIs
+text
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    SUCCESS METRICS                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  📊 OPERATIONAL KPIs                                             │
+│  ├── Job completion rate: Target > 95%                          │
+│  ├── Average TAT reduction: Target 30%                          │
+│  ├── QC first-pass rate: Target > 90%                           │
+│  ├── Bay utilization: Target > 80%                              │
+│  ├── Technician utilization: Target > 75%                       │
+│  ├── Checklist compliance: Target 100%                          │
+│  └── Issue resolution time: Target < 2 hours                   │
+│                                                                  │
+│  💰 FINANCIAL KPIs                                               │
+│  ├── Revenue per bay per day                                    │
+│  ├── Parts revenue growth: Target 20% YoY                      │
+│  ├── Warranty recovery rate: Target > 85%                       │
+│  ├── Invoice accuracy: Target 99.9%                             │
+│  ├── Outstanding reduction: Target 40%                          │
+│  └── Profit margin improvement: Target 15%                     │
+│                                                                  │
+│  😊 CUSTOMER KPIs                                                │
+│  ├── CSAT score: Target > 4.5/5                                │
+│  ├── NPS: Target > 60                                           │
+│  ├── Repeat rate: Target > 70%                                  │
+│  ├── Complaint resolution: Target < 24 hours                   │
+│  ├── Appointment no-show: Target < 10%                         │
+│  └── Customer wait time: Target < 15 min                       │
+│                                                                  │
+│  👥 STAFF KPIs                                                   │
+│  ├── Attendance rate: Target > 95%                              │
+│  ├── Productivity score: Target > 80%                           │
+│  ├── Training compliance: Target 100%                           │
+│  ├── Tool return rate: Target 100%                              │
+│  └── Issue escalation rate: Target < 5%                        │
+│                                                                  │
+│  🖥️ SYSTEM KPIs                                                 │
+│  ├── System uptime: Target 99.9%                                │
+│  ├── API response time: Target < 200ms                         │
+│  ├── Mobile app crash rate: Target < 0.1%                      │
+│  ├── User adoption rate: Target > 90% in 3 months             │
+│  └── Data accuracy: Target 99.9%                                │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+📋 SECTION 9: DATA FLOW — REAL WORLD SCENARIOS
+🔄 Scenario 1: Complete Service Visit (Happy Path)
+text
+
+CUSTOMER JOURNEY                    SYSTEM ACTIONS
+━━━━━━━━━━━━━━━━                   ━━━━━━━━━━━━━━
+
+1. Customer calls/books online
+   │                                → Appointment created
+   │                                → Slot blocked
+   │                                → Confirmation SMS/WhatsApp
+   │
+2. Reminder (24h before)
+   │                                → Auto notification triggered
+   │
+3. Customer arrives
+   │                                → Check-in by Service Advisor
+   │                                → Job card created (CREATED)
+   │                                → Vehicle photos (before)
+   │                                → Multi-point inspection
+   │                                → Known issues from history loaded
+   │
+4. Diagnosis
+   │                                → Status → DIAGNOSED
+   │                                → Issues documented
+   │                                → Photos attached
+   │
+5. Estimate prepared
+   │                                → Status → ESTIMATE_SENT
+   │                                → Parts checked in inventory
+   │                                → Labor hours estimated
+   │                                → Total calculated with GST
+   │                                → Estimate sent to customer
+   │
+6. Customer approves
+   │                                → Status → CUSTOMER_APPROVED
+   │                                → Digital signature captured
+   │                                → Parts reserved in inventory
+   │
+7. Job assigned
+   │                                → Technician assigned (skill-based)
+   │                                → Status → IN_PROGRESS
+   │                                → Technician notified on app
+   │                                → Timer started
+   │
+8. Technician works
+   │                                → Tools borrowed (logged)
+   │                                → Parts issued from store
+   │                                → Checklist items completed
+   │                                → Progress photos uploaded
+   │                                → Time logs recorded
+   │                                → Break times logged
+   │
+9. Additional work found
+   │                                → Status → ADDITIONAL_WORK
+   │                                → Customer notified
+   │                                → Revised estimate sent
+   │                                → Customer approves/declines
+   │                                → Status → IN_PROGRESS
+   │
+10. Work completed
+    │                               → Status → QC_PENDING
+    │                               → QC request created
+    │                               → Tools returned (logged)
+    │                               → Completion photos uploaded
+    │
+11. QC inspection
+    │                               → QC inspector reviews
+    │                               → Checklist verified
+    │                               → Photos compared
+    │
+    ├── If PASS                     → Status → QC_APPROVED
+    │                               → Status → COMPLETED
+    │
+    └── If FAIL                     → Status → QC_REJECTED
+                                    → Rework notes added
+                                    → Back to technician
+                                    → Status → IN_PROGRESS
+                                    → (Repeat from step 8)
+
+12. Invoice generated
+    │                               → Status → INVOICED
+    │                               → Final invoice with GST
+    │                               → Parts cost + labor cost
+    │                               → Warranty deductions if any
+    │                               → Discounts applied
+    │                               → PDF generated
+    │
+13. Payment
+    │                               → Payment collected
+    │                               → Status → PAID
+    │                               → Receipt generated
+    │                               → Loyalty points added
+    │
+14. Vehicle delivery
+    │                               → Status → DELIVERED
+    │                               → After photos
+    │                               → Customer sign-off
+    │                               → Gate pass generated
+    │
+15. Post service
+    │                               → Feedback request (next day)
+    │                               → Next service date calculated
+    │                               → Service history updated
+    │                               → Vehicle digital profile updated
+    │                               → Customer lifetime value updated
+    │
+16. Follow up
+                                    → Next service reminder (auto)
+                                    → Insurance expiry reminder
+                                    → Campaign notifications
+🔄 Scenario 2: Warranty Claim Flow
+text
+
+1. Vehicle arrives with complaint
+   │
+2. Warranty check
+   │                               → System checks policy
+   │                               → Vehicle age/mileage verified
+   │
+   ├── IN WARRANTY
+   │   │
+   │   3. Claim created
+   │   │                           → Evidence photos
+   │   │                           → Defect description
+   │   │                           → Parts identified
+   │   │
+   │   4. Internal review
+   │   │                           → Service manager reviews
+   │   │                           → Approves for OEM submission
+   │   │
+   │   5. OEM submission
+   │   │                           → Claim forwarded to OEM
+   │   │                           → Reference number received
+   │   │
+   │   6. OEM decision
+   │   │
+   │   ├── APPROVED
+   │   │   │                       → Parts covered
+   │   │   │                       → Labor covered
+   │   │   │                       → Invoice adjusted
+   │   │   │                       → Settlement tracked
+   │   │
+   │   └── REJECTED
+   │       │                       → Reason recorded
+   │       │                       → Customer informed
+   │       │                       → Normal billing
+   │
+   └── OUT OF WARRANTY
+       │                           → Normal job card flow
+       │                           → Regular billing
+🔄 Scenario 3: Technician Daily Flow
+text
+
+MORNING
+━━━━━━━
+07:55  Arrives at workshop
+       │                           → Opens technician app
+       │                           → GPS verified (geofence check)
+       │                           → Clock-in recorded
+       │                           → Device registered
+
+08:00  Checks assigned jobs
+       │                           → Job list loaded
+       │                           → Priority sorted
+       │                           → Vehicle details shown
+       │                           → Customer notes visible
+
+WORK SESSION 1
+━━━━━━━━━━━━━
+08:15  Starts Job #1234
+       │                           → "Start Job" tapped
+       │                           → Timer begins
+       │                           → Status → IN_PROGRESS
+
+08:20  Borrows special tool
+       │                           → Tool scanned/selected
+       │                           → Tool checkout recorded
+       │                           → Tool linked to job
+
+08:30  Takes before photos
+       │                           → Camera captures
+       │                           → Auto-tagged with job ID
+       │                           → GPS + timestamp embedded
+
+09:30  Completes checklist items
+       │                           → Each item checked
+       │                           → Condition noted
+       │                           → Photo evidence per item
+
+10:00  Finds additional issue
+       │                           → Issue reported in app
+       │                           → Photo attached
+       │                           → Severity selected
+       │                           → Admin notified
+       │                           → Customer approval requested
+
+BREAK
+━━━━━
+10:30  Tea break
+       │                           → "Break" tapped
+       │                           → Break timer starts
+       │                           → Break type selected
+
+10:45  Break ends
+       │                           → "Resume" tapped
+       │                           → Break duration recorded
+
+WORK SESSION 2
+━━━━━━━━━━━━━
+10:45  Continues Job #1234
+       │                           → Timer resumes
+
+12:00  Requests parts
+       │                           → Parts list submitted
+       │                           → Parts manager notified
+       │                           → Parts issued from store
+       │                           → Stock auto-updated
+
+12:30  Job paused (waiting parts)
+       │                           → Status → WAITING_PARTS
+       │                           → Timer paused
+
+12:35  Starts Job #1235
+       │                           → New job timer begins
+
+LUNCH
+━━━━━
+13:00  Lunch break
+       │                           → Auto break logged
+
+14:00  Back from lunch
+       │                           → Resume logged
+
+AFTERNOON
+━━━━━━━━━
+14:00  Parts arrived for #1234
+       │                           → Resumes Job #1234
+       │                           → Status → IN_PROGRESS
+       │                           → Timer resumes
+
+15:00  Job #1234 completed
+       │                           → After photos taken
+       │                           → Tools returned
+       │                           → QC requested
+       │                           → Status → QC_PENDING
+
+15:30  Continues Job #1235
+       │                           → (similar flow)
+
+END OF DAY
+━━━━━━━━━━
+17:00  Day summary
+       │                           → Jobs completed: 3
+       │                           → Jobs in progress: 1
+       │                           → Total productive hours: 7.5
+       │                           → Breaks: 1.5 hours
+       │                           → Tools all returned ✅
+
+17:30  Clock-out
+       │                           → GPS verified
+       │                           → Attendance completed
+       │                           → Daily metrics calculated
+📋 SECTION 10: ADMIN PANEL UI MODULE PLAN
+text
+
+┌─────────────────────────────────────────────────────────────┐
+│                  ADMIN PANEL STRUCTURE                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  📊 DASHBOARD (Landing page)                                 │
+│  ├── Today's stats cards                                     │
+│  │   ├── Active jobs                                         │
+│  │   ├── Completed today                                     │
+│  │   ├── Revenue today                                       │
+│  │   ├── Staff present                                       │
+│  │   ├── Pending QC                                          │
+│  │   └── Open issues                                         │
+│  ├── Job status distribution (pie)                           │
+│  ├── Revenue trend (line)                                    │
+│  ├── Upcoming appointments (list)                            │
+│  ├── Recent activities (timeline)                            │
+│  └── Alerts / notifications                                  │
+│                                                              │
+│  📋 JOB MANAGEMENT                                           │
+│  ├── Job Board (Kanban view by status)                       │
+│  ├── Job List (Table view with filters)                      │
+│  ├── Job Detail page                                         │
+│  │   ├── Timeline tab                                        │
+│  │   ├── Checklist tab                                       │
+│  │   ├── Photos tab                                          │
+│  │   ├── Parts tab                                           │
+│  │   ├── Billing tab                                         │
+│  │   └── Communication tab                                   │
+│  ├── Create new job                                          │
+│  └── Job analytics                                           │
+│                                                              │
+│  👥 STAFF MANAGEMENT                                         │
+│  ├── Staff directory                                         │
+│  ├── Staff profile (detailed)                                │
+│  ├── Attendance board                                        │
+│  │   ├── Today view                                          │
+│  │   ├── Calendar view                                       │
+│  │   └── Monthly summary                                     │
+│  ├── Shift roster                                            │
+│  ├── Leave management                                        │
+│  ├── Productivity dashboard                                  │
+│  ├── Skill matrix                                            │
+│  └── Training records                                        │
+│                                                              │
+│  📦 INVENTORY                                                │
+│  ├── Parts catalog                                           │
+│  ├── Stock levels                                            │
+│  ├── Low stock alerts                                        │
+│  ├── Parts issuance                                          │
+│  ├── Purchase orders                                         │
+│  ├── GRN processing                                          │
+│  ├── Stock adjustment                                        │
+│  ├── Stock audit                                             │
+│  └── Inventory analytics                                     │
+│                                                              │
+│  🔧 TOOLS                                                    │
+│  ├── Tool inventory                                          │
+│  ├── Active checkouts                                        │
+│  ├── Overdue tools                                           │
+│  ├── Maintenance schedule                                    │
+│  └── Usage analytics                                         │
+│                                                              │
+│  📅 APPOINTMENTS                                             │
+│  ├── Calendar view                                           │
+│  ├── Slot management                                         │
+│  ├── Capacity planner                                        │
+│  └── No-show tracking                                        │
+│                                                              │
+│  👤 CUSTOMERS                                                │
+│  ├── Customer directory                                      │
+│  ├── Customer 360° view                                      │
+│  ├── Vehicle database                                        │
+│  ├── Service history                                         │
+│  ├── Feedback & ratings                                      │
+│  ├── Complaints                                              │
+│  └── Segments                                                │
+│                                                              │
+│  ✅ QUALITY CONTROL                                          │
+│  ├── QC queue                                                │
+│  ├── QC review interface                                     │
+│  ├── Rejection analytics                                     │
+│  └── Quality trends                                          │
+│                                                              │
+│  ⚠️ ISSUES                                                   │
+│  ├── Issue board                                             │
+│  ├── Escalation tracker                                      │
+│  ├── Resolution log                                          │
+│  └── Issue analytics                                         │
+│                                                              │
+│  🛡️ WARRANTY                                                 │
+│  ├── Warranty checker                                        │
+│  ├── Claims dashboard                                        │
+│  ├── OEM submissions                                         │
+│  └── Settlement tracker                                      │
+│                                                              │
+│  💰 FINANCE                                                  │
+│  ├── Invoice management                                      │
+│  ├── Payment tracking                                        │
+│  ├── Outstanding report                                      │
+│  ├── Revenue dashboard                                       │
+│  ├── Profitability analysis                                  │
+│  └── Tax reports                                             │
+│                                                              │
+│  🏪 VENDOR                                                   │
+│  ├── Vendor directory                                        │
+│  ├── Purchase orders                                         │
+│  ├── Vendor ratings                                          │
+│  └── Payment tracking                                        │
+│                                                              │
+│  📢 COMMUNICATIONS                                           │
+│  ├── Notification center                                     │
+│  ├── Template manager                                        │
+│  ├── Campaign builder                                        │
+│  ├── Communication log                                       │
+│  └── Delivery analytics                                      │
+│                                                              │
+│  🎁 LOYALTY                                                  │
+│  ├── Program settings                                        │
+│  ├── Member list                                             │
+│  ├── Points ledger                                           │
+│  └── Program analytics                                       │
+│                                                              │
+│  📊 REPORTS                                                  │
+│  ├── Operations reports                                      │
+│  ├── Financial reports                                       │
+│  ├── Customer reports                                        │
+│  ├── Staff reports                                           │
+│  ├── Inventory reports                                       │
+│  ├── Custom report builder                                   │
+│  └── Scheduled reports                                       │
+│                                                              │
+│  ⚙️ SETTINGS                                                 │
+│  ├── Dealer settings                                         │
+│  ├── Branch settings                                         │
+│  ├── Role management                                         │
+│  ├── Permission matrix                                       │
+│  ├── Checklist templates                                     │
+│  ├── Notification rules                                      │
+│  ├── Tax configuration                                       │
+│  ├── SLA configuration                                       │
+│  ├── Escalation rules                                        │
+│  ├── Shift templates                                         │
+│  └── System preferences                                      │
+│                                                              │
+│  🔒 SECURITY                                                 │
+│  ├── User management                                         │
+│  ├── Login history                                           │
+│  ├── Device management                                       │
+│  ├── Audit logs                                              │
+│  └── API keys                                                │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘

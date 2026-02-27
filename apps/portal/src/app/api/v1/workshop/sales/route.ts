@@ -24,6 +24,9 @@ export async function POST(req: NextRequest) {
             laborCost
         } = body;
 
+        // transport is ignored for now as per user logic
+        void transport;
+
         // Create Sale in transaction
         const sale = await prisma.$transaction(async (tx) => {
             let totalCost = 0;
@@ -107,7 +110,7 @@ export async function POST(req: NextRequest) {
 
             // 4. Update Job Card status if it was from a job
             if (jobCardId) {
-                const jobCard = await tx.job_cards.findUnique({ where: { id: jobCardId } });
+                // If we have a job card, we might want to store labor cost in other_charges
 
                 // If we have a job card, we might want to store labor cost in other_charges
                 // This is a mapping decision.
@@ -129,13 +132,14 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ success: true, data: sale });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Sale Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: (error as Error).message }, { status: 500 });
     }
 }
 
-export async function GET(req: NextRequest) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function GET(_req: NextRequest) {
     try {
         const user = await getCurrentUser();
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -158,8 +162,8 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json({ success: true, data: formattedSales });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Fetch Sales Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: (error as Error).message }, { status: 500 });
     }
 }

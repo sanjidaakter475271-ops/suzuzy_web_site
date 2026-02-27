@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
     try {
         const technician = await getCurrentTechnician();
         if (!technician || !technician.serviceStaffId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
         const { searchParams } = new URL(req.url);
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
                                 bike_models: true,
                             }
                         },
-                        profiles: true, // Customer profile
+                        profiles: true,
                     }
                 },
                 service_tasks: true,
@@ -49,7 +49,6 @@ export async function GET(req: NextRequest) {
 
         const total = await prisma.job_cards.count({ where: query });
 
-        // Transform to match mobile app JobCard interface
         const formattedJobs = jobs.map((job: any) => {
             const ticket = job.service_tickets;
             const vehicle = ticket?.service_vehicles;
@@ -89,6 +88,7 @@ export async function GET(req: NextRequest) {
         });
 
         return NextResponse.json({
+            success: true,
             data: formattedJobs,
             meta: {
                 total,
@@ -99,6 +99,6 @@ export async function GET(req: NextRequest) {
         });
     } catch (error: any) {
         console.error('Error fetching jobs:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
     }
 }

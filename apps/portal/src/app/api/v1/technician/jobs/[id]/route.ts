@@ -66,21 +66,18 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
         if (!job) {
             return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
-
-        // Use any cast to bypass TypeScript inference issues with complex Prisma includes
-        const jobData = job as any;
-        const ticket = jobData.service_tickets;
+        const ticket = job.service_tickets;
         const vehicle = ticket?.service_vehicles;
-        const latestQC = jobData.qc_requests?.[0];
+        const latestQC = job.qc_requests?.[0];
 
         // Calculate checklist stats
-        const totalChecklist = jobData.service_checklist_items?.length || 0;
-        const completedChecklist = jobData.service_checklist_items?.filter((i: any) => i.is_completed).length || 0;
+        const totalChecklist = job.service_checklist_items?.length || 0;
+        const completedChecklist = job.service_checklist_items?.filter(i => i.is_completed).length || 0;
 
         const formattedJob = {
-            id: jobData.id,
+            id: job.id,
             jobNumber: ticket?.service_number || 'N/A',
-            status: jobData.status,
+            status: job.status,
             qc_status: latestQC ? latestQC.status : null,
             ticket: ticket ? {
                 id: ticket.id,
@@ -98,17 +95,17 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
                     chassisNumber: vehicle.chassis_number || 'N/A',
                 } : null,
             } : null,
-            tasks: jobData.service_tasks?.map((t: any) => ({
+            tasks: job.service_tasks?.map((t) => ({
                 id: t.id,
-                name: t.task_name || 'Unnamed Task',
+                name: t.name || 'Unnamed Task',
                 status: t.status,
             })) || [],
-            parts: jobData.parts_usage?.map((p: any) => ({
+            parts: job.parts_usage?.map((p) => ({
                 id: p.id,
                 name: p.part_variants?.parts?.name || p.part_variants?.brand || 'Unknown Part',
                 quantity: p.quantity,
             })) || [],
-            requisitions: jobData.service_requisitions?.map((r: any) => ({
+            requisitions: job.service_requisitions?.map((r) => ({
                 id: r.id,
                 productName: r.products?.name || 'Unknown',
                 quantity: r.quantity,
@@ -116,22 +113,22 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
                 notes: r.notes,
                 createdAt: r.created_at
             })) || [],
-            photos: jobData.job_photos?.map((p: any) => ({
+            photos: job.job_photos?.map((p) => ({
                 id: p.id,
-                url: p.photo_url,
-                type: p.photo_type,
+                url: p.image_url,
+                type: p.tag,
             })) || [],
             checklist_stats: {
                 total: totalChecklist,
                 completed: completedChecklist,
             },
-            time_logs: jobData.technician_time_logs || [],
-            notes: jobData.notes,
-            created_at: jobData.created_at,
+            time_logs: job.technician_time_logs || [],
+            notes: job.notes,
+            created_at: job.created_at,
         };
 
         return NextResponse.json(formattedJob);
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Error fetching job details:', error);
         return NextResponse.json(
             { error: 'Internal server error' },

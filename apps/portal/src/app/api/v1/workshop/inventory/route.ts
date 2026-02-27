@@ -1,7 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma/client";
 import { getCurrentUser } from "@/lib/auth/get-user";
-import { broadcast } from "@/lib/socket-server";
+import { broadcastEvent } from "@/lib/socket-server";
+
+// Helper to convert Prisma Decimals to Numbers
+const serialize = (obj: any): any => {
+    if (obj === null || obj === undefined) return obj;
+    if (Array.isArray(obj)) return obj.map(serialize);
+    if (typeof obj === 'object') {
+        if (obj.constructor && obj.constructor.name === 'Decimal') {
+            return Number(obj);
+        }
+        const newObj: any = {};
+        for (const key in obj) {
+            newObj[key] = serialize(obj[key]);
+        }
+        return newObj;
+    }
+    return obj;
+};
 
 /**
  * GET: Fetch workshop products for inventory management and requisition search
@@ -10,6 +27,8 @@ export async function GET(req: NextRequest) {
     try {
         const user = await getCurrentUser();
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        const dealerId = user.dealerId;
+        if (!dealerId) return NextResponse.json({ error: "Dealer context required" }, { status: 400 });
 
         const { searchParams } = new URL(req.url);
         const includeMovements = searchParams.get('movements') === 'true';
@@ -17,7 +36,7 @@ export async function GET(req: NextRequest) {
         if (includeMovements) {
             const movements = await prisma.inventory_movements.findMany({
                 where: {
-                    dealer_id: user.dealerId || ""
+                    dealer_id: dealerId
                 },
                 include: {
                     products: { select: { name: true } },
@@ -26,12 +45,12 @@ export async function GET(req: NextRequest) {
                 orderBy: { created_at: 'desc' },
                 take: 50
             });
-            return NextResponse.json({ success: true, data: movements });
+            return NextResponse.json({ success: true, data: serialize(movements) });
         }
 
         const products = await prisma.products.findMany({
             where: {
-                dealer_id: user.dealerId || "",
+                dealer_id: dealerId,
                 status: 'approved',
             },
             include: {
@@ -91,6 +110,8 @@ export async function POST(req: NextRequest) {
     try {
         const user = await getCurrentUser();
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        const dealerId = user.dealerId;
+        if (!dealerId) return NextResponse.json({ error: "Dealer context required" }, { status: 400 });
 
         const body = await req.json();
 
@@ -98,29 +119,29 @@ export async function POST(req: NextRequest) {
         if (body.productId) {
             const { productId, quantity, type, reason } = body;
 
-            // Get current product
-            const product = await prisma.products.findUnique({
-                where: { id: productId }
+            // Scoped by dealerId
+            const product = await prisma.products.findFirst({
+                where: {
+                    id: productId,
+                    dealer_id: dealerId
+                }
             });
 
-            if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
+            if (!product) return NextResponse.json({ error: "Product not found or access denied" }, { status: 404 });
 
             const quantity_before = product.stock_quantity || 0;
             const quantity_change = type === 'in' ? Math.abs(quantity) : -Math.abs(quantity);
             const quantity_after = quantity_before + quantity_change;
 
-            // Transaction for atomicity
             const result = await prisma.$transaction(async (tx) => {
-                // 1. Update product stock
                 const updatedProduct = await tx.products.update({
                     where: { id: productId },
                     data: { stock_quantity: quantity_after }
                 });
 
-                // 2. Create movement record
                 await tx.inventory_movements.create({
                     data: {
-                        dealer_id: product.dealer_id || user.dealerId || "",
+                        dealer_id: dealerId,
                         product_id: productId,
                         movement_type: type === 'in' ? 'stock_in' : 'stock_out',
                         quantity_before,
@@ -134,23 +155,19 @@ export async function POST(req: NextRequest) {
                 return updatedProduct;
             });
 
-            // Broadcast real-time update
-            const broadcastData = {
+            await broadcastEvent('inventory:adjusted', {
                 productId,
                 type,
-                triggeredBy: user.userId,
-                dealerId: user.dealerId
-            };
-            await broadcast('inventory:changed', broadcastData);
-            await broadcast('inventory:adjusted', broadcastData);
+                dealerId
+            });
 
-            return NextResponse.json({ success: true, data: result });
+            return NextResponse.json({ success: true, data: serialize(result) });
         }
 
-        // Otherwise, create new product
+        // Create new product
         const product = await prisma.products.create({
             data: {
-                dealer_id: user.dealerId || "",
+                dealer_id: dealerId,
                 name: body.name,
                 sku: body.sku,
                 brand: body.brand,
@@ -160,7 +177,7 @@ export async function POST(req: NextRequest) {
                 slug: (body.name || 'product').toLowerCase().replace(/\s+/g, '-') + '-' + Date.now()
             }
         });
-        return NextResponse.json({ success: true, data: product });
+        return NextResponse.json({ success: true, data: serialize(product) });
     } catch (error: any) {
         console.error("Inventory error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
@@ -169,8 +186,20 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
     try {
+        const user = await getCurrentUser();
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        const dealerId = user.dealerId;
+        if (!dealerId) return NextResponse.json({ error: "Dealer context required" }, { status: 400 });
+
         const body = await req.json();
         const { id, ...data } = body;
+
+        // Verify ownership
+        const existing = await prisma.products.findFirst({
+            where: { id, dealer_id: dealerId }
+        });
+        if (!existing) return NextResponse.json({ error: "Product not found or access denied" }, { status: 404 });
+
         const product = await prisma.products.update({
             where: { id },
             data: {
@@ -181,7 +210,7 @@ export async function PATCH(req: NextRequest) {
                 stock_quantity: data.stock
             }
         });
-        return NextResponse.json({ success: true, data: product });
+        return NextResponse.json({ success: true, data: serialize(product) });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

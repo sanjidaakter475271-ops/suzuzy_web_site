@@ -1,0 +1,785 @@
+🏗️ Royal Suzuky Workshop ERP — Complete Implementation Plan
+Based on deep analysis of existing codebase + 
+implementation04.txt
+
+📊 Current State Assessment (Gap Analysis)
+What Already Exists ✅
+Layer	What's Built	Details
+DB Schema	190 Prisma models (3464 lines)	job_cards, service_tickets, service_staff, service_invoices, warranty_claims, escalation_rules, vendors, qc_requests, technician_attendance, service_checklist_templates, special_tools, service_appointments, loyalty_tiers, user_loyalty, etc.
+Auth	JWT + Session system	getCurrentUser(), user_sessions, login_history, profiles, dealer_users
+Workshop APIs	12 routes	analytics, appointments, create-job, escalation, inventory, invoices, jobs, overview, requisitions, sales, scheduling, warranty
+Technician APIs	10 routes	attendance, breaks, categories, dashboard, jobs, location, products, push-tokens, reports, requisitions
+Customer APIs	4 routes	appointments, records, track, vehicles
+Frontend Pages	30+ pages	dashboard, workshop, inventory, POS, finance, CRM, appointments, analytics, settings, admin
+Components	35 UI + 39 service-admin + domain components	shadcn/ui, charts, finance, POS, dashboard, workshop
+Types	6 type files	
+workshop.ts
+, 
+inventory.ts
+, 
+crm.ts
+, 
+finance.ts
+, 
+pos.ts
+, 
+index.ts
+Permissions	8 modules	WORKSHOP, JOB_CARD, INVENTORY, FINANCE, SERVICE_BILLING, WARRANTY, SCHEDULING, ESCALATION
+Mobile App	servicestuff (Vite+Capacitor)	Technician app with jobs, attendance, requisitions, dashboard
+Realtime	Socket.io server	Event broadcasting for requisitions, jobs
+What's Missing / Incomplete ❌
+Module	Gap	Priority
+RBAC System	No roles, permissions, role_permissions tables — only dealer_users with boolean flags	🔴 CRITICAL
+Branch/Multi-location	No branches table — dealers acts as single location	🟡 Phase 4
+Staff HR	Missing: skill_matrix, shift_templates, staff_roster, leave_requests, overtime_logs, staff_performance_scores	🟡 Phase 3
+Customer CRM	Missing: customer_segments, customer_communications, customer_preferences, lifetime value tracking	🟡 Phase 2
+Job Card State Machine	Status is VARCHAR — no proper state machine with transition validation & audit trail	🔴 CRITICAL
+Billing	service_invoices + service_estimates exist but missing: payments table (for service), credit_notes, partial payments, advance payments	🔴 Phase 2
+Vendor/Procurement	vendors + purchase_orders exist but missing: GRN, vendor ratings, 3-way matching, PO approval workflow	🟡 Phase 3
+Notification Engine	notifications + notification_templates exist but no event-driven trigger system, no SMS/WhatsApp/push integration pipeline	🟡 Phase 2
+Issue Escalation	escalation_rules + escalation_history tables exist, but APIs partially built + no auto-escalation engine	🟡 Phase 3
+Training	Completely missing — no tables, no APIs	🟢 Phase 4
+Recall/Campaign	Completely missing — no tables, no APIs	🟢 Phase 4
+Document Mgmt	No dedicated document management, only job_photos	🟢 Phase 4
+Analytics/BI	Basic analytics API exists, but no custom reports, no financial/customer/staff dashboards	🟡 Phase 3-5
+🔧 Common API Patterns & Shared Utilities
+IMPORTANT
+
+These patterns MUST be used consistently across ALL new APIs. Memorize these file paths.
+
+Auth & Data Access
+typescript
+// ALWAYS use this for authenticated routes:
+import { getCurrentUser } from "@/lib/auth/get-user";
+// ALWAYS scope by dealer:
+const data = await prisma.someModel.findMany({
+    where: { dealer_id: user.dealerId }
+});
+// ALWAYS convert Prisma Decimals:
+const safe = data.map(d => ({
+    ...d,
+    price: d.price ? Number(d.price) : 0,
+}));
+Key Files Used Across ALL Phases
+File	Purpose	Used By
+get-user.ts
+getCurrentUser() — auth for every API	All APIs
+client.ts
+Prisma client singleton	All APIs
+permissions.ts
+RBAC permission constants	All APIs
+socket-server.ts
+broadcastEvent()	Realtime features
+schema.prisma
+Database schema	Schema changes
+types/index.ts
+Shared TypeScript types	Frontend + API
+Standard API Route Template
+Every new API at apps/portal/src/app/api/v1/{module}/route.ts:
+
+typescript
+import { NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth/get-user";
+import { prisma } from "@/lib/prisma/client";
+import { z } from "zod";
+// 1. Zod schema for POST/PATCH
+const createSchema = z.object({ /* ... */ });
+export async function GET(request: NextRequest) {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        
+        // Role check
+        if (!['service_admin', 'dealer_owner'].includes(user.role)) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+        
+        // ALWAYS scope by dealerId
+        const data = await prisma.someModel.findMany({
+            where: { dealer_id: user.dealerId },
+        });
+        
+        // Convert Decimals
+        const safe = data.map(d => ({ ...d, amount: d.amount ? Number(d.amount) : 0 }));
+        
+        return NextResponse.json(safe);
+    } catch (error: any) {
+        console.error("[MODULE_NAME] Error:", error);
+        return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+    }
+}
+🚀 PHASE 1: FOUNDATION (Weeks 1-8)
+Priority: MUST HAVE — Stabilize existing features + build core infrastructure
+
+1.1 RBAC System Enhancement
+CAUTION
+
+This is the most critical foundation piece. Everything else depends on proper role/permission enforcement.
+
+Schema Changes
+File: 
+schema.prisma
+
+prisma
+// ADD these new models:
+model roles {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @unique @db.VarChar(50) // 'super_admin', 'dealer_admin', 'service_manager', etc.
+  display_name String  @db.VarChar(100)
+  description String?
+  level       Int      @default(0) // hierarchy level
+  is_system   Boolean  @default(false) // system roles can't be deleted
+  is_active   Boolean  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+  
+  role_permissions role_permissions[]
+  profile_roles    profile_roles[]
+  @@schema("public")
+}
+model permissions {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  module      String   @db.VarChar(50) // 'workshop', 'inventory', 'finance', etc.
+  action      String   @db.VarChar(50) // 'view', 'create', 'edit', 'delete', 'approve'
+  resource    String   @db.VarChar(100) // 'job_cards', 'invoices', etc.
+  description String?
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  
+  role_permissions role_permissions[]
+  @@unique([module, action, resource])
+  @@schema("public")
+}
+model role_permissions {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  role_id       String      @db.Uuid
+  permission_id String      @db.Uuid
+  created_at    DateTime?   @default(now()) @db.Timestamptz(6)
+  
+  roles       roles       @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  permissions permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+  
+  @@unique([role_id, permission_id])
+  @@schema("public")
+}
+model profile_roles {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profile_id String    @db.Uuid
+  role_id    String    @db.Uuid
+  dealer_id  String?   @db.Uuid // scope role to a dealer
+  assigned_by String?  @db.Uuid
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  
+  profiles profiles @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+  roles    roles    @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  
+  @@unique([profile_id, role_id, dealer_id])
+  @@schema("public")
+}
+API Routes to Create/Update
+Route	Method	File	Purpose
+/api/v1/admin/roles	GET, POST	[NEW] api/v1/admin/roles/route.ts	List & create roles
+/api/v1/admin/roles/[id]	GET, PATCH, DELETE	[NEW] api/v1/admin/roles/[id]/route.ts	Single role CRUD
+/api/v1/admin/permissions	GET	[NEW] api/v1/admin/permissions/route.ts	List all permissions
+/api/v1/admin/roles/[id]/permissions	GET, PUT	[NEW] api/v1/admin/roles/[id]/permissions/route.ts	Manage role permissions
+/api/v1/admin/users/[id]/roles	GET, PUT	[NEW] api/v1/admin/users/[id]/roles/route.ts	Assign roles to user
+Middleware Enhancement
+File: [MODIFY] 
+apps/portal/src/middleware.ts
+
+typescript
+// Add permission checking helper:
+export function withPermission(permission: string) {
+    return async (req: NextRequest) => {
+        const user = await getCurrentUser();
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        
+        const hasPermission = await checkUserPermission(user.userId, permission, user.dealerId);
+        if (!hasPermission) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        
+        return null; // proceed
+    };
+}
+New Lib File
+File: [NEW] apps/portal/src/lib/auth/check-permission.ts
+
+typescript
+import { prisma } from "@/lib/prisma/client";
+export async function checkUserPermission(
+    userId: string,
+    permissionKey: string, // e.g. "workshop.view.job_cards"
+    dealerId?: string
+): Promise<boolean> {
+    const [module, action, resource] = permissionKey.split('.');
+    
+    const count = await prisma.role_permissions.count({
+        where: {
+            permissions: { module, action, resource },
+            roles: {
+                profile_roles: {
+                    some: {
+                        profile_id: userId,
+                        ...(dealerId ? { dealer_id: dealerId } : {}),
+                    }
+                }
+            }
+        }
+    });
+    
+    return count > 0;
+}
+1.2 Job Card State Machine
+IMPORTANT
+
+The job card workflow is the core of the entire system. Status transitions must be validated and audited.
+
+Schema Changes
+File: 
+schema.prisma
+
+prisma
+// ADD to job_cards model:
+model job_cards {
+  // ... existing fields ...
+  priority         String?   @default("normal") @db.VarChar(20) // 'urgent', 'high', 'normal', 'low'
+  warranty_type    String?   @default("paid") @db.VarChar(20) // 'paid', 'warranty', 'free_service'
+  customer_approved Boolean? @default(false)
+  
+  // ADD new relations:
+  job_state_history job_state_history[]
+  job_events        job_events[]
+}
+model job_state_history {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job_card_id  String    @db.Uuid
+  from_status  String?   @db.VarChar(50)
+  to_status    String    @db.VarChar(50)
+  changed_by   String    @db.Uuid
+  reason       String?
+  metadata     Json?
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  
+  job_cards job_cards @relation(fields: [job_card_id], references: [id], onDelete: Cascade)
+  profiles  profiles  @relation(fields: [changed_by], references: [id])
+  
+  @@index([job_card_id])
+  @@schema("public")
+}
+model job_events {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job_card_id String    @db.Uuid
+  event_type  String    @db.VarChar(50) // 'status_change', 'photo_added', 'part_requested', etc.
+  description String
+  actor_id    String?   @db.Uuid
+  metadata    Json?
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  
+  job_cards job_cards @relation(fields: [job_card_id], references: [id], onDelete: Cascade)
+  profiles  profiles? @relation(fields: [actor_id], references: [id])
+  
+  @@index([job_card_id])
+  @@schema("public")
+}
+New Lib: State Machine Engine
+File: [NEW] apps/portal/src/lib/workshop/job-state-machine.ts
+
+typescript
+export const JOB_STATUS = {
+    CREATED: 'created',
+    DIAGNOSED: 'diagnosed',
+    ESTIMATE_SENT: 'estimate_sent',
+    CUSTOMER_APPROVED: 'customer_approved',
+    IN_PROGRESS: 'in_progress',
+    WAITING_PARTS: 'waiting_parts',
+    ADDITIONAL_WORK: 'additional_work',
+    QC_PENDING: 'qc_pending',
+    QC_APPROVED: 'qc_approved',
+    QC_REJECTED: 'qc_rejected',
+    COMPLETED: 'completed',
+    INVOICED: 'invoiced',
+    PAID: 'paid',
+    DELIVERED: 'delivered',
+    CANCELLED: 'cancelled',
+    ON_HOLD: 'on_hold',
+} as const;
+// Valid transitions map
+const VALID_TRANSITIONS: Record<string, string[]> = {
+    [JOB_STATUS.CREATED]: [JOB_STATUS.DIAGNOSED, JOB_STATUS.CANCELLED, JOB_STATUS.ON_HOLD],
+    [JOB_STATUS.DIAGNOSED]: [JOB_STATUS.ESTIMATE_SENT, JOB_STATUS.CANCELLED, JOB_STATUS.ON_HOLD],
+    [JOB_STATUS.ESTIMATE_SENT]: [JOB_STATUS.CUSTOMER_APPROVED, JOB_STATUS.CANCELLED],
+    [JOB_STATUS.CUSTOMER_APPROVED]: [JOB_STATUS.IN_PROGRESS, JOB_STATUS.CANCELLED],
+    [JOB_STATUS.IN_PROGRESS]: [JOB_STATUS.WAITING_PARTS, JOB_STATUS.ADDITIONAL_WORK, JOB_STATUS.QC_PENDING, JOB_STATUS.CANCELLED, JOB_STATUS.ON_HOLD],
+    [JOB_STATUS.WAITING_PARTS]: [JOB_STATUS.IN_PROGRESS, JOB_STATUS.CANCELLED],
+    [JOB_STATUS.ADDITIONAL_WORK]: [JOB_STATUS.IN_PROGRESS, JOB_STATUS.CANCELLED],
+    [JOB_STATUS.QC_PENDING]: [JOB_STATUS.QC_APPROVED, JOB_STATUS.QC_REJECTED],
+    [JOB_STATUS.QC_APPROVED]: [JOB_STATUS.COMPLETED],
+    [JOB_STATUS.QC_REJECTED]: [JOB_STATUS.IN_PROGRESS],
+    [JOB_STATUS.COMPLETED]: [JOB_STATUS.INVOICED],
+    [JOB_STATUS.INVOICED]: [JOB_STATUS.PAID],
+    [JOB_STATUS.PAID]: [JOB_STATUS.DELIVERED],
+    [JOB_STATUS.ON_HOLD]: [JOB_STATUS.IN_PROGRESS, JOB_STATUS.CANCELLED],
+};
+export function canTransition(fromStatus: string, toStatus: string): boolean {
+    return VALID_TRANSITIONS[fromStatus]?.includes(toStatus) ?? false;
+}
+export function getNextStates(currentStatus: string): string[] {
+    return VALID_TRANSITIONS[currentStatus] ?? [];
+}
+API Routes
+Route	Method	File	Purpose
+/api/v1/workshop/jobs/[id]/transition	POST	[NEW] api/v1/workshop/jobs/[id]/transition/route.ts	Validate & execute state transition
+/api/v1/workshop/jobs/[id]/timeline	GET	[NEW] api/v1/workshop/jobs/[id]/timeline/route.ts	Job event timeline
+/api/v1/workshop/jobs/[id]/history	GET	[NEW] api/v1/workshop/jobs/[id]/history/route.ts	State transition history
+1.3 Existing Features Stabilization
+Files to Update
+File	Change
+[MODIFY] api/v1/workshop/jobs/route.ts	Add proper state machine validation on status changes
+[MODIFY] api/v1/workshop/requisitions/route.ts	Fix Decimal conversions, add proper dealer scoping
+[MODIFY] api/v1/technician/jobs/route.ts	Align response shape with mobile types.ts
+[MODIFY] api/v1/workshop/invoices/route.ts	Fix type mismatches, add estimate linking
+[MODIFY] src/lib/auth/get-user.ts	Ensure dealerId is always populated
+[MODIFY] 
+src/lib/permissions.ts
+Add new permission constants for all Phase 1 modules
+1.4 QC Workflow Completion
+Schema Update (extend existing qc_requests)
+prisma
+// ADD new model:
+model qc_checklist_items {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  qc_request_id String   @db.Uuid
+  item_name     String   @db.VarChar(200)
+  category      String?  @db.VarChar(100)
+  is_passed     Boolean? @default(false)
+  notes         String?
+  photo_url     String?
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+  
+  qc_requests qc_requests @relation(fields: [qc_request_id], references: [id], onDelete: Cascade)
+  @@schema("public")
+}
+API Routes
+Route	Method	File
+/api/v1/workshop/qc/queue	GET	[NEW] QC queue dashboard
+/api/v1/workshop/qc/[id]/review	POST	[NEW] Approve/reject with checklist
+/api/v1/workshop/qc/analytics	GET	[NEW] QC metrics (rejection rate, turnaround)
+1.5 Admin Panel Enhancements
+Frontend Pages to Create/Update
+Page	File	Purpose
+Job Board (Kanban)	[NEW] (dashboard)/workshop/board/page.tsx	Drag-n-drop kanban by status
+Job Timeline View	[NEW] (dashboard)/workshop/[id]/page.tsx	Full job detail with timeline
+RBAC Management	[MODIFY] (dashboard)/admin/roles/page.tsx	Role + permission matrix UI
+QC Dashboard	[NEW] (dashboard)/workshop/qc/page.tsx	QC queue + review interface
+Staff Directory	[MODIFY] (dashboard)/workshop/staff/page.tsx	Enhanced staff listing
+Type Files to Update
+File: [MODIFY] apps/portal/src/types/workshop.ts
+
+typescript
+// ADD:
+export type JobStatus = 'created' | 'diagnosed' | 'estimate_sent' | 'customer_approved' 
+  | 'in_progress' | 'waiting_parts' | 'additional_work' | 'qc_pending' 
+  | 'qc_approved' | 'qc_rejected' | 'completed' | 'invoiced' | 'paid' | 'delivered' 
+  | 'cancelled' | 'on_hold';
+export interface JobEvent {
+    id: string;
+    jobCardId: string;
+    eventType: string;
+    description: string;
+    actorName?: string;
+    metadata?: Record<string, any>;
+    createdAt: string;
+}
+export interface QCRequest {
+    id: string;
+    jobCardId: string;
+    status: 'pending' | 'approved' | 'rejected';
+    requestedBy: string;
+    reviewerId?: string;
+    notes?: string;
+    checklistItems?: QCChecklistItem[];
+    reviewedAt?: string;
+    createdAt: string;
+}
+🚀 PHASE 2: BUSINESS OPERATIONS (Weeks 9-16)
+2.1 Parts & Inventory Enhancement
+Existing: products, inventory_batches, inventory_movements, purchase_orders, stock_adjustments
+Missing: Parts issuance to job workflow, auto-reorder alerts, dead stock identification
+
+API Routes
+Route	Method	File	Purpose
+/api/v1/workshop/inventory/issue-to-job	POST	[NEW]	Issue parts directly to a job card
+/api/v1/workshop/inventory/return-from-job	POST	[NEW]	Return unused parts
+/api/v1/workshop/inventory/low-stock	GET	[NEW]	Alert dashboard data
+/api/v1/workshop/inventory/dead-stock	GET	[NEW]	Items with no movement in X days
+/api/v1/workshop/inventory/auto-reorder	GET	[NEW]	Items below min_stock
+2.2 Billing & Financial Module
+Schema Changes
+prisma
+model service_payments {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoice_id     String   @db.Uuid
+  dealer_id      String   @db.Uuid
+  amount         Decimal  @db.Decimal(12, 2)
+  payment_method String   @db.VarChar(30) // 'cash', 'card', 'upi', 'bank_transfer', 'bkash', 'nagad'
+  payment_date   DateTime @default(dbgenerated("CURRENT_DATE")) @db.Date
+  reference_no   String?  @db.VarChar(100)
+  notes          String?
+  received_by    String?  @db.Uuid
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  
+  service_invoices service_invoices @relation(fields: [invoice_id], references: [id])
+  dealers          dealers          @relation(fields: [dealer_id], references: [id])
+  @@schema("public")
+}
+model credit_notes {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  note_number  String   @db.VarChar
+  dealer_id    String   @db.Uuid
+  invoice_id   String?  @db.Uuid
+  customer_id  String?  @db.Uuid
+  amount       Decimal  @db.Decimal(12, 2)
+  reason       String
+  status       String   @default("active") @db.VarChar(20)
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  
+  dealers dealers @relation(fields: [dealer_id], references: [id])
+  @@schema("public")
+}
+API Routes
+Route	Method	Purpose
+/api/v1/workshop/invoices/[id]/payments	GET, POST	Record & list payments
+/api/v1/workshop/invoices/[id]/pdf	GET	Generate invoice PDF
+/api/v1/workshop/estimates/[id]/approve	POST	Customer estimate approval
+/api/v1/workshop/credit-notes	GET, POST	Credit note management
+/api/v1/workshop/finance/daily-summary	GET	Today's collection summary
+/api/v1/workshop/finance/outstanding	GET	Outstanding payments report
+2.3 Customer CRM Module
+Schema Changes
+prisma
+model customer_segments {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dealer_id   String   @db.Uuid
+  name        String   @db.VarChar(50) // 'VIP', 'Regular', 'New', 'At-Risk'
+  criteria    Json     // { min_visits: 5, min_spend: 50000 }
+  color       String?  @db.VarChar(7)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  @@schema("public")
+}
+model customer_communications {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dealer_id    String   @db.Uuid
+  customer_id  String   @db.Uuid
+  channel      String   @db.VarChar(20) // 'sms', 'email', 'whatsapp', 'call', 'in_app'
+  direction    String   @db.VarChar(10) // 'inbound', 'outbound'
+  subject      String?
+  content      String
+  status       String?  @default("sent") @db.VarChar(20)
+  sent_by      String?  @db.Uuid
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  @@schema("public")
+}
+API Routes
+Route	Method	Purpose
+/api/v1/customer/360/[id]	GET	Full customer 360° view
+/api/v1/customer/segments	GET, POST	Customer segmentation
+/api/v1/customer/lifetime-value/[id]	GET	LTV calculation
+/api/v1/customer/next-service	GET	Predicted next service dates
+/api/v1/customer/communications	GET, POST	Communication log
+/api/v1/customer/feedback	GET, POST	Service feedback with ratings
+2.4 Notification Engine
+Schema Changes
+prisma
+model notification_triggers {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dealer_id    String?  @db.Uuid
+  event_type   String   @db.VarChar(100) // 'job_completed', 'estimate_ready', etc.
+  template_id  String?  @db.Uuid
+  channels     String[] // ['sms', 'email', 'push', 'whatsapp']
+  is_active    Boolean  @default(true)
+  delay_minutes Int?    @default(0) // delay before sending
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  @@schema("public")
+}
+model notification_queue {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String?  @db.Uuid
+  channel      String   @db.VarChar(20)
+  recipient    String   @db.VarChar(255) // phone/email
+  title        String?
+  body         String
+  status       String   @default("pending") @db.VarChar(20) // 'pending', 'sent', 'failed', 'delivered'
+  retry_count  Int      @default(0)
+  scheduled_at DateTime? @db.Timestamptz(6)
+  sent_at      DateTime? @db.Timestamptz(6)
+  error_message String?
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  @@schema("public")
+}
+New Lib: Notification Service
+File: [NEW] apps/portal/src/lib/notifications/notification-service.ts
+
+typescript
+export class NotificationService {
+    static async emit(event: string, data: { dealerId: string; userId?: string; metadata: Record<string, any> }) {
+        // 1. Find triggers for this event
+        // 2. Render templates
+        // 3. Queue notifications
+        // 4. Process queue (SMS via API, Email via Resend, Push via FCM)
+    }
+    
+    static async processQueue() { /* BullMQ/cron-based processor */ }
+}
+// Usage:
+// await NotificationService.emit('job_completed', { dealerId, userId, metadata: { jobNo, vehicleReg } });
+🚀 PHASE 3: PROCESS EXCELLENCE (Weeks 17-24)
+3.1 Vendor & Procurement Enhancement
+Schema Additions
+prisma
+model goods_receipt_notes {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  grn_number        String   @db.VarChar
+  dealer_id         String   @db.Uuid
+  purchase_order_id String   @db.Uuid
+  vendor_id         String   @db.Uuid
+  received_date     DateTime @default(dbgenerated("CURRENT_DATE")) @db.Date
+  received_by       String?  @db.Uuid
+  status            String   @default("pending") @db.VarChar(20) // 'pending', 'accepted', 'partial', 'rejected'
+  notes             String?
+  created_at        DateTime? @default(now()) @db.Timestamptz(6)
+  
+  grn_items grn_items[]
+  @@schema("public")
+}
+model grn_items {
+  id                  String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  grn_id              String  @db.Uuid
+  product_id          String  @db.Uuid
+  ordered_quantity    Int
+  received_quantity   Int
+  accepted_quantity   Int?
+  rejected_quantity   Int?    @default(0)
+  rejection_reason    String?
+  unit_cost           Decimal @db.Decimal(10, 2)
+  
+  goods_receipt_notes goods_receipt_notes @relation(fields: [grn_id], references: [id], onDelete: Cascade)
+  @@schema("public")
+}
+model vendor_ratings {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendor_id   String   @db.Uuid
+  dealer_id   String   @db.Uuid
+  po_id       String?  @db.Uuid
+  quality     Int      // 1-5
+  delivery    Int      // 1-5
+  pricing     Int      // 1-5
+  service     Int      // 1-5
+  comments    String?
+  rated_by    String?  @db.Uuid
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  @@schema("public")
+}
+API Routes
+Route	Method	Purpose
+/api/v1/workshop/procurement/grn	GET, POST	GRN processing
+/api/v1/workshop/procurement/grn/[id]	GET, PATCH	GRN details
+/api/v1/workshop/vendors/[id]/ratings	GET, POST	Vendor rating system
+/api/v1/workshop/vendors/[id]/ledger	GET	Vendor payment ledger
+/api/v1/workshop/procurement/po/[id]/approve	POST	PO approval workflow
+3.2 Warranty System Enhancement
+Existing: warranty_claims, warranty_claim_parts tables exist
+Missing: Policy management, settlement tracking, OEM integration
+
+Schema Additions
+prisma
+model warranty_policies {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dealer_id         String   @db.Uuid
+  name              String   @db.VarChar(100)
+  coverage_type     String   @db.VarChar(30) // 'manufacturer', 'dealer', 'extended'
+  duration_months   Int
+  max_mileage       Int?
+  coverage_parts    Boolean  @default(true)
+  coverage_labor    Boolean  @default(true)
+  coverage_percent  Decimal  @default(100) @db.Decimal(5, 2)
+  terms             String?
+  is_active         Boolean  @default(true)
+  created_at        DateTime? @default(now()) @db.Timestamptz(6)
+  @@schema("public")
+}
+model warranty_settlements {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  claim_id        String   @db.Uuid
+  settlement_type String   @db.VarChar(30) // 'oem_credit', 'parts_replacement', 'cash'
+  amount          Decimal  @db.Decimal(10, 2)
+  reference_no    String?  @db.VarChar
+  settled_date    DateTime @db.Date
+  notes           String?
+  created_at      DateTime? @default(now()) @db.Timestamptz(6)
+  
+  warranty_claims warranty_claims @relation(fields: [claim_id], references: [id])
+  @@schema("public")
+}
+3.3 HR Enhancement
+Schema Additions
+prisma
+model shift_templates {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dealer_id  String   @db.Uuid
+  name       String   @db.VarChar(50) // 'Morning', 'Evening', 'Split'
+  start_time DateTime @db.Time(6)
+  end_time   DateTime @db.Time(6)
+  break_minutes Int   @default(60)
+  is_active  Boolean  @default(true)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  @@schema("public")
+}
+model leave_requests {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  staff_id     String   @db.Uuid
+  dealer_id    String   @db.Uuid
+  leave_type   String   @db.VarChar(30) // 'sick', 'casual', 'annual', 'unpaid'
+  start_date   DateTime @db.Date
+  end_date     DateTime @db.Date
+  reason       String?
+  status       String   @default("pending") @db.VarChar(20) // 'pending', 'approved', 'rejected'
+  approved_by  String?  @db.Uuid
+  approved_at  DateTime? @db.Timestamptz(6)
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  @@schema("public")
+}
+model skill_matrix {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  staff_id    String   @db.Uuid
+  skill_name  String   @db.VarChar(100) // 'Engine Repair', 'Electrical', 'Diagnostic'
+  proficiency Int      // 1-5
+  certified   Boolean  @default(false)
+  certified_at DateTime? @db.Date
+  expires_at  DateTime? @db.Date
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  @@schema("public")
+}
+3.4 Escalation Matrix Enhancement
+Existing: escalation_rules, escalation_history tables + partial API
+
+API Routes
+Route	Method	Purpose
+/api/v1/workshop/escalation/auto-check	POST	Cron: auto-check overdue issues and escalate
+/api/v1/workshop/escalation/dashboard	GET	Escalation monitoring dashboard
+/api/v1/workshop/issues/[id]/resolve	POST	Record resolution + root cause
+/api/v1/workshop/issues/analytics	GET	Issue trend analytics
+🚀 PHASE 4: GROWTH & ENGAGEMENT (Weeks 25-32)
+4.1 Customer Loyalty System
+Existing: loyalty_tiers, user_loyalty, points_history, referrals tables
+Missing: Points earning/redemption APIs, tier management UI, referral tracking
+
+4.2 Training & Certification
+Completely new module — needs full schema + API + UI
+
+4.3 Document Management
+New module: digital signatures, customer consent, insurance docs
+
+4.4 Multi-Branch (Future)
+Requires branches table, branch-level scoping in all queries
+
+🚀 PHASE 5: INTELLIGENCE (Weeks 33-44)
+5.1 Analytics Dashboards (6 dashboards)
+Dashboard	API Route	Key Metrics
+Operations	/api/v1/dashboard/operations	Active jobs, avg TAT, bay utilization, technician utilization
+Financial	/api/v1/dashboard/financial	Daily/monthly revenue, parts vs labor split, outstanding
+Customer	/api/v1/dashboard/customer	New vs repeat, CSAT, NPS, complaint rate
+Staff	/api/v1/dashboard/staff	Attendance, productivity, QC rejection rate per tech
+Inventory	/api/v1/dashboard/inventory	Stock value, low stock, dead stock, fast-moving
+Management	/api/v1/dashboard/management	Branch comparison, targets, forecasting
+5.2 AI/ML (Future)
+Smart technician assignment based on skill matrix
+Job duration prediction
+Parts demand forecasting
+Customer churn prediction
+📁 File Change Summary by Phase
+Phase 1 Files (~25 files)
+Action	File Path
+[MODIFY]	
+apps/portal/prisma/schema.prisma
+[NEW]	apps/portal/src/lib/auth/check-permission.ts
+[NEW]	apps/portal/src/lib/workshop/job-state-machine.ts
+[MODIFY]	
+apps/portal/src/lib/permissions.ts
+[MODIFY]	
+apps/portal/src/middleware.ts
+[MODIFY]	
+apps/portal/src/types/workshop.ts
+[NEW]	apps/portal/src/types/rbac.ts
+[NEW]	apps/portal/src/app/api/v1/admin/roles/route.ts
+[NEW]	apps/portal/src/app/api/v1/admin/roles/[id]/route.ts
+[NEW]	apps/portal/src/app/api/v1/admin/roles/[id]/permissions/route.ts
+[NEW]	apps/portal/src/app/api/v1/admin/permissions/route.ts
+[NEW]	apps/portal/src/app/api/v1/admin/users/[id]/roles/route.ts
+[NEW]	apps/portal/src/app/api/v1/workshop/jobs/[id]/transition/route.ts
+[NEW]	
+apps/portal/src/app/api/v1/workshop/jobs/[id]/timeline/route.ts
+[NEW]	apps/portal/src/app/api/v1/workshop/jobs/[id]/history/route.ts
+[NEW]	apps/portal/src/app/api/v1/workshop/qc/queue/route.ts
+[NEW]	apps/portal/src/app/api/v1/workshop/qc/[id]/review/route.ts
+[NEW]	apps/portal/src/app/api/v1/workshop/qc/analytics/route.ts
+[MODIFY]	apps/portal/src/app/api/v1/workshop/jobs/route.ts
+[MODIFY]	
+apps/portal/src/app/api/v1/workshop/requisitions/route.ts
+[MODIFY]	
+apps/portal/src/app/api/v1/workshop/invoices/route.ts
+[NEW]	apps/portal/src/app/(dashboard)/workshop/board/page.tsx
+[NEW]	apps/portal/src/app/(dashboard)/workshop/qc/page.tsx
+[NEW]	apps/portal/src/components/workshop/JobKanbanBoard.tsx
+[NEW]	apps/portal/src/components/workshop/QCReviewPanel.tsx
+Phase 2 Files (~20 files)
+Action	File Path
+[MODIFY]	
+apps/portal/prisma/schema.prisma
+[NEW]	apps/portal/src/lib/notifications/notification-service.ts
+[NEW]	apps/portal/src/types/billing.ts
+[NEW]	apps/portal/src/types/notification.ts
+[NEW]	apps/portal/src/app/api/v1/workshop/invoices/[id]/payments/route.ts
+[NEW]	apps/portal/src/app/api/v1/workshop/invoices/[id]/pdf/route.ts
+[NEW]	apps/portal/src/app/api/v1/workshop/credit-notes/route.ts
+[NEW]	apps/portal/src/app/api/v1/workshop/finance/daily-summary/route.ts
+[NEW]	apps/portal/src/app/api/v1/workshop/finance/outstanding/route.ts
+[NEW]	apps/portal/src/app/api/v1/customer/360/[id]/route.ts
+[NEW]	apps/portal/src/app/api/v1/customer/segments/route.ts
+[NEW]	apps/portal/src/app/api/v1/customer/communications/route.ts
+[NEW]	apps/portal/src/app/api/v1/workshop/inventory/issue-to-job/route.ts
+[NEW]	apps/portal/src/app/api/v1/workshop/inventory/return-from-job/route.ts
+[NEW]	apps/portal/src/app/api/v1/notifications/triggers/route.ts
+[NEW]	apps/portal/src/app/api/v1/notifications/queue/route.ts
+✅ Verification Plan
+Automated Verification
+Since this project uses Next.js App Router with Prisma, run:
+
+powershell
+# 1. Validate Prisma schema after changes
+cd d:\suzuky\apps\portal
+npx prisma validate
+# 2. Build check — ensures all TypeScript compiles
+npm run build
+# 3. Run the dev server to test APIs
+npm run dev
+Manual Verification (per phase)
+Phase 1 Manual Tests
+RBAC: Login as different roles → verify different menu items/access levels
+Job State Machine: Try to transition a job from created → paid (should fail) vs created → diagnosed (should succeed)
+QC Flow: Create a job → complete it → request QC → approve/reject → verify state transitions
+Phase 2 Manual Tests
+Invoice Payment: Generate invoice → record partial payment → verify due_amount updates
+Customer 360: View a customer's full profile with service history, vehicles, communications
+Notifications: Trigger a job completion → verify notification appears in queue
+NOTE
+
+Since there are no existing automated tests (unit/integration), the first verification step for each phase should be npx prisma validate + npm run build. I recommend the user manually test API endpoints using the browser or a tool like Postman/Thunder Client. We can add automated API tests as a future enhancement.
+
+📋 Implementation Priority Order (Within Each Phase)
+Phase 1 Recommended Order:
+✅ Schema migrations (RBAC tables + job state history + events)
+✅ RBAC lib + permission checking middleware
+✅ Job State Machine lib
+✅ Admin APIs (roles/permissions)
+✅ Job transition API + timeline API
+✅ QC queue + review APIs
+✅ Fix existing API issues (Decimal conversion, dealer scoping)
+✅ Frontend: Kanban board + QC dashboard + RBAC management UI

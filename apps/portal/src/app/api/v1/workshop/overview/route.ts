@@ -9,12 +9,17 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Authentication required" }, { status: 401 });
         }
 
+        const dealerId = user.dealerId;
+        if (!dealerId) {
+            return NextResponse.json({ error: "Dealer context required" }, { status: 400 });
+        }
+
         // Fetch everything in parallel
         const [cards, tickets, ramps, staff, tasks] = await Promise.all([
             prisma.job_cards.findMany({
                 where: {
                     status: { not: 'delivered' },
-                    ...(user.dealerId ? { dealer_id: user.dealerId } : {})
+                    dealer_id: dealerId
                 },
                 include: {
                     service_tickets: {
@@ -38,7 +43,7 @@ export async function GET(req: NextRequest) {
             prisma.service_tickets.findMany({
                 where: {
                     status: { not: 'closed' },
-                    ...(user.dealerId ? { profiles: { dealer_id: user.dealerId } } : {})
+                    profiles: { dealer_id: dealerId }
                 },
                 take: 50
             }),
@@ -54,7 +59,7 @@ export async function GET(req: NextRequest) {
             prisma.service_staff.findMany({
                 where: {
                     is_active: true,
-                    ...(user.dealerId ? { dealer_id: user.dealerId } : {})
+                    dealer_id: dealerId
                 },
                 include: { profiles: true }
             }),
@@ -63,15 +68,33 @@ export async function GET(req: NextRequest) {
             })
         ]);
 
+        // Helper to convert Prisma Decimals to Numbers
+        const serialize = (obj: any): any => {
+            if (obj === null || obj === undefined) return obj;
+            if (Array.isArray(obj)) return obj.map(serialize);
+            if (typeof obj === 'object') {
+                // Check if it's a Decimal object from Prisma
+                if (obj.constructor && obj.constructor.name === 'Decimal') {
+                    return Number(obj);
+                }
+                const newObj: any = {};
+                for (const key in obj) {
+                    newObj[key] = serialize(obj[key]);
+                }
+                return newObj;
+            }
+            return obj;
+        };
+
         return NextResponse.json({
             success: true,
-            data: {
+            data: serialize({
                 jobCards: cards,
                 serviceTickets: tickets,
                 ramps: ramps,
                 staff: staff,
                 serviceTasks: tasks
-            }
+            })
         });
 
     } catch (error: any) {

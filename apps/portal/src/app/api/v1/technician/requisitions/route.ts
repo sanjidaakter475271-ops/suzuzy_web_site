@@ -1,18 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/client';
 import { getCurrentTechnician } from '@/lib/auth/get-technician';
-import { broadcast } from "@/lib/socket-server";
+import { broadcastEvent } from "@/lib/socket-server";
 import crypto from "crypto";
+
+// Helper to convert Prisma Decimals to Numbers
+const serialize = (obj: any): any => {
+    if (obj === null || obj === undefined) return obj;
+    if (Array.isArray(obj)) return obj.map(serialize);
+    if (typeof obj === 'object') {
+        if (obj.constructor && obj.constructor.name === 'Decimal') {
+            return Number(obj);
+        }
+        const newObj: any = {};
+        for (const key in obj) {
+            newObj[key] = serialize(obj[key]);
+        }
+        return newObj;
+    }
+    return obj;
+};
 
 /**
  * GET: Fetch technician's requisitions, grouped by requisition_group_id
- * Returns shape: { id, job_card_id, status, created_at, items: [{ ...req, part_name }] }
  */
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
     try {
         const technician = await getCurrentTechnician();
         if (!technician || !technician.serviceStaffId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
         const requisitions = await prisma.service_requisitions.findMany({
@@ -36,43 +52,42 @@ export async function GET(req: NextRequest) {
             }
         });
 
-        // Group by requisition_group_id for frontend consumption
         const grouped = Object.values(
-            requisitions.reduce((acc: Record<string, any>, req) => {
-                const gid = req.requisition_group_id || req.id;
+            requisitions.reduce((acc: any, item) => {
+                const gid = item.requisition_group_id || item.id;
                 if (!acc[gid]) {
                     acc[gid] = {
                         id: gid,
-                        job_card_id: req.job_card_id,
-                        status: req.status,
-                        created_at: req.created_at,
-                        job_cards: req.job_cards,
+                        job_card_id: item.job_card_id,
+                        status: item.status,
+                        created_at: item.created_at,
+                        job_cards: item.job_cards,
                         items: []
                     };
                 }
                 acc[gid].items.push({
-                    id: req.id,
-                    product_id: req.product_id,
-                    quantity: req.quantity,
-                    unit_price: Number(req.unit_price || 0),
-                    total_price: Number(req.total_price || 0),
-                    status: req.status,
-                    notes: req.notes,
-                    part_name: req.products?.name || 'Unknown Part',
-                    sku: req.products?.sku || '',
-                    brand: req.products?.brand || ''
+                    id: item.id,
+                    product_id: item.product_id,
+                    quantity: item.quantity,
+                    unit_price: Number(item.unit_price || 0),
+                    total_price: Number(item.total_price || 0),
+                    status: item.status,
+                    notes: item.notes,
+                    part_name: item.products?.name || 'Unknown Part',
+                    sku: item.products?.sku || '',
+                    brand: item.products?.brand || ''
                 });
-                // Update group status to worst status
-                if (req.status === 'rejected') acc[gid].status = 'rejected';
-                else if (req.status === 'pending' && acc[gid].status !== 'rejected') acc[gid].status = 'pending';
+
+                if (item.status === 'rejected') acc[gid].status = 'rejected';
+                else if (item.status === 'pending' && acc[gid].status !== 'rejected') acc[gid].status = 'pending';
                 return acc;
             }, {})
         );
 
-        return NextResponse.json({ success: true, data: grouped });
-    } catch (error: any) {
+        return NextResponse.json({ success: true, data: serialize(grouped) });
+    } catch (error: unknown) {
         console.error('Error fetching technician requisitions:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
     }
 }
 
@@ -83,28 +98,26 @@ export async function POST(req: NextRequest) {
     try {
         const technician = await getCurrentTechnician();
         if (!technician || !technician.serviceStaffId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
         const body = await req.json();
         const { jobId, items } = body;
 
         if (!jobId || !items || !Array.isArray(items) || items.length === 0) {
-            return NextResponse.json({ error: 'JobId and items array required' }, { status: 400 });
+            return NextResponse.json({ success: false, error: 'JobId and items array required' }, { status: 400 });
         }
 
-        // Fetch job details for context
         const job = await prisma.job_cards.findUnique({
             where: { id: jobId },
-            select: {
-                ticket_id: true,
-                service_tickets: {
-                    select: { service_number: true }
-                }
+            include: {
+                service_tickets: true
             }
         });
 
-        if (!job) return NextResponse.json({ error: 'Job card not found' }, { status: 404 });
+        if (!job || job.dealer_id !== technician.dealerId) {
+            return NextResponse.json({ success: false, error: 'Job card not found or access denied' }, { status: 404 });
+        }
 
         const jobNo = job.service_tickets?.service_number || "N/A";
         const group_id = crypto.randomUUID();
@@ -144,8 +157,7 @@ export async function POST(req: NextRequest) {
             return results;
         });
 
-        // Notify via Real-time
-        await broadcast('requisition:created', {
+        await broadcastEvent('requisition:created', {
             groupId: group_id,
             jobId: jobId,
             jobNo: jobNo,
@@ -154,9 +166,10 @@ export async function POST(req: NextRequest) {
             itemCount: created.length
         });
 
-        return NextResponse.json({ success: true, data: created });
-    } catch (error: any) {
+        return NextResponse.json({ success: true, data: serialize(created) });
+    } catch (error: unknown) {
         console.error('Error creating requisitions:', error);
-        return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+        const message = error instanceof Error ? error.message : 'Internal Server Error';
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }

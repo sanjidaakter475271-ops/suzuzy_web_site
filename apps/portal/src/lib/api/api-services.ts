@@ -9,6 +9,23 @@ import { broadcast } from "@/lib/socket-server";
 import { getDashboardStats } from "./handlers/dashboard-stats";
 import { checkStockAndAutoReorder } from "../inventory/auto-reorder";
 
+// Helper to convert Prisma Decimals to Numbers recursively
+export const serialize = (obj: any): any => {
+    if (obj === null || obj === undefined) return obj;
+    if (Array.isArray(obj)) return obj.map(serialize);
+    if (typeof obj === 'object') {
+        if (obj.constructor && obj.constructor.name === 'Decimal') {
+            return Number(obj);
+        }
+        const newObj: any = {};
+        for (const key in obj) {
+            newObj[key] = serialize(obj[key]);
+        }
+        return newObj;
+    }
+    return obj;
+};
+
 /**
  * Generate a human-readable unique number
  * Format: PREFIX-YYYYMMDD-XXXX
@@ -150,7 +167,7 @@ export async function handleList(entity: string, searchParams?: URLSearchParams)
 
         return NextResponse.json({
             success: true,
-            data,
+            data: serialize(data),
             pagination: {
                 total,
                 page,
@@ -250,7 +267,7 @@ export async function handleCreate(entity: string, body: any) {
         // Trigger real-time update
         await broadcast(`${entity}:changed`, { id: data.id, action: 'create', data });
 
-        return NextResponse.json({ success: true, data }, { status: 201 });
+        return NextResponse.json({ success: true, data: serialize(data) }, { status: 201 });
     } catch (error: any) {
         console.error(`Creation error for ${entity}:`, error);
         return NextResponse.json({ error: `Failed to register ${entity} asset: ${error.message}` }, { status: 500 });
@@ -291,7 +308,7 @@ export async function handleRead(entity: string, id: string) {
             return NextResponse.json({ error: "Asset not found or unauthorized access" }, { status: 404 });
         }
 
-        return NextResponse.json({ success: true, data });
+        return NextResponse.json({ success: true, data: serialize(data) });
     } catch (error: any) {
         console.error(`Read error for ${entity}:`, error);
         return NextResponse.json({ error: `Retrieval failure for ${entity}` }, { status: 500 });
@@ -396,7 +413,7 @@ export async function handleUpdate(entity: string, id: string, body: any) {
         // Trigger real-time update
         await broadcast(`${entity}:changed`, { id, action: 'update', data });
 
-        return NextResponse.json({ success: true, data });
+        return NextResponse.json({ success: true, data: serialize(data) });
     } catch (error: any) {
         console.error(`Update error for ${entity}:`, error);
         return NextResponse.json({ error: `Modification failure for ${entity}: ${error.message}` }, { status: 500 });

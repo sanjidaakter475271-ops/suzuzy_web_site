@@ -1,6 +1,6 @@
 /**
  * broadcast: Sends a signal to the Socket.io server to wake up clients.
- * Use this in your Server Actions after a successful mutation.
+ * Use this in your API routes or Server Actions after a successful mutation.
  */
 export async function broadcast(event: string, data: Record<string, unknown> = {}) {
     const SOCKET_API = process.env.INTERNAL_SOCKET_URL || "http://localhost:3001/broadcast";
@@ -16,3 +16,6 @@ export async function broadcast(event: string, data: Record<string, unknown> = {
         console.warn("Failed to broadcast signal:", error);
     }
 }
+
+// Alias for compliance with some rule docs
+export const broadcastEvent = broadcast;
