@@ -6,7 +6,7 @@ const { prisma } = require('./src/lib/prisma/client');
 
 async function main() {
   console.log('Seeding Permissions...');
-  
+
   const modules = {
     workshop: ['view', 'create', 'edit', 'delete', 'assign_technician', 'finalize'],
     job_card: ['view', 'create', 'edit', 'request_qc', 'approve_requisition', 'transition'],
@@ -17,7 +17,7 @@ async function main() {
     notifications: ['view', 'manage_triggers']
   };
 
-  const resources = {
+  const resources: Record<string, string> = {
     workshop: 'workshop',
     job_card: 'job_cards',
     inventory: 'inventory',
@@ -104,3 +104,5 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
+export { };
