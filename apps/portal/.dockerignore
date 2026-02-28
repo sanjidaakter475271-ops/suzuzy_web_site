@@ -48,3 +48,6 @@ next-env.d.ts
 Dockerfile
 .dockerignore
 docker-compose*.yml
+
+# Separate apps
+nazmul
