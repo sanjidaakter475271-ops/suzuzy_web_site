@@ -233,7 +233,7 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
 
     addServiceTask: async (jobCardId: string, description: string, cost: number) => {
         try {
-            const res = await fetch(`/api/v1/job_cards/${jobCardId}/tasks`, {
+            const res = await fetch(`/api/v1/workshop/jobs/${jobCardId}/tasks`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ item_name: description, cost, is_checked: false }),

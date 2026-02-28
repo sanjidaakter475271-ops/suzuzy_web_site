@@ -215,7 +215,8 @@ export async function handleCreate(entity: string, body: any) {
         'payments': { field: 'payment_number', prefix: 'PAY' },
         'return_requests': { field: 'return_number', prefix: 'RET' },
         'shipments': { field: 'tracking_number', prefix: 'SHP' },
-        'referrals': { field: 'referral_code', prefix: 'REF' }
+        'referrals': { field: 'referral_code', prefix: 'REF' },
+        'service_estimates': { field: 'estimate_number', prefix: 'EST' }
     };
 
     const mapping = businessNumbers[config.model];

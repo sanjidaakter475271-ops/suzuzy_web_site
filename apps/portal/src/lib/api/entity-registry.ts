@@ -235,5 +235,11 @@ export const ENTITY_REGISTRY: Record<string, EntityConfig> = {
         model: 'profiles',
         scopeBy: 'dealer_id',
         includes: { roles: true }
+    },
+    service_estimates: {
+        model: 'service_estimates',
+        scopeBy: 'dealer_id',
+        includes: { profiles: true },
+        searchFields: ['estimate_number']
     }
 };

@@ -20,9 +20,31 @@ const MOCK_QUOTATIONS: any[] = [];
 const QuotationsPage = () => {
     const [searchQuery, setSearchQuery] = useState('');
 
-    const filteredQuotations = MOCK_QUOTATIONS.filter(q =>
-        q.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        q.customer.toLowerCase().includes(searchQuery.toLowerCase())
+    const [quotations, setQuotations] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    React.useEffect(() => {
+        const fetchQuotations = async () => {
+            try {
+                const res = await fetch('/api/v1/service_estimates');
+                const data = await res.json();
+                if (data.success) {
+                    setQuotations(data.data);
+                } else {
+                    console.error('Failed to fetch quotations:', data.error);
+                }
+            } catch (error) {
+                console.error('Network error fetching quotations:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchQuotations();
+    }, []);
+
+    const filteredQuotations = quotations.filter(q =>
+        q.estimate_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        q.profiles?.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return (
@@ -59,61 +81,64 @@ const QuotationsPage = () => {
                                 <th className="p-5 text-[10px] font-black text-ink-muted uppercase tracking-widest">Quote No</th>
                                 <th className="p-5 text-[10px] font-black text-ink-muted uppercase tracking-widest">Date</th>
                                 <th className="p-5 text-[10px] font-black text-ink-muted uppercase tracking-widest">Customer</th>
-                                <th className="p-5 text-[10px] font-black text-ink-muted uppercase tracking-widest">Items</th>
                                 <th className="p-5 text-[10px] font-black text-ink-muted uppercase tracking-widest">Total Amount</th>
                                 <th className="p-5 text-[10px] font-black text-ink-muted uppercase tracking-widest">Status</th>
                                 <th className="p-5 text-[10px] font-black text-ink-muted uppercase tracking-widest text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-surface-border dark:divide-dark-border/50 bg-white dark:bg-dark-card">
-                            {filteredQuotations.map((q) => (
-                                <tr key={q.id} className="hover:bg-brand-soft/10 transition-colors group">
-                                    <td className="p-5 font-black text-brand text-xs">{q.id}</td>
-                                    <td className="p-5">
-                                        <div className="flex items-center gap-2 text-xs font-bold text-ink-muted whitespace-nowrap">
-                                            <Clock size={14} />
-                                            {new Date(q.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                        </div>
-                                    </td>
-                                    <td className="p-5 text-sm font-bold text-ink-heading dark:text-white">{q.customer}</td>
-                                    <td className="p-5 text-xs font-bold text-ink-muted">{q.items} Items</td>
-                                    <td className="p-5 font-black text-ink-heading dark:text-white">৳{q.amount.toLocaleString()}</td>
-                                    <td className="p-5">
-                                        <span className={cn(
-                                            "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase flex items-center w-fit gap-1.5",
-                                            q.status === 'converted' ? "bg-success-bg text-success border border-success/20" :
-                                                q.status === 'pending' ? "bg-warning-bg text-warning border border-warning/20" :
-                                                    "bg-surface-page text-ink-muted border border-surface-border"
-                                        )}>
-                                            <div className={cn("w-1.5 h-1.5 rounded-full",
-                                                q.status === 'converted' ? "bg-success" :
-                                                    q.status === 'pending' ? "bg-warning" : "bg-ink-muted"
-                                            )}></div>
-                                            {q.status}
-                                        </span>
-                                    </td>
-                                    <td className="p-5 text-right">
-                                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button className="p-2 hover:bg-brand/10 text-ink-muted hover:text-brand rounded-xl transition-colors" title="View">
-                                                <Eye size={18} />
-                                            </button>
-                                            <button className="p-2 hover:bg-brand/10 text-ink-muted hover:text-brand rounded-xl transition-colors" title="Download">
-                                                <Download size={18} />
-                                            </button>
-                                            <button className="p-2 hover:bg-surface-page text-ink-muted rounded-xl transition-colors" title="More">
-                                                <MoreHorizontal size={18} />
-                                            </button>
-                                        </div>
-                                    </td>
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan={6} className="p-12 text-center text-ink-muted/50 text-sm font-bold italic">Loading quotations...</td>
                                 </tr>
-                            ))}
+                            ) : filteredQuotations.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="p-12 text-center text-ink-muted/50 text-sm font-bold italic">No quotations found.</td>
+                                </tr>
+                            ) : (
+                                filteredQuotations.map((q) => (
+                                    <tr key={q.id} className="hover:bg-brand-soft/10 transition-colors group">
+                                        <td className="p-5 font-black text-brand text-xs">{q.estimate_number || `EST-${q.id.substring(0, 6)}`}</td>
+                                        <td className="p-5">
+                                            <div className="flex items-center gap-2 text-xs font-bold text-ink-muted whitespace-nowrap">
+                                                <Clock size={14} />
+                                                {new Date(q.created_at || new Date()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                            </div>
+                                        </td>
+                                        <td className="p-5 text-sm font-bold text-ink-heading dark:text-white">{q.profiles?.full_name || 'Walk-in Customer'}</td>
+                                        <td className="p-5 font-black text-ink-heading dark:text-white">৳{Number(q.grand_total || 0).toLocaleString()}</td>
+                                        <td className="p-5">
+                                            <span className={cn(
+                                                "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase flex items-center w-fit gap-1.5",
+                                                q.status === 'converted' || q.status === 'approved' ? "bg-success-bg text-success border border-success/20" :
+                                                    q.status === 'pending' || q.status === 'draft' ? "bg-warning-bg text-warning border border-warning/20" :
+                                                        "bg-surface-page text-ink-muted border border-surface-border"
+                                            )}>
+                                                <div className={cn("w-1.5 h-1.5 rounded-full",
+                                                    q.status === 'converted' || q.status === 'approved' ? "bg-success" :
+                                                        q.status === 'pending' || q.status === 'draft' ? "bg-warning" : "bg-ink-muted"
+                                                )}></div>
+                                                {q.status || 'draft'}
+                                            </span>
+                                        </td>
+                                        <td className="p-5 text-right">
+                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button className="p-2 hover:bg-brand/10 text-ink-muted hover:text-brand rounded-xl transition-colors" title="View">
+                                                    <Eye size={18} />
+                                                </button>
+                                                <button className="p-2 hover:bg-brand/10 text-ink-muted hover:text-brand rounded-xl transition-colors" title="Download">
+                                                    <Download size={18} />
+                                                </button>
+                                                <button className="p-2 hover:bg-surface-page text-ink-muted rounded-xl transition-colors" title="More">
+                                                    <MoreHorizontal size={18} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
-                    {filteredQuotations.length === 0 && (
-                        <div className="p-12 text-center text-ink-muted/50 text-sm font-bold italic">
-                            No quotations found.
-                        </div>
-                    )}
                 </div>
             </Card>
         </div>
