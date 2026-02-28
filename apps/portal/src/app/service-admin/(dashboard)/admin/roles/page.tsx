@@ -43,7 +43,7 @@ const RolesPage = () => {
                                     Included Permissions
                                 </h4>
                                 <ul className="space-y-2">
-                                    {role.permissions.map((perm, idx) => (
+                                    {role.permissions.map((perm: string, idx: number) => (
                                         <li key={idx} className="flex items-start gap-2 text-xs font-bold text-ink-muted">
                                             <Check size={14} className="text-success shrink-0 mt-0.5" />
                                             {perm.replace('_', ' ').toUpperCase()}
