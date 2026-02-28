@@ -13,9 +13,9 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-    user: MOCK_USERS[0], // Default logged in as admin
-    users: MOCK_USERS,
-    isAuthenticated: true,
+    user: null, // Default to null
+    users: [],
+    isAuthenticated: false,
 
     login: (email) => {
         const foundUser = MOCK_USERS.find(u => u.email === email);

@@ -53,48 +53,19 @@ export const useCustomerStore = create<CustomerState>()(
             serviceRequests: [],
 
             login: async (phone, otp) => {
-                // Mock API call
-                return new Promise((resolve) => {
-                    setTimeout(() => {
-                        if (otp.length === 4) {
-                            set({ isAuthenticated: true, customer: { ...MOCK_CUSTOMER, phone } });
-                            resolve(true);
-                        } else {
-                            resolve(false);
-                        }
-                    }, 1000);
-                });
+                // To be implemented with actual API
+                return false;
             },
 
             register: async (data) => {
-                // Mock API call
-                return new Promise((resolve) => {
-                    setTimeout(() => {
-                        const newCustomer: Customer = {
-                            id: 'C' + Math.random().toString(36).substr(2, 9),
-                            name: data.name,
-                            phone: data.phone,
-                            vehicles: [
-                                { id: 'V' + Math.random(), regNo: data.vehicleRegNo, model: data.vehicleModel }
-                            ]
-                        };
-                        set({ isAuthenticated: true, customer: newCustomer });
-                        resolve(true);
-                    }, 1000);
-                });
+                // To be implemented with actual API
+                return false;
             },
 
             logout: () => set({ isAuthenticated: false, customer: null }),
 
             requestService: (vehicleId, complaint) => {
-                const newRequest: ServiceRequest = {
-                    id: 'SR' + Math.random().toString(36).substr(2, 5).toUpperCase(),
-                    vehicleId,
-                    complaint,
-                    status: 'pending',
-                    date: new Date().toISOString()
-                };
-                set((state) => ({ serviceRequests: [newRequest, ...state.serviceRequests] }));
+                // To be implemented
             }
         }),
         {

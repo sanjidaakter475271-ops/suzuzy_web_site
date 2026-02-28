@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { Customer, Vehicle } from '@/types/service-admin/index';
 import { Complaint, ReminderLog } from '@/types/service-admin/crm';
-import { MOCK_CUSTOMERS, MOCK_VEHICLES, MOCK_COMPLAINTS, MOCK_REMINDER_LOGS } from '@/constants/service-admin/crmData';
 
 interface CRMState {
     customers: Customer[];
@@ -15,10 +14,10 @@ interface CRMState {
 }
 
 export const useCRMStore = create<CRMState>((set) => ({
-    customers: MOCK_CUSTOMERS,
-    vehicles: MOCK_VEHICLES,
-    complaints: MOCK_COMPLAINTS,
-    reminderLogs: MOCK_REMINDER_LOGS,
+    customers: [],
+    vehicles: [],
+    complaints: [],
+    reminderLogs: [],
     addCustomer: (c) => set((state) => ({ customers: [c, ...state.customers] })),
     addVehicle: (v) => set((state) => ({ vehicles: [v, ...state.vehicles] })),
     addComplaint: (c) => set((state) => ({ complaints: [c, ...state.complaints] })),

@@ -7,7 +7,6 @@ const issueSchema = z.object({
     job_card_id: z.string().uuid(),
     variant_id: z.string().uuid(),
     quantity: z.number().int().positive(),
-    notes: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -23,7 +22,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: false, error: "Invalid input", details: parsed.error.flatten() }, { status: 400 });
         }
 
-        const { job_card_id, variant_id, quantity, notes } = parsed.data;
+        const { job_card_id, variant_id, quantity } = parsed.data;
 
         // 1. Verify Job Card ownership
         const jobCard = await prisma.job_cards.findFirst({
@@ -56,9 +55,8 @@ export async function POST(req: NextRequest) {
                     job_card_id,
                     variant_id,
                     quantity,
-                    unit_price: variant.price,
-                    total_price: Number(variant.price) * quantity,
-                    notes
+                    unit_price: variant.price || 0,
+                    total_price: (Number(variant.price) || 0) * quantity
                 }
             });
 

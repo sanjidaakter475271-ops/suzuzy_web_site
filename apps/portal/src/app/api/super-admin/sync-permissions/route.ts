@@ -16,9 +16,13 @@ export async function POST(req: NextRequest) {
         const results = [];
         for (const perm of SYSTEM_PERMISSIONS) {
             const upserted = await prisma.permissions.upsert({
-                where: { name: perm.name },
+                where: {
+                    name: perm.name
+                },
                 update: {
                     module: perm.module,
+                    action: perm.action,
+                    resource: perm.resource,
                     description: perm.description,
                 },
                 create: perm,

@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
         const permissions = await prisma.permissions.findMany({
             orderBy: [
                 { module: 'asc' },
-                { name: 'asc' }
+                { action: 'asc' }
             ]
         });
 
@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
 export async function POST(req: NextRequest) {
     try {
         const token = req.cookies.get("access_token")?.value;
@@ -32,21 +33,31 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
         }
 
-        const { name, module, description } = await req.json();
+        const { module, action, resource, description } = await req.json();
 
-        if (!name || !module) {
-            return NextResponse.json({ error: "Name and module are required" }, { status: 400 });
+        if (!module || !action || !resource) {
+            return NextResponse.json({ error: "Module, action, and resource are required" }, { status: 400 });
         }
 
-        const existing = await prisma.permissions.findUnique({ where: { name } });
+        const existing = await prisma.permissions.findUnique({
+            where: {
+                module_action_resource: {
+                    module,
+                    action,
+                    resource
+                }
+            }
+        });
+
         if (existing) {
             return NextResponse.json({ error: "Permission already exists" }, { status: 409 });
         }
 
         const newPerm = await prisma.permissions.create({
             data: {
-                name,
                 module,
+                action,
+                resource,
                 description
             }
         });

@@ -15,11 +15,7 @@ import { Card, Button } from '@/components/service-admin/ui';
 import { cn } from '@/lib/utils';
 
 // Local Mock Data
-const MOCK_QUOTATIONS = [
-    { id: 'QT-1001', date: '2024-04-25T09:00:00Z', customer: 'Rafiqul Islam', amount: 5400, status: 'pending', items: 4 },
-    { id: 'QT-1002', date: '2024-04-24T14:30:00Z', customer: 'Tanvir Ahmed', amount: 12500, status: 'converted', items: 8 },
-    { id: 'QT-1003', date: '2024-04-23T11:15:00Z', customer: 'Corporate Client A', amount: 45000, status: 'expired', items: 12 },
-];
+const MOCK_QUOTATIONS: any[] = [];
 
 const QuotationsPage = () => {
     const [searchQuery, setSearchQuery] = useState('');

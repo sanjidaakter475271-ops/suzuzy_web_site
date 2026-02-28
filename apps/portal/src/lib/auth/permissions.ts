@@ -24,8 +24,17 @@ export async function hasPermission(userId: string, permissionName: string): Pro
     // Super Admin has all permissions
     if (user.roles.name === "super_admin") return true;
 
+    // Check if permissionName is in 'module:action' format
+    if (permissionName.includes(':')) {
+        const [module, action] = permissionName.split(':');
+        return user.roles.role_permissions.some(
+            (rp) => rp.permissions.module === module && rp.permissions.action === action
+        );
+    }
+
+    // Fallback or specific action check
     return user.roles.role_permissions.some(
-        (rp) => rp.permissions.name === permissionName
+        (rp) => rp.permissions.action === permissionName || rp.permissions.module === permissionName
     );
 }
 

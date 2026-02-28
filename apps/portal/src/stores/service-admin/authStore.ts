@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { User } from '@/types/service-admin/index';
-import { MOCK_USERS } from '@/constants/service-admin/userData';
 
 interface AuthState {
     user: User | null;

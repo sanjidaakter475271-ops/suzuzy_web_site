@@ -66,11 +66,18 @@ async function main() {
             const permName = `${key}:${op}`;
 
             const permission = await prisma.permissions.upsert({
-                where: { name: permName },
+                where: {
+                    module_action_resource: {
+                        module: key,
+                        action: op,
+                        resource: key
+                    }
+                },
                 update: {},
                 create: {
-                    name: permName,
                     module: key,
+                    action: op,
+                    resource: key,
                     description: `Allow ${op} on ${key}`
                 }
             });

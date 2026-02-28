@@ -2,8 +2,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-const { prisma } = require('./src/lib/prisma/client');
-
+const { prisma } = require('../src/lib/prisma/client');
 async function main() {
   console.log('Seeding Permissions...');
 

@@ -7,7 +7,7 @@ import { z } from "zod";
 const transitionSchema = z.object({
     toStatus: z.string(),
     reason: z.string().optional(),
-    metadata: z.record(z.any()).optional(),
+    metadata: z.record(z.string(), z.any()).optional(),
 });
 
 export async function POST(
@@ -42,7 +42,7 @@ export async function POST(
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
-        const fromStatus = job.status || 'created';
+        const fromStatus: string = job.status || 'created';
 
         // 2. Validate transition
         if (!canTransition(fromStatus, toStatus)) {

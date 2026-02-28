@@ -29,7 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
             if (!claim) throw new Error("Warranty claim not found");
             if (claim.dealer_id !== dealerId) throw new Error("Unauthorized");
-            if (['approved', 'rejected', 'partially_approved'].includes(claim.status)) {
+            if (['approved', 'rejected', 'partially_approved'].includes(claim.status as string)) {
                 throw new Error(`Claim is already settled with status: ${claim.status}`);
             }
 
