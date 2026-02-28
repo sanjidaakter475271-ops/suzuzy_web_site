@@ -1,37 +1,42 @@
-import { ROLE_LEVELS } from "@/middlewares/checkRole";
+import { ROLES, ROLE_LEVELS } from "@/lib/auth/roles";
 
 export const PORTAL_CONFIG = {
     SUPER_ADMIN: {
         path: "/super-admin",
-        minLevel: ROLE_LEVELS.SUPER_ADMIN,
-        allowedRoles: ["super_admin"],
+        minLevel: ROLE_LEVELS[ROLES.SUPER_ADMIN],
+        allowedRoles: [ROLES.SUPER_ADMIN],
     },
     ADMIN: {
         path: "/admin",
-        minLevel: ROLE_LEVELS.ADMIN,
-        maxLevel: ROLE_LEVELS.VIEWER,
-        allowedRoles: ["super_admin", "admin", "sales_admin", "service_admin", "service_sales_admin", "support", "accountant", "viewer"],
+        minLevel: ROLE_LEVELS[ROLES.SHOWROOM_ADMIN],
+        maxLevel: ROLE_LEVELS[ROLES.SERVICE_TECHNICIAN],
+        allowedRoles: [
+            ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SHOWROOM_ADMIN,
+            ROLES.SALES_ADMIN, ROLES.SHOWROOM_SALES_ADMIN,
+            ROLES.SERVICE_SALES_ADMIN, ROLES.SUPPORT, ROLES.ACCOUNTANT,
+            ROLES.SELLS_STUFF,
+        ],
     },
     SALES_ADMIN: {
         path: "/sales-admin",
-        minLevel: ROLE_LEVELS.SALES_ADMIN,
-        allowedRoles: ["super_admin", "sales_admin"],
+        minLevel: ROLE_LEVELS[ROLES.SHOWROOM_SALES_ADMIN],
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.SALES_ADMIN, ROLES.SHOWROOM_SALES_ADMIN, ROLES.SERVICE_SALES_ADMIN],
     },
     SERVICE_ADMIN: {
         path: "/service-admin",
-        minLevel: ROLE_LEVELS.SERVICE_ADMIN,
-        allowedRoles: ["super_admin", "service_admin"],
+        minLevel: ROLE_LEVELS[ROLES.SERVICE_ADMIN],
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.SERVICE_ADMIN],
     },
     SERVICE_STAFF: {
         path: "/service-staff",
-        minLevel: ROLE_LEVELS.SERVICE_TECHNICIAN,
-        allowedRoles: ["super_admin", "service_admin", "service_technician"],
+        minLevel: ROLE_LEVELS[ROLES.SERVICE_TECHNICIAN],
+        allowedRoles: [ROLES.SUPER_ADMIN, ROLES.SERVICE_ADMIN, ROLES.SERVICE_TECHNICIAN, ROLES.SERVICE_STUFF],
     },
     DEALER: {
         path: "/dealer",
-        minLevel: ROLE_LEVELS.DEALER_OWNER,
-        maxLevel: ROLE_LEVELS.DEALER_STAFF,
-        allowedRoles: ["dealer_owner", "dealer_manager", "dealer_staff"],
+        minLevel: ROLE_LEVELS[ROLES.DEALER_OWNER],
+        maxLevel: ROLE_LEVELS[ROLES.DEALER_STAFF],
+        allowedRoles: [ROLES.DEALER_OWNER, ROLES.DEALER_MANAGER, ROLES.DEALER_STAFF, ROLES.DEALER],
     },
 };
 

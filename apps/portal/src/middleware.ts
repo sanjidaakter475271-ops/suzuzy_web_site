@@ -9,6 +9,7 @@ export default async function authMiddleware(request: NextRequest) {
     const isAuthRoute = request.nextUrl.pathname.startsWith("/login") || request.nextUrl.pathname.startsWith("/register");
     const isDashboardRoute = request.nextUrl.pathname.startsWith("/admin") ||
         request.nextUrl.pathname.startsWith("/super-admin") ||
+        request.nextUrl.pathname.startsWith("/service-admin") ||
         request.nextUrl.pathname.startsWith("/dealer") ||
         request.nextUrl.pathname.startsWith("/sales-admin");
 
@@ -22,22 +23,22 @@ export default async function authMiddleware(request: NextRequest) {
         if (role === ROLES.SUPER_ADMIN) return NextResponse.redirect(new URL("/super-admin/dashboard", request.url));
 
         // Showroom roles
-        if (ROLE_GROUPS.SHOWROOM.includes(role)) {
-            return NextResponse.redirect(new URL("/admin/showroom/dashboard", request.url));
+        if ((ROLE_GROUPS.SHOWROOM as string[]).includes(role)) {
+            return NextResponse.redirect(new URL("/admin/dashboard", request.url));
         }
 
         // Service Center roles
-        if (ROLE_GROUPS.SERVICE.includes(role)) {
-            return NextResponse.redirect(new URL("/admin/service/dashboard", request.url));
+        if ((ROLE_GROUPS.SERVICE as string[]).includes(role)) {
+            return NextResponse.redirect(new URL("/service-admin/dashboard", request.url));
         }
 
         // General Admin / Support roles
-        if (ROLE_GROUPS.GENERAL_ADMIN.includes(role)) {
+        if ((ROLE_GROUPS.GENERAL_ADMIN as string[]).includes(role)) {
             return NextResponse.redirect(new URL("/admin/dashboard", request.url));
         }
 
         // Dealer roles
-        if (ROLE_GROUPS.DEALER.includes(role) || role.includes('dealer') || role === 'sub_dealer') {
+        if ((ROLE_GROUPS.DEALER as string[]).includes(role) || role.includes('dealer') || role === 'sub_dealer') {
             return NextResponse.redirect(new URL("/dealer/dashboard", request.url));
         }
 

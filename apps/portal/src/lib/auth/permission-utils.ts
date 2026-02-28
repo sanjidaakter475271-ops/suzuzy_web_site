@@ -1,6 +1,15 @@
 /**
- * Centralized Permission Registry and Role Mapping
+ * ═══════════════════════════════════════════════════════════════
+ *  Centralized Permission Registry & Role → Permission Mapping
+ * ═══════════════════════════════════════════════════════════════
+ *
+ *  - SYSTEM_PERMISSIONS: flat list of all permissions
+ *  - ROLE_PERMISSIONS_MAPPING: which role gets which permissions
+ *
+ *  Roles are imported from the central "@/lib/auth/roles" file.
  */
+
+import { ROLES } from "@/lib/auth/roles";
 
 export interface SystemPermission {
     name: string;
@@ -87,13 +96,20 @@ export const SYSTEM_PERMISSIONS: SystemPermission[] = [
 ];
 
 /**
- * Mapping of Roles to their default Permission sets
+ * ═══════════════════════════════════════════════════════════════
+ *  ROLE → PERMISSIONS MAPPING
+ *  Every role from ROLES must have an entry here.
+ * ═══════════════════════════════════════════════════════════════
  */
 export const ROLE_PERMISSIONS_MAPPING: Record<string, string[]> = {
-    super_admin: SYSTEM_PERMISSIONS.map(p => p.name),
 
-    showroom_admin: [
-        'view_dashboard', 'view_users', 'view_roles', 'view_dealers',
+    // ── SUPER ADMIN ── gets everything
+    [ROLES.SUPER_ADMIN]: SYSTEM_PERMISSIONS.map(p => p.name),
+
+    // ── SHOWROOM ADMIN ── full showroom authority
+    [ROLES.SHOWROOM_ADMIN]: [
+        'view_dashboard', 'view_users', 'create_user', 'edit_user',
+        'view_roles', 'view_dealers',
         'view_products', 'create_product', 'edit_product', 'manage_inventory',
         'view_orders', 'create_order', 'update_order_status',
         'view_payments', 'create_payment', 'manage_payments',
@@ -101,60 +117,160 @@ export const ROLE_PERMISSIONS_MAPPING: Record<string, string[]> = {
         'view_returns', 'approve_return', 'reject_return',
         'view_reviews', 'approve_review',
         'view_reports', 'export_reports',
-        'view_audit_logs'
+        'view_audit_logs',
     ],
 
-    service_admin: [
-        'view_dashboard', 'view_users',
+    // ── SERVICE ADMIN ── full service center authority
+    [ROLES.SERVICE_ADMIN]: [
+        'view_dashboard', 'view_users', 'create_user', 'edit_user',
         'view_products', 'manage_inventory',
         'view_orders', 'update_order_status',
         'view_payments', 'create_payment',
         'view_returns', 'approve_return',
         'view_service_tasks', 'manage_service_tasks', 'manage_ramps',
-        'view_reports'
+        'view_reports', 'export_reports',
     ],
 
-    dealer: [
-        'view_dashboard', 'view_products', 'manage_inventory',
+    // ── SHOWROOM SALES ADMIN ── sales operations in showroom
+    [ROLES.SHOWROOM_SALES_ADMIN]: [
+        'view_dashboard',
+        'view_products', 'create_product', 'edit_product',
         'view_orders', 'create_order', 'update_order_status',
-        'view_payments', 'view_shipments', 'create_shipment',
+        'view_payments', 'create_payment', 'manage_payments',
+        'view_shipments', 'create_shipment',
+        'view_returns', 'approve_return',
+        'view_reports', 'export_reports',
+    ],
+
+    // ── SERVICE SALES ADMIN ── sales operations in service center
+    [ROLES.SERVICE_SALES_ADMIN]: [
+        'view_dashboard',
+        'view_products',
+        'view_orders', 'create_order', 'update_order_status',
+        'view_payments', 'create_payment', 'manage_payments',
+        'view_service_tasks',
+        'view_reports', 'export_reports',
+    ],
+
+    // ── SALES ADMIN ── generic sales admin (alias-level same as showroom_sales_admin)
+    [ROLES.SALES_ADMIN]: [
+        'view_dashboard',
+        'view_products', 'create_product', 'edit_product',
+        'view_orders', 'create_order', 'update_order_status',
+        'view_payments', 'create_payment', 'manage_payments',
+        'view_shipments', 'create_shipment',
+        'view_returns', 'approve_return',
+        'view_reports', 'export_reports',
+    ],
+
+    // ── GENERIC ADMIN ── back-office admin
+    [ROLES.ADMIN]: [
+        'view_dashboard', 'view_users', 'view_roles', 'view_dealers',
+        'view_products', 'create_product', 'edit_product', 'manage_inventory',
+        'view_orders', 'create_order', 'update_order_status',
+        'view_payments', 'create_payment', 'manage_payments',
+        'view_shipments', 'create_shipment',
+        'view_returns', 'approve_return',
+        'view_reviews', 'approve_review',
+        'view_reports', 'export_reports',
+        'manage_settings', 'view_audit_logs',
+    ],
+
+    // ── SUPPORT ── customer support staff
+    [ROLES.SUPPORT]: [
+        'view_dashboard',
+        'view_users',
+        'view_products',
+        'view_orders', 'update_order_status',
+        'view_payments',
+        'view_returns', 'approve_return', 'reject_return',
+        'view_reviews', 'approve_review', 'delete_review',
+        'view_reports',
+    ],
+
+    // ── ACCOUNTANT ── finance-focused
+    [ROLES.ACCOUNTANT]: [
+        'view_dashboard',
+        'view_orders',
+        'view_payments', 'create_payment', 'manage_payments',
+        'view_reports', 'export_reports',
+    ],
+
+    // ── SELLS STUFF ── showroom floor sales staff
+    [ROLES.SELLS_STUFF]: [
+        'view_products',
+        'view_orders', 'create_order',
+        'view_payments', 'create_payment',
+    ],
+
+    // ── SERVICE STUFF ── service floor staff
+    [ROLES.SERVICE_STUFF]: [
+        'view_products',
+        'view_service_tasks', 'manage_service_tasks',
+    ],
+
+    // ── SERVICE TECHNICIAN ── hands-on technician
+    [ROLES.SERVICE_TECHNICIAN]: [
+        'view_products',
+        'view_service_tasks', 'manage_service_tasks',
+    ],
+
+    // ── DEALER OWNER ── full dealer authority
+    [ROLES.DEALER_OWNER]: [
+        'view_dashboard', 'view_products', 'create_product', 'edit_product', 'manage_inventory',
+        'view_orders', 'create_order', 'update_order_status',
+        'view_payments', 'create_payment',
+        'view_shipments', 'create_shipment',
         'view_returns', 'create_return_request',
         'view_loyalty', 'view_referrals',
-        'view_reports'
+        'view_reports', 'export_reports',
     ],
 
-    dealer_manager: [
+    // ── DEALER (legacy alias) ── same as dealer_owner
+    [ROLES.DEALER]: [
+        'view_dashboard', 'view_products', 'create_product', 'edit_product', 'manage_inventory',
+        'view_orders', 'create_order', 'update_order_status',
+        'view_payments', 'create_payment',
+        'view_shipments', 'create_shipment',
+        'view_returns', 'create_return_request',
+        'view_loyalty', 'view_referrals',
+        'view_reports', 'export_reports',
+    ],
+
+    // ── DEALER MANAGER ── manages dealer operations
+    [ROLES.DEALER_MANAGER]: [
         'view_dashboard', 'view_products', 'manage_inventory',
         'view_orders', 'create_order', 'update_order_status',
-        'view_payments', 'view_shipments', 'view_returns',
-        'view_reports'
+        'view_payments',
+        'view_shipments',
+        'view_returns',
+        'view_reports',
     ],
 
-    customer: [
+    // ── DEALER STAFF ── basic dealer employee
+    [ROLES.DEALER_STAFF]: [
+        'view_products', 'manage_inventory',
+        'view_orders', 'create_order',
+        'view_payments',
+        'view_shipments',
+    ],
+
+    // ── SUB DEALER ── downstream reseller
+    [ROLES.SUB_DEALER]: [
+        'view_dashboard', 'view_products',
+        'view_orders', 'create_order',
+        'view_payments',
+        'view_returns', 'create_return_request',
+        'view_loyalty', 'view_referrals',
+    ],
+
+    // ── CUSTOMER ── end-user
+    [ROLES.CUSTOMER]: [
         'view_products',
         'view_orders', 'create_order',
         'create_return_request',
         'view_loyalty', 'view_referrals',
         'view_reviews',
-        'view_wishlists'
+        'view_wishlists',
     ],
-
-    sells_stuff: [
-        'view_products', 'view_orders', 'create_order',
-        'view_payments', 'create_payment'
-    ],
-
-    service_stuff: [
-        'view_products', 'view_service_tasks', 'manage_service_tasks'
-    ],
-
-    inventory_manager: [
-        'view_products', 'create_product', 'edit_product', 'manage_inventory',
-        'view_shipments', 'create_shipment'
-    ],
-
-    accountant: [
-        'view_dashboard', 'view_orders', 'view_payments', 'manage_payments',
-        'view_reports', 'export_reports'
-    ]
 };

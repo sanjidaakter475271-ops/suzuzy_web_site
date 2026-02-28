@@ -65,6 +65,8 @@ export default function SetInitialPasswordPage() {
 
             if (role === "super_admin") {
                 redirectPath = "/super-admin/dashboard";
+            } else if (role === "service_admin") {
+                redirectPath = "/service-admin/dashboard";
             } else if (role.includes("sales_admin")) {
                 redirectPath = "/sales-admin/dashboard";
             } else if (role.includes("showroom") || role.includes("service") || role === "support" || role === "accountant" || role === "admin") {
