@@ -38,6 +38,9 @@ interface WorkshopState {
     addServiceTask: (jobCardId: string, description: string, cost: number) => Promise<void>;
 }
 
+let lastFetchTime = 0;
+const FETCH_THROTTLE_MS = 2000;
+
 export const useWorkshopStore = create<WorkshopState>((set, get) => ({
     jobCards: [],
     technicians: [],
@@ -47,6 +50,16 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
     error: null,
 
     fetchWorkshopData: async () => {
+        const now = Date.now();
+        const { isLoading } = get();
+
+        // Prevent concurrent or too-frequent fetches
+        if (isLoading || (now - lastFetchTime < FETCH_THROTTLE_MS)) {
+            console.log("[WORKSHOP_STORE] Skipping redundant fetch (throttled or in-progress)");
+            return;
+        }
+
+        lastFetchTime = now;
         set({ isLoading: true, error: null });
         try {
             const res = await fetch('/api/v1/workshop/overview');
@@ -132,7 +145,8 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
                     dedicatedTechnicianId: ramp.staff_id,
                     currentJobCardId: card?.id,
                     assignedTechnicianId: ramp.staff_id,
-                    vehicleRegNo: ticket?.service_vehicles?.engine_number
+                    vehicleRegNo: ticket?.service_vehicles?.engine_number,
+                    startTime: ramp.updated_at
                 };
             });
 
@@ -373,9 +387,16 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
             const res = await fetch('/api/v1/service_staff', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify({
+                    status: 'active',
+                    ...data
+                })
             });
-            if (!res.ok) throw new Error('Failed to add technician');
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                console.error("[WORKSHOP_STORE] addTechnician failed:", errData);
+                throw new Error(errData.error || 'Failed to add technician');
+            }
             await get().fetchWorkshopData();
         } catch (error: any) {
             console.error(error);
@@ -409,7 +430,11 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
                     ...data
                 })
             });
-            if (!res.ok) throw new Error('Failed to add ramp');
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                console.error("[WORKSHOP_STORE] addRamp failed:", errData);
+                throw new Error(errData.error || 'Failed to add ramp');
+            }
             await get().fetchWorkshopData();
         } catch (error: any) {
             console.error(error);

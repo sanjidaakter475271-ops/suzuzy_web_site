@@ -69,6 +69,7 @@ export const ENTITY_REGISTRY: Record<string, EntityConfig> = {
     },
     service_ramps: {
         model: 'service_ramps',
+        scopeBy: 'dealer_id',
         includes: {
             service_tickets_service_ramps_current_ticket_idToservice_tickets: {
                 include: { service_vehicles: true }
@@ -101,6 +102,7 @@ export const ENTITY_REGISTRY: Record<string, EntityConfig> = {
     },
     service_tasks: {
         model: 'service_tasks',
+        scopeBy: 'job_cards.dealer_id',
         includes: { service_staff: true }
     },
     purchase_orders: {
@@ -206,6 +208,7 @@ export const ENTITY_REGISTRY: Record<string, EntityConfig> = {
     },
     service_requisitions: {
         model: 'service_requisitions',
+        scopeBy: 'job_cards.dealer_id',
         includes: {
             products: true,
             service_staff: true,
@@ -215,6 +218,7 @@ export const ENTITY_REGISTRY: Record<string, EntityConfig> = {
     },
     parts_usage: {
         model: 'parts_usage',
+        scopeBy: 'job_cards.dealer_id',
         includes: {
             part_variants: {
                 include: {
@@ -225,6 +229,7 @@ export const ENTITY_REGISTRY: Record<string, EntityConfig> = {
     },
     service_history: {
         model: 'service_history',
+        scopeBy: 'job_cards.dealer_id',
         includes: {
             service_vehicles: true,
             job_cards: true
@@ -241,5 +246,16 @@ export const ENTITY_REGISTRY: Record<string, EntityConfig> = {
         scopeBy: 'dealer_id',
         includes: { profiles: true },
         searchFields: ['estimate_number']
+    },
+    service_invoices: {
+        model: 'service_invoices',
+        scopeBy: 'dealer_id',
+        includes: { profiles: true, service_vehicles: true },
+        searchFields: ['invoice_number']
+    },
+    service_appointments: {
+        model: 'service_appointments',
+        scopeBy: 'dealer_id',
+        includes: { profiles: true, service_vehicles: true }
     }
 };

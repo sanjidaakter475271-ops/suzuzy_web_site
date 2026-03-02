@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["partialIndexes", "multiSchema"]
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
@@ -444,6 +444,7 @@ model dealers {
   service_estimates                        service_estimates[]
   service_invoices                         service_invoices[]
   service_payments                         service_payments[]
+  service_ramps                            service_ramps[]
   service_staff                            service_staff[]
   shift_templates                          shift_templates[]
   shipments                                shipments[]
@@ -1925,17 +1926,21 @@ model wishlists {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model service_ramps {
   id                                                               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  ramp_number                                                      Int               @unique
+  ramp_number                                                      Int
   status                                                           String            @default("idle")
   technician_name                                                  String?
+  name                                                             String?
   current_ticket_id                                                String?           @db.Uuid
   created_at                                                       DateTime?         @default(now()) @db.Timestamptz(6)
   updated_at                                                       DateTime?         @default(now()) @db.Timestamptz(6)
   staff_id                                                         String?           @db.Uuid
+  dealer_id                                                        String?           @db.Uuid
   service_tickets_service_ramps_current_ticket_idToservice_tickets service_tickets?  @relation("service_ramps_current_ticket_idToservice_tickets", fields: [current_ticket_id], references: [id], onUpdate: NoAction, map: "fk_current_ticket")
   service_staff                                                    service_staff?    @relation(fields: [staff_id], references: [id], onUpdate: NoAction)
   service_tickets_service_tickets_ramp_idToservice_ramps           service_tickets[] @relation("service_tickets_ramp_idToservice_ramps")
+  dealers                                                          dealers?          @relation(fields: [dealer_id], references: [id], onUpdate: NoAction)
 
+  @@unique([dealer_id, ramp_number])
   @@schema("public")
 }
 

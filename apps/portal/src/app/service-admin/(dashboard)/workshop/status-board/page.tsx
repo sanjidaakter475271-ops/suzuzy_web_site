@@ -17,31 +17,8 @@ import { cn } from '@/lib/utils';
 import { JobCard } from '@/types/service-admin/workshop';
 
 const StatusBoardPage = () => {
-    const { jobCards, technicians, fetchWorkshopData } = useWorkshopStore();
-    const { socket, isConnected } = useSocket();
-
-    // Fetch initial data
-    React.useEffect(() => {
-        fetchWorkshopData();
-    }, []);
-
-    // Listen for realtime updates
-    React.useEffect(() => {
-        if (!socket) return;
-
-        const handleUpdate = () => {
-            console.log('[REALTIME] Workshop update received, refetching status board...');
-            fetchWorkshopData();
-        };
-
-        socket.on('order:update', handleUpdate);
-        socket.on('signal:refresh', handleUpdate);
-
-        return () => {
-            socket.off('order:update', handleUpdate);
-            socket.off('signal:refresh', handleUpdate);
-        };
-    }, [socket, fetchWorkshopData]);
+    const { jobCards, technicians } = useWorkshopStore();
+    const { isConnected } = useSocket();
 
     const columns = [
         { id: 'received', label: 'Received', color: 'bg-slate-500' },
@@ -58,7 +35,7 @@ const StatusBoardPage = () => {
     };
 
     return (
-        <div className="h-[calc(100vh-100px)] flex flex-col p-6 lg:p-8 space-y-6 overflow-hidden animate-fade">
+        <div className="h-[calc(100vh-65px)] flex flex-col p-6 lg:p-8 space-y-6 overflow-hidden animate-fade w-full max-w-full">
             <Breadcrumb items={[{ label: 'Workshop', href: '/service-admin/workshop' }, { label: 'Status Board' }]} />
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

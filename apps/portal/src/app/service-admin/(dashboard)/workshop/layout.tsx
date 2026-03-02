@@ -6,13 +6,21 @@ import { Loader2 } from 'lucide-react';
 
 export default function WorkshopLayout({ children }: { children: React.ReactNode }) {
     const { fetchWorkshopData, isLoading, jobCards } = useWorkshopStore();
+    const [isInitialLoaded, setIsInitialLoaded] = React.useState(false);
 
     useEffect(() => {
-        fetchWorkshopData();
+        const init = async () => {
+            // Only fetch if stores are empty to prevent background-refresh loops on navigation
+            if (jobCards.length === 0) {
+                await fetchWorkshopData();
+            }
+            setIsInitialLoaded(true);
+        };
+        init();
     }, []);
 
-    // Show loading state only on initial load (when no data exists)
-    if (isLoading && jobCards.length === 0) {
+    // Show loading state ONLY on the first load if no data exists
+    if (!isInitialLoaded && isLoading && jobCards.length === 0) {
         return (
             <div className="flex h-[calc(100vh-100px)] w-full items-center justify-center">
                 <div className="flex flex-col items-center gap-4 text-ink-muted">

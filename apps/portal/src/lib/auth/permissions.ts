@@ -6,17 +6,7 @@ import { prisma } from "@/lib/prisma/client";
 export async function hasPermission(userId: string, permissionName: string): Promise<boolean> {
     const user = await prisma.profiles.findUnique({
         where: { id: userId },
-        include: {
-            roles: {
-                include: {
-                    role_permissions: {
-                        include: {
-                            permissions: true
-                        }
-                    }
-                }
-            }
-        }
+        select: { role_id: true, roles: { select: { id: true, name: true } } }
     });
 
     if (!user || !user.roles) return false;
@@ -24,18 +14,47 @@ export async function hasPermission(userId: string, permissionName: string): Pro
     // Super Admin has all permissions
     if (user.roles.name === "super_admin") return true;
 
-    // Check if permissionName is in 'module:action' format
+    // Find the permission record
+    // We try name, OR resource + action for flexibility
+    let permissionWhere: any;
     if (permissionName.includes(':')) {
-        const [module, action] = permissionName.split(':');
-        return user.roles.role_permissions.some(
-            (rp) => rp.permissions.module === module && rp.permissions.action === action
-        );
+        const [resource, action] = permissionName.split(':');
+        permissionWhere = {
+            OR: [
+                { name: permissionName },
+                { resource, action },
+                { module: resource, action } // legacy fallback
+            ]
+        };
+    } else {
+        permissionWhere = {
+            OR: [
+                { name: permissionName },
+                { action: permissionName },
+                { resource: permissionName },
+                { module: permissionName }
+            ]
+        };
     }
 
-    // Fallback or specific action check
-    return user.roles.role_permissions.some(
-        (rp) => rp.permissions.action === permissionName || rp.permissions.module === permissionName
-    );
+    const permission = await prisma.permissions.findFirst({
+        where: permissionWhere,
+        select: { id: true }
+    });
+
+    if (!permission) return false;
+
+    // Check if role_permission link exists
+    const rolePermission = await (prisma as any).role_permissions.findUnique({
+        where: {
+            role_id_permission_id: {
+                role_id: user.roles.id,
+                permission_id: permission.id
+            }
+        }
+    });
+
+    return !!rolePermission;
 }
 
 /**
@@ -63,5 +82,6 @@ export async function hasMinLevel(userId: string, minLevel: number): Promise<boo
 
     if (!user || !user.roles) return false;
 
-    return user.roles.level >= minLevel;
+    // Lower number = higher authority (1 = super_admin, 99 = customer)
+    return user.roles.level <= minLevel;
 }

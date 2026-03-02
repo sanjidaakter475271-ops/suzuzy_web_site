@@ -3,7 +3,7 @@ import { ZodError } from "zod";
 import { prisma } from "@/lib/prisma/client";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { ENTITY_REGISTRY, EntityOperation, EntityConfig } from "./entity-registry";
-import { ROLES } from "@/lib/auth/roles";
+import { ROLES, isAnyAdmin } from "@/lib/auth/roles";
 import crypto from "crypto";
 import { broadcast } from "@/lib/socket-server";
 import { getDashboardStats } from "./handlers/dashboard-stats";
@@ -66,24 +66,46 @@ export async function authorize(entity: string, operation: EntityOperation): Pro
     const permissionName = `${entity}:${operation}`;
 
     try {
-        const roleRecord = await (prisma as any).roles.findUnique({
+        // Step 1: Find the role by name
+        const roleRecord = await prisma.roles.findUnique({
             where: { name: user.role },
-            include: {
-                role_permissions: {
-                    where: {
-                        permissions: {
-                            name: permissionName
-                        }
-                    },
-                    include: {
-                        permissions: true
-                    }
-                }
+            select: { id: true }
+        });
+
+        if (!roleRecord) {
+            return NextResponse.json({ error: `Permission denied: ${permissionName}` }, { status: 403 });
+        }
+
+        // Step 2: Check if this role has the required permission
+        // We query by (resource + action) OR (name) for maximum compatibility
+        const permission = await prisma.permissions.findFirst({
+            where: {
+                OR: [
+                    { resource: entity, action: operation },
+                    { name: permissionName }
+                ]
             }
         });
 
-        if (!roleRecord || roleRecord.role_permissions.length === 0) {
-            return NextResponse.json({ error: `Permission denied: ${permissionName}` }, { status: 403 });
+        if (permission) {
+            const rolePermission = await (prisma as any).role_permissions.findUnique({
+                where: {
+                    role_id_permission_id: {
+                        role_id: roleRecord.id,
+                        permission_id: permission.id
+                    }
+                }
+            });
+
+            if (!rolePermission) {
+                return NextResponse.json({ error: `Permission denied: ${permissionName}` }, { status: 403 });
+            }
+        } else {
+            // Permission not defined in DB — allow for any platform admin roles as a fallback
+            // This follows the hierarchy: level <= 8 (Super Admin already bypassed above)
+            if (!isAnyAdmin(user.role)) {
+                return NextResponse.json({ error: `Permission denied: ${permissionName}` }, { status: 403 });
+            }
         }
 
     } catch (error) {
@@ -213,6 +235,7 @@ export async function handleCreate(entity: string, body: any) {
         'service_tickets': { field: 'service_number', prefix: 'SRV' },
         'purchase_orders': { field: 'po_number', prefix: 'PO' },
         'payments': { field: 'payment_number', prefix: 'PAY' },
+        'payment_transactions': { field: 'transaction_number', prefix: 'TXN' },
         'return_requests': { field: 'return_number', prefix: 'RET' },
         'shipments': { field: 'tracking_number', prefix: 'SHP' },
         'referrals': { field: 'referral_code', prefix: 'REF' },
@@ -225,17 +248,16 @@ export async function handleCreate(entity: string, body: any) {
     }
 
     // Inject dealer_id if required
-    if (config.scopeBy && user.dealerId) {
-        if (config.scopeBy.includes('.')) {
-            // For creation, we might not want to inject nested paths directly into 'data'
-            // unless we handle nested creates. For now, let's at least ensure we don't
-            // break the top-level 'body' with dot-keyed properties that Prisma doesn't know.
-            // If the model has a direct dealer_id, use it. Otherwise, assume the link happens elsewhere.
-            if ((prisma as any)[config.model].fields?.dealer_id) {
-                body.dealer_id = user.dealerId;
-            }
-        } else {
-            body[config.scopeBy] = user.dealerId;
+    if (config.scopeBy === 'dealer_id' && user.dealerId && !body.dealer_id) {
+        body.dealer_id = user.dealerId;
+    } else if (config.scopeBy && config.scopeBy.includes('.') && user.dealerId) {
+        // Handle models where scoping is via a relation (e.g., service_tickets via profiles.dealer_id)
+        // Check if the model itself has a direct dealer_id column as a backup
+        // Note: For creation, we usually pick the relation's parent (like customer_id)
+        // but if the model ALSO has dealer_id, we populate it.
+        const modelFields = (prisma as any)[config.model].fields;
+        if (modelFields && (modelFields.dealer_id || modelFields.dealerId)) {
+            body.dealer_id = user.dealerId;
         }
     }
 
