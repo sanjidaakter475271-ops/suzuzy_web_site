@@ -69,12 +69,18 @@ async function main() {
     for (let i = 1; i <= 6; i++) {
         const status = i <= 2 ? 'busy' : i <= 4 ? 'idle' : 'offline';
         await prisma.service_ramps.upsert({
-            where: { ramp_number: i },
+            where: {
+                dealer_id_ramp_number: {
+                    dealer_id: dealerId,
+                    ramp_number: i
+                }
+            },
             update: { status },
             create: {
+                dealer_id: dealerId,
                 ramp_number: i,
                 status: status,
-                staff_id: status === 'busy' ? staff[i - 1].id : null,
+                staff_id: status === 'busy' && staff[i - 1] ? staff[i - 1].id : null,
             },
         });
     }
