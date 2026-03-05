@@ -16,8 +16,13 @@ const createSchema = z.object({
 export async function GET(request: NextRequest) {
     try {
         const user = await getCurrentUser();
-        if (!user || !user.dealerId) {
+        if (!user) {
+            console.error("[APPOINTMENTS_GET] No user session found");
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        if (!user.dealerId) {
+            console.error("[APPOINTMENTS_GET] User has no dealerId", user);
+            return NextResponse.json({ error: "Forbidden: No dealer associated" }, { status: 403 });
         }
 
         const { searchParams } = new URL(request.url);
@@ -77,8 +82,15 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ success: true, data: appointments });
     } catch (error: any) {
-        console.error("[APPOINTMENTS_GET]", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        console.error("[APPOINTMENTS_GET] Detailed Error:", {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
+        return NextResponse.json({
+            error: "Failed to fetch appointments",
+            details: error.message
+        }, { status: 500 });
     }
 }
 

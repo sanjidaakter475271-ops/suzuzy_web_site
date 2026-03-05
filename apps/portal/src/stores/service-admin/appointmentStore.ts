@@ -25,7 +25,10 @@ export const useAppointmentStore = create<AppointmentState>((set, get) => ({
             if (filters?.status) query.append('status', filters.status);
 
             const res = await fetch(`/api/v1/workshop/appointments?${query.toString()}`);
-            if (!res.ok) throw new Error('Failed to fetch appointments');
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || 'Failed to fetch appointments');
+            }
             const { data } = await res.json();
             set({ appointments: data, isLoading: false });
         } catch (error: any) {
