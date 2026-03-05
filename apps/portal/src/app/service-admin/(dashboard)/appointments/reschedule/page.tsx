@@ -10,7 +10,8 @@ import {
     XCircle,
     User,
     Bike,
-    Clock
+    Clock,
+    Phone
 } from 'lucide-react';
 import Breadcrumb from '@/components/service-admin/Breadcrumb';
 import { Card, CardContent } from '@/components/service-admin/ui';
@@ -19,15 +20,19 @@ import { cn } from '@/lib/utils';
 import { Appointment } from '@/types/service-admin/index';
 
 const ReschedulePage = () => {
-    const { appointments, updateStatus, reschedule } = useAppointmentStore();
+    const { appointments, fetchAppointments, isLoading, updateStatus, reschedule } = useAppointmentStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState({ date: '', time: '' });
 
+    React.useEffect(() => {
+        fetchAppointments(); // Fetch all active by not passing status to show all that can be rescheduled
+    }, [fetchAppointments]);
+
     const filteredAppointments = appointments.filter(apt =>
-        (apt.customerId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            apt.vehicleId.toLowerCase().includes(searchQuery.toLowerCase())) &&
-        apt.status !== 'cancelled'
+        (apt.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            apt.vehicleRegNo?.toLowerCase().includes(searchQuery.toLowerCase())) &&
+        !['cancelled', 'completed', 'no-show'].includes(apt.status)
     );
 
     const handleEditClick = (apt: Appointment) => {
@@ -68,94 +73,110 @@ const ReschedulePage = () => {
                 />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredAppointments.map((apt) => (
-                    <Card key={apt.id} className={cn("transition-all", editingId === apt.id ? "border-brand ring-2 ring-brand/20" : "hover:border-brand")}>
-                        <CardContent className="p-6 space-y-4">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <h3 className="font-bold text-ink-heading dark:text-white">{apt.customerId}</h3>
-                                    <p className="text-xs text-ink-muted flex items-center gap-1 mt-1">
-                                        <Bike size={12} /> {apt.vehicleId}
-                                    </p>
+            {isLoading ? (
+                <div className="text-center p-12 text-ink-muted">Loading appointments...</div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredAppointments.length === 0 && (
+                        <div className="col-span-full text-center text-ink-muted py-8">
+                            No active appointments found.
+                        </div>
+                    )}
+                    {filteredAppointments.map((apt) => (
+                        <Card key={apt.id} className={cn("transition-all", editingId === apt.id ? "border-brand ring-2 ring-brand/20" : "hover:border-brand")}>
+                            <CardContent className="p-6 space-y-4">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h3 className="font-bold text-ink-heading dark:text-white">{apt.customerName}</h3>
+                                        <p className="text-xs text-ink-muted flex items-center gap-1 mt-1">
+                                            <Bike size={12} /> {apt.vehicleRegNo} ({apt.vehicleModel})
+                                        </p>
+                                    </div>
+                                    <span className={cn(
+                                        "px-2 py-0.5 rounded text-[10px] font-black uppercase",
+                                        apt.status === 'scheduled' ? 'bg-success-bg text-success' : 'bg-slate-100 text-slate-500'
+                                    )}>
+                                        {apt.status}
+                                    </span>
                                 </div>
-                                <span className={cn(
-                                    "px-2 py-0.5 rounded text-[10px] font-black uppercase",
-                                    apt.status === 'scheduled' ? 'bg-success-bg text-success' : 'bg-slate-100 text-slate-500'
-                                )}>
-                                    {apt.status}
-                                </span>
-                            </div>
 
-                            {editingId === apt.id ? (
-                                <div className="space-y-3 bg-surface-page dark:bg-dark-page p-3 rounded-xl border border-dashed border-brand">
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-ink-muted uppercase">New Date</label>
-                                        <input
-                                            type="date"
-                                            value={editForm.date}
-                                            onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
-                                            className="w-full bg-transparent border-b border-surface-border focus:border-brand outline-none text-xs"
-                                        />
+                                {editingId === apt.id ? (
+                                    <div className="space-y-3 bg-surface-page dark:bg-dark-page p-3 rounded-xl border border-dashed border-brand">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-ink-muted uppercase">New Date</label>
+                                            <input
+                                                type="date"
+                                                value={editForm.date}
+                                                onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                                                className="w-full bg-transparent border-b border-surface-border focus:border-brand outline-none text-xs"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-ink-muted uppercase">New Time</label>
+                                            <input
+                                                type="time"
+                                                value={editForm.time}
+                                                onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
+                                                className="w-full bg-transparent border-b border-surface-border focus:border-brand outline-none text-xs"
+                                            />
+                                        </div>
+                                        <div className="flex gap-2 pt-2">
+                                            <button
+                                                onClick={() => handleSave(apt.id)}
+                                                className="flex-1 bg-brand text-white py-1.5 rounded text-xs font-bold"
+                                            >
+                                                Save
+                                            </button>
+                                            <button
+                                                onClick={() => setEditingId(null)}
+                                                className="flex-1 bg-surface-border text-ink-muted py-1.5 rounded text-xs font-bold"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-ink-muted uppercase">New Time</label>
-                                        <input
-                                            type="time"
-                                            value={editForm.time}
-                                            onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
-                                            className="w-full bg-transparent border-b border-surface-border focus:border-brand outline-none text-xs"
-                                        />
+                                ) : (
+                                    <div className="flex items-center gap-4 text-sm text-ink-heading dark:text-white font-medium bg-surface-page dark:bg-dark-page p-3 rounded-xl">
+                                        <div className="flex items-center gap-2">
+                                            <Calendar size={16} className="text-brand" />
+                                            {apt.date}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Clock size={16} className="text-brand" />
+                                            {apt.time}
+                                        </div>
                                     </div>
-                                    <div className="flex gap-2 pt-2">
+                                )}
+
+                                {editingId !== apt.id && (
+                                    <div className="flex gap-3 pt-2">
                                         <button
-                                            onClick={() => handleSave(apt.id)}
-                                            className="flex-1 bg-brand text-white py-1.5 rounded text-xs font-bold"
+                                            onClick={() => handleEditClick(apt)}
+                                            className="flex-1 py-2 border border-surface-border dark:border-dark-border rounded-xl text-xs font-bold text-ink-muted hover:border-brand hover:text-brand transition-all flex items-center justify-center gap-2"
                                         >
-                                            Save
+                                            <Edit2 size={14} />
+                                            reschedule
                                         </button>
                                         <button
-                                            onClick={() => setEditingId(null)}
-                                            className="flex-1 bg-surface-border text-ink-muted py-1.5 rounded text-xs font-bold"
+                                            onClick={() => handleCancel(apt.id)}
+                                            className="py-2 px-3 border border-surface-border dark:border-dark-border rounded-xl text-xs font-bold text-danger hover:bg-danger-bg hover:border-danger transition-all"
                                         >
-                                            Cancel
+                                            <Trash2 size={14} />
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); alert('Messaging feature coming soon!'); }}
+                                            className="py-2 px-3 border border-surface-border dark:border-dark-border rounded-xl text-xs font-bold text-blue-500 hover:bg-blue-50 hover:border-blue-500 transition-all"
+                                            title="Message Customer"
+                                        >
+                                            <Phone size={14} />
                                         </button>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-4 text-sm text-ink-heading dark:text-white font-medium bg-surface-page dark:bg-dark-page p-3 rounded-xl">
-                                    <div className="flex items-center gap-2">
-                                        <Calendar size={16} className="text-brand" />
-                                        {apt.date}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Clock size={16} className="text-brand" />
-                                        {apt.time}
-                                    </div>
-                                </div>
-                            )}
-
-                            {editingId !== apt.id && (
-                                <div className="flex gap-3 pt-2">
-                                    <button
-                                        onClick={() => handleEditClick(apt)}
-                                        className="flex-1 py-2 border border-surface-border dark:border-dark-border rounded-xl text-xs font-bold text-ink-muted hover:border-brand hover:text-brand transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <Edit2 size={14} />
-                                        reschedule
-                                    </button>
-                                    <button
-                                        onClick={() => handleCancel(apt.id)}
-                                        className="py-2 px-3 border border-surface-border dark:border-dark-border rounded-xl text-xs font-bold text-danger hover:bg-danger-bg hover:border-danger transition-all"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };

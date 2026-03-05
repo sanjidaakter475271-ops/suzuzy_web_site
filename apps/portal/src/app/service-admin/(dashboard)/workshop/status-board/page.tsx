@@ -1,132 +1,150 @@
 'use client';
 
-import React from 'react';
-import {
-    Clock,
-    User,
-    Bike,
-    AlertCircle,
-    ChevronRight,
-    Search,
-    Filter
-} from 'lucide-react';
+import React, { memo, useMemo, useState } from 'react';
 import Breadcrumb from '@/components/service-admin/Breadcrumb';
 import { useWorkshopStore } from '@/stores/service-admin/workshopStore';
-import { useSocket } from '@/hooks/useSocket';
 import { cn } from '@/lib/utils';
-import { JobCard } from '@/types/service-admin/workshop';
+import { Clock, CheckCircle2, AlertCircle, Wrench, Search, LayoutGrid, LayoutList, User } from 'lucide-react';
+import { Card, CardContent } from '@/components/service-admin/ui';
 
-const StatusBoardPage = () => {
-    const { jobCards, technicians } = useWorkshopStore();
-    const { isConnected } = useSocket();
-
-    const columns = [
-        { id: 'received', label: 'Received', color: 'bg-slate-500' },
-        { id: 'in-diagnosis', label: 'Diagnosis', color: 'bg-blue-500' },
-        { id: 'waiting-parts', label: 'Parts Wait', color: 'bg-amber-500' },
-        { id: 'in-service', label: 'In Service', color: 'bg-brand' },
-        { id: 'qc-done', label: 'QC Done', color: 'bg-purple-500' },
-        { id: 'ready', label: 'Ready', color: 'bg-success' },
-        { id: 'delivered', label: 'Delivered', color: 'bg-emerald-600' },
-    ];
-
-    const getJobsByStatus = (status: string) => {
-        return jobCards.filter(job => job.status === status);
+const StatusBadge = ({ status }: { status: string }) => {
+    const config: Record<string, { label: string; color: string; bg: string; icon: any }> = {
+        'received': { label: 'Pending', color: 'text-brand', bg: 'bg-brand/10', icon: Clock },
+        'in-service': { label: 'Active', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: Wrench },
+        'qc-done': { label: 'Ready', color: 'text-success', bg: 'bg-success/10', icon: CheckCircle2 },
+        'delivered': { label: 'Delivered', color: 'text-slate-500', bg: 'bg-slate-500/10', icon: CheckCircle2 },
+        'waiting-parts': { label: 'Waiting Parts', color: 'text-danger', bg: 'bg-danger/10', icon: AlertCircle },
     };
 
-    return (
-        <div className="h-[calc(100vh-65px)] flex flex-col p-6 lg:p-8 space-y-6 overflow-hidden animate-fade w-full max-w-full">
-            <Breadcrumb items={[{ label: 'Workshop', href: '/service-admin/workshop' }, { label: 'Status Board' }]} />
+    const s = config[status] || config['received'];
+    const Icon = s.icon;
 
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-black text-ink-heading dark:text-white">Service Status Board</h1>
-                    <p className="text-sm text-ink-muted">Live view of workshop floor activity.</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    {isConnected && (
-                        <div className="flex items-center gap-1.5 bg-success/10 text-success text-[10px] font-black uppercase px-2 py-1 rounded-full border border-success/20 animate-pulse">
-                            <div className="w-1.5 h-1.5 rounded-full bg-success" />
-                            Live
-                        </div>
-                    )}
-                    <div className="flex -space-x-2">
-                        {technicians.slice(0, 3).map(tech => (
-                            <img
-                                key={tech.id}
-                                src={tech.avatar}
-                                className="w-8 h-8 rounded-full border-2 border-white dark:border-dark-page object-cover"
-                                alt={tech.name}
-                            />
-                        ))}
+    return (
+        <div className={cn("px-2.5 py-1 rounded-lg flex items-center gap-1.5 border border-current/10 shrink-0", s.bg, s.color)}>
+            <Icon size={12} strokeWidth={2.5} />
+            <span className="text-[9px] font-black uppercase tracking-widest">{s.label}</span>
+        </div>
+    );
+};
+
+const JobCardCompact = memo(({ job }: { job: any }) => {
+    const technicians = useWorkshopStore(state => state.technicians);
+
+    const technicianName = useMemo(() => {
+        if (!job.assignedTechnicianId) return 'Unassigned';
+        const tech = technicians.find(t => t.id === job.assignedTechnicianId);
+        return tech ? tech.name : 'Unknown Tech';
+    }, [technicians, job.assignedTechnicianId]);
+
+    const elapsedTime = useMemo(() => {
+        if (!job.createdAt) return '--';
+        const start = new Date(job.createdAt).getTime();
+        const now = new Date().getTime();
+        const diffMins = Math.floor((now - start) / 60000);
+        if (diffMins < 60) return `${diffMins}m`;
+        const hrs = Math.floor(diffMins / 60);
+        const mins = diffMins % 60;
+        return `${hrs}h ${mins}m`;
+    }, [job.createdAt]);
+
+    return (
+        <Card className="group hover:-translate-y-1 transition-all duration-300 border-surface-border dark:border-white/5 bg-white dark:bg-white/[0.02] overflow-hidden shadow-sm hover:shadow-xl rounded-[1.5rem]">
+            <CardContent className="p-4 lg:p-5 flex flex-col gap-3.5">
+                <div className="flex justify-between items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[9px] font-black text-ink-muted/40 uppercase tracking-[0.2em] mb-0.5">#{job.jobNo}</p>
+                        <h4 className="text-sm lg:text-base font-black text-ink-heading dark:text-white truncate tracking-tighter uppercase italic">{job.vehicleRegNo}</h4>
                     </div>
-                    <span className="text-xs font-bold text-ink-muted">{technicians.length} Technicians Online</span>
+                    <StatusBadge status={job.status} />
+                </div>
+
+                <div className="flex items-center gap-3 py-2 border-y border-surface-border dark:border-white/5">
+                    <div className="w-8 h-8 rounded-full bg-surface-page dark:bg-white/5 border border-surface-border dark:border-white/5 flex items-center justify-center shrink-0">
+                        <User size={14} className="text-brand" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[8px] font-black text-ink-muted/30 uppercase tracking-widest mb-0.5">Technician</p>
+                        <p className="text-[10px] lg:text-[11px] font-bold text-ink-muted truncate uppercase tracking-tight">{technicianName}</p>
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
+                    <div className="flex items-center gap-1.5">
+                        <Clock size={12} strokeWidth={2.5} />
+                        <span>Duration</span>
+                    </div>
+                    <span className="text-brand">{elapsedTime}</span>
+                </div>
+            </CardContent>
+        </Card>
+    );
+});
+JobCardCompact.displayName = 'JobCardCompact';
+
+const StatusBoardPage = () => {
+    const jobCards = useWorkshopStore(state => state.jobCards);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const columns = [
+        { id: 'received', title: 'Pending', icon: Clock, color: 'text-brand' },
+        { id: 'in-service', title: 'Working', icon: Wrench, color: 'text-blue-500' },
+        { id: 'qc-done', title: 'Ready', icon: CheckCircle2, color: 'text-success' },
+    ];
+
+    const filteredJobs = useMemo(() => jobCards.filter(j =>
+        j.vehicleRegNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        j.jobNo.toLowerCase().includes(searchQuery.toLowerCase())
+    ), [jobCards, searchQuery]);
+
+    return (
+        <div className="h-full lg:h-[calc(100vh-65px)] flex flex-col p-5 lg:p-8 space-y-6 overflow-hidden animate-fade w-full max-w-full bg-[#fafafa] dark:bg-[#080809]">
+            <div className="opacity-40 text-xs shrink-0"><Breadcrumb items={[{ label: 'Workshop', href: '/service-admin/workshop' }, { label: 'Status Board' }]} /></div>
+
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 shrink-0">
+                <div className="min-w-0 flex-1">
+                    <h1 className="text-3xl lg:text-5xl font-black text-ink-heading dark:text-white tracking-tighter uppercase italic leading-none">Status <span className="text-brand">Board</span></h1>
+                    <p className="text-xs lg:text-sm font-medium text-ink-muted/40 mt-1.5 tracking-tight truncate">Real-time job card tracking across operational segments.</p>
+                </div>
+
+                <div className="flex items-center gap-4 shrink-0">
+                    <div className="relative w-full md:w-[300px] lg:w-[350px] group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted/30 group-focus-within:text-brand transition-all duration-300" size={16} />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="SEARCH VEHICLE..."
+                            className="w-full pl-12 pr-5 py-3 bg-white dark:bg-white/[0.03] border border-surface-border dark:border-white/5 rounded-[1.5rem] text-[11px] lg:text-xs font-black focus:outline-none focus:ring-8 focus:ring-brand/5 focus:border-brand/30 transition-all placeholder:text-ink-muted/20"
+                        />
+                    </div>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-x-auto pb-4">
-                <div className="flex gap-4 min-w-max h-full">
-                    {columns.map((column) => {
-                        const jobs = getJobsByStatus(column.id);
-                        return (
-                            <div key={column.id} className="w-72 flex flex-col gap-4">
-                                <div className="flex items-center justify-between px-1">
-                                    <div className="flex items-center gap-2">
-                                        <div className={cn("w-2.5 h-2.5 rounded-full", column.color)} />
-                                        <h3 className="font-black uppercase tracking-widest text-xs text-ink-heading dark:text-white">
-                                            {column.label}
-                                        </h3>
-                                    </div>
-                                    <span className="bg-surface-card dark:bg-dark-card border border-surface-border dark:border-dark-border px-2 py-0.5 rounded text-[10px] font-black text-ink-muted">
-                                        {jobs.length}
-                                    </span>
+            <div className="flex-1 overflow-x-auto no-scrollbar scroll-smooth flex gap-5 pb-5">
+                {columns.map((col) => (
+                    <div key={col.id} className="flex-1 min-w-[300px] lg:min-w-[340px] max-w-[420px] flex flex-col h-full bg-surface-page/50 dark:bg-white/[0.01] rounded-[2rem] border border-surface-border dark:border-white/5 overflow-hidden">
+                        <div className="px-5 py-4 lg:px-6 lg:py-5 border-b border-surface-border dark:border-white/5 flex items-center justify-between shrink-0 bg-white/50 dark:bg-black/20 text-ink-heading dark:text-white">
+                            <div className="flex items-center gap-3">
+                                <div className={cn("p-2 rounded-xl shrink-0", col.color, "bg-current/10")}>
+                                    <col.icon size={16} strokeWidth={2.5} />
                                 </div>
-
-                                <div className="flex-1 bg-surface-card/30 dark:bg-dark-card/30 rounded-2xl border border-dashed border-surface-border dark:border-dark-border p-3 space-y-3 overflow-y-auto custom-scrollbar">
-                                    {jobs.map((job) => (
-                                        <div
-                                            key={job.id}
-                                            className="bg-surface-card dark:bg-dark-card border border-surface-border dark:border-dark-border p-4 rounded-xl shadow-sm hover:shadow-md hover:border-brand/40 transition-all group cursor-pointer animate-fade"
-                                        >
-                                            <div className="flex justify-between items-start mb-2">
-                                                <span className="text-[10px] font-black text-brand tracking-tighter">#{job.jobNo}</span>
-                                                <div className="flex items-center gap-1 text-[10px] font-bold text-ink-muted">
-                                                    <Clock size={12} />
-                                                    {new Date(job.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </div>
-                                            </div>
-
-                                            <h4 className="font-bold text-sm text-ink-heading dark:text-white mb-1 truncate">{job.customerId}</h4>
-                                            <div className="flex items-center gap-1.5 text-xs text-ink-muted mb-3">
-                                                <Bike size={12} className="text-brand" />
-                                                <span>{job.vehicleId}</span>
-                                            </div>
-
-                                            <div className="flex items-center justify-between pt-3 border-t border-surface-border dark:border-dark-border/50">
-                                                <div className="flex items-center gap-1.5">
-                                                    <div className="w-5 h-5 rounded-full bg-brand-soft flex items-center justify-center text-[8px] font-black text-brand">
-                                                        {job.assignedTechnicianId?.substring(0, 2)}
-                                                    </div>
-                                                    <span className="text-[10px] font-bold text-ink-muted">T-ID: {job.assignedTechnicianId}</span>
-                                                </div>
-                                                <ChevronRight size={14} className="text-ink-muted group-hover:text-brand transition-colors" />
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    {jobs.length === 0 && (
-                                        <div className="h-20 flex items-center justify-center border border-dashed border-surface-border dark:border-dark-border rounded-xl">
-                                            <span className="text-[10px] font-bold text-ink-muted uppercase">No Jobs</span>
-                                        </div>
-                                    )}
-                                </div>
+                                <h3 className="text-sm lg:text-base font-black tracking-tighter uppercase italic">{col.title}</h3>
                             </div>
-                        );
-                    })}
-                </div>
+                            <span className="px-2.5 py-0.5 rounded-full bg-surface-page dark:bg-white/5 text-[10px] font-black text-ink-muted border border-surface-border dark:border-white/5">
+                                {filteredJobs.filter(j => j.status === col.id).length}
+                            </span>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto no-scrollbar custom-scrollbar p-4 lg:p-5 flex flex-col gap-4">
+                            {filteredJobs.filter(j => j.status === col.id).map((job) => (
+                                <JobCardCompact key={job.id} job={job} />
+                            ))}
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );
 };
 
-export default StatusBoardPage;
+export default memo(StatusBoardPage);

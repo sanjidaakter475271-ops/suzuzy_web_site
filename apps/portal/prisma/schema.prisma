@@ -1203,6 +1203,7 @@ model profiles {
   sales_sales_customer_idToprofiles                               sales[]                   @relation("sales_customer_idToprofiles")
   sales_sales_sold_byToprofiles                                   sales[]                   @relation("sales_sold_byToprofiles")
   service_appointments                                            service_appointments[]
+  created_appointments                                            service_appointments[]    @relation("AppointmentCreatedBy")
   service_estimates                                               service_estimates[]
   service_feedback                                                service_feedback[]
   service_invoices                                                service_invoices[]
@@ -2794,14 +2795,23 @@ model service_appointments {
   appointment_date DateTime          @db.Date
   time_slot        String            @db.VarChar(20)
   service_type     String?           @db.VarChar(100)
+  source           String?           @default("walk_in") @db.VarChar(20)
+  token_number     Int?
   notes            String?
   status           String?           @default("pending") @db.VarChar(20)
+  checked_in_at    DateTime?         @db.Timestamptz(6)
+  completed_at     DateTime?         @db.Timestamptz(6)
+  created_by       String?           @db.Uuid
   created_at       DateTime?         @default(now()) @db.Timestamptz(6)
   updated_at       DateTime?         @default(now()) @db.Timestamptz(6)
   profiles         profiles?         @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+  created_by_user  profiles?         @relation("AppointmentCreatedBy", fields: [created_by], references: [id], onUpdate: NoAction)
   dealers          dealers?          @relation(fields: [dealer_id], references: [id], onUpdate: NoAction)
   service_vehicles service_vehicles? @relation(fields: [vehicle_id], references: [id], onUpdate: NoAction)
 
+  @@unique([dealer_id, appointment_date, token_number])
+  @@index([dealer_id, appointment_date])
+  @@index([status])
   @@schema("public")
 }
 

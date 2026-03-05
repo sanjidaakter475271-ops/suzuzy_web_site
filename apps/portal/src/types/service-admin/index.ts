@@ -79,12 +79,21 @@ export interface Vehicle {
 export interface Appointment {
     id: string;
     customerId: string;
+    customerName: string;
+    customerPhone: string;
     vehicleId: string;
+    vehicleRegNo: string;
+    vehicleModel: string;
     serviceType: string;
+    source: 'walk_in' | 'online' | 'phone';
     date: string;
     time: string;
-    status: 'scheduled' | 'cancelled' | 'completed' | 'no-show';
+    notes?: string;
+    status: 'pending' | 'scheduled' | 'cancelled' | 'completed' | 'no-show';
     token?: number;
+    checkedInAt?: string;
+    completedAt?: string;
+    createdAt: string;
 }
 
 export interface OTPRecord {

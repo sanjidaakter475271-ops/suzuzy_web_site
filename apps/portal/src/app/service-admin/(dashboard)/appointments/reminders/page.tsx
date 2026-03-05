@@ -17,6 +17,42 @@ import { SERVICE_REMINDERS_SETTINGS } from '@/constants/service-admin/appointmen
 
 const RemindersPage = () => {
     const [settings, setSettings] = useState(SERVICE_REMINDERS_SETTINGS);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    React.useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const res = await fetch('/api/v1/workshop/settings?key=appointment_reminders');
+                const { data } = await res.json();
+                if (data) {
+                    // Merge with defaults to ensure all fields exist
+                    setSettings(prev => ({ ...prev, ...data }));
+                }
+            } catch (err) {
+                console.error("Failed to load settings", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchSettings();
+    }, []);
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await fetch('/api/v1/workshop/settings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'appointment_reminders', value: settings })
+            });
+            // Show success via some method or toast, relying on visual feedback
+        } catch (err) {
+            console.error("Failed to save settings", err);
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const handleToggle = (field: keyof typeof settings) => {
         setSettings({ ...settings, [field]: !settings[field] });
@@ -29,18 +65,26 @@ const RemindersPage = () => {
         });
     };
 
+    if (isLoading) {
+        return <div className="p-12 text-center text-ink-muted">Loading settings...</div>;
+    }
+
     return (
         <div className="p-6 lg:p-8 space-y-8 animate-fade max-w-4xl mx-auto">
             <Breadcrumb items={[{ label: 'Appointments', href: '/service-admin/appointments' }, { label: 'Service Reminders' }]} />
 
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-black text-ink-heading dark:text-white">Reminder Settings</h1>
                     <p className="text-sm text-ink-muted">Configure automated SMS & WhatsApp notification templates.</p>
                 </div>
-                <button className="bg-brand text-white px-6 py-2.5 rounded-xl font-bold hover:bg-brand-hover shadow-lg shadow-brand/20 active:scale-95 transition-all flex items-center gap-2">
+                <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="bg-brand text-white px-6 py-2.5 rounded-xl font-bold hover:bg-brand-hover shadow-lg shadow-brand/20 active:scale-95 transition-all flex items-center gap-2 justify-center w-full md:w-auto disabled:opacity-70 disabled:scale-100"
+                >
                     <Save size={18} />
-                    Save Changes
+                    {isSaving ? 'Saving...' : 'Save Changes'}
                 </button>
             </div>
 
@@ -65,7 +109,7 @@ const RemindersPage = () => {
                                     </div>
                                 </div>
                                 <button
-                                    onClick={() => handleToggle('smsEnabled')}
+                                    onClick={() => handleToggle('smsEnabled' as keyof typeof settings)}
                                     className={`text-2xl transition-colors ${settings.smsEnabled ? 'text-success' : 'text-slate-300'}`}
                                 >
                                     {settings.smsEnabled ? <ToggleRight size={40} /> : <ToggleLeft size={40} />}
@@ -83,7 +127,7 @@ const RemindersPage = () => {
                                     </div>
                                 </div>
                                 <button
-                                    onClick={() => handleToggle('whatsappEnabled')}
+                                    onClick={() => handleToggle('whatsappEnabled' as keyof typeof settings)}
                                     className={`text-2xl transition-colors ${settings.whatsappEnabled ? 'text-success' : 'text-slate-300'}`}
                                 >
                                     {settings.whatsappEnabled ? <ToggleRight size={40} /> : <ToggleLeft size={40} />}
@@ -95,7 +139,7 @@ const RemindersPage = () => {
                             <label className="text-xs font-bold text-ink-muted uppercase">Reminder Timing</label>
                             <div className="relative mt-2">
                                 <select
-                                    value={settings.reminderBeforeHours}
+                                    value={settings.reminderBeforeHours as number}
                                     onChange={(e) => setSettings({ ...settings, reminderBeforeHours: Number(e.target.value) })}
                                     className="w-full bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-xl px-4 py-3 outline-none focus:border-brand transition-colors appearance-none"
                                 >
@@ -127,7 +171,7 @@ const RemindersPage = () => {
                                 </label>
                                 <textarea
                                     rows={3}
-                                    value={settings.templates.sms}
+                                    value={settings.templates?.sms || ''}
                                     onChange={(e) => handleTemplateChange('sms', e.target.value)}
                                     className="w-full bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-xl px-4 py-3 outline-none focus:border-brand transition-colors text-sm resize-none"
                                 />
@@ -140,7 +184,7 @@ const RemindersPage = () => {
                                 </label>
                                 <textarea
                                     rows={5}
-                                    value={settings.templates.whatsapp}
+                                    value={settings.templates?.whatsapp || ''}
                                     onChange={(e) => handleTemplateChange('whatsapp', e.target.value)}
                                     className="w-full bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-xl px-4 py-3 outline-none focus:border-brand transition-colors text-sm resize-none"
                                 />
