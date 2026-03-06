@@ -15,44 +15,87 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { SocketService } from '../services/socket';
 import { useAuth } from '../lib/auth';
 import { Notification } from '../types';
+import { TechnicianAPI } from '../services/api';
 
 export const Notifications: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
     const { user } = useAuth();
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    // Mock initial data
+    const fetchNotifications = async () => {
+        try {
+            setLoading(true);
+            const { data } = await TechnicianAPI.getNotifications();
+            if (data.success) {
+                // Ensure dates are correctly formatted for display
+                const formatted = data.data.map((n: any) => ({
+                    ...n,
+                    timestamp: n.created_at ? new Date(n.created_at) : new Date(),
+                    read: n.is_read
+                }));
+                setNotifications(formatted);
+            }
+        } catch (error) {
+            console.error("Failed to fetch notifications:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        setNotifications([
-            { id: '1', title: 'New Job Assigned', message: 'Job card #TC-9901 (Suzuki Gixxer) has been assigned to you.', type: 'info', timestamp: new Date(Date.now() - 1000 * 60 * 30), read: false, created_at: new Date().toISOString() },
-            { id: '2', title: 'Parts Ready', message: 'Brake pads for Job #TC-8890 are now available at the counter.', type: 'success', timestamp: new Date(Date.now() - 1000 * 60 * 120), read: true, created_at: new Date().toISOString() },
-            { id: '3', title: 'QC Failed', message: 'Job #TC-8850 requires rework on engine tuning.', type: 'error', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5), read: false, created_at: new Date().toISOString() },
-            { id: '4', title: 'Shift Reminder', message: 'Your morning shift starts in 30 minutes. Don\'t forget to clock in.', type: 'warning', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), read: true, created_at: new Date().toISOString() },
-        ]);
+        fetchNotifications();
 
         // Connect socket for real-time notifications
         const socket = SocketService.getInstance();
-        if (user?.id) {
-            socket.connect(user.id);
-            socket.on('notification:new', (data: Notification) => {
-                setNotifications(prev => [data, ...prev]);
-            });
+
+        const handleNewNotification = (data: any) => {
+            const newNotif = {
+                ...data,
+                timestamp: new Date(),
+                read: false
+            };
+            setNotifications(prev => [newNotif, ...prev]);
+        };
+
+        const handleJobUpdate = () => {
+            // Re-fetch all to get latest DB state
+            fetchNotifications();
         }
 
+        socket.on('notification:new', handleNewNotification);
+        socket.on('job_cards:changed', handleJobUpdate);
+
         return () => {
-            // Optional: socket.off('notification:new') if wanted
+            socket.off('notification:new', handleNewNotification);
+            socket.off('job_cards:changed', handleJobUpdate);
         };
-    }, [user?.id]);
+    }, []);
 
-    const markAsRead = (id: string) => {
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    const markAsRead = async (id: string) => {
+        try {
+            await TechnicianAPI.markNotificationsRead(id);
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+        } catch (error) {
+            console.error("Failed to mark read:", error);
+        }
     };
 
-    const deleteNotification = (id: string) => {
-        setNotifications(prev => prev.filter(n => n.id !== id));
+    const deleteNotification = async (id: string) => {
+        try {
+            await TechnicianAPI.deleteNotifications(id);
+            setNotifications(prev => prev.filter(n => n.id !== id));
+        } catch (error) {
+            console.error("Failed to delete:", error);
+        }
     };
 
-    const clearAll = () => {
-        setNotifications([]);
+    const clearAll = async () => {
+        try {
+            await TechnicianAPI.deleteNotifications();
+            setNotifications([]);
+        } catch (error) {
+            console.error("Failed to clear all:", error);
+        }
     };
 
     const getTypeStyles = (type: string) => {

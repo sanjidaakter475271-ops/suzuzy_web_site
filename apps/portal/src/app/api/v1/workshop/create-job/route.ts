@@ -110,12 +110,25 @@ export async function POST(req: NextRequest) {
                 });
             }
 
-            // E. Update Appointment status if provided
-            if (appointment_id) {
-                await tx.service_appointments.update({
-                    where: { id: appointment_id },
-                    data: { status: 'in_progress' }
+            // F. Create Notification for technician
+            if (technician_id) {
+                // Find profile ID for the technician (staff_id -> profile_id)
+                const staff = await tx.service_staff.findUnique({
+                    where: { id: technician_id },
+                    select: { profile_id: true }
                 });
+
+                if (staff?.profile_id) {
+                    await tx.notifications.create({
+                        data: {
+                            user_id: staff.profile_id,
+                            title: "New Job Assigned",
+                            message: `You have been assigned to a new ${vehicle_model} (Reg: ${vehicle_reg_no}). Job #: ${serviceNumber}`,
+                            type: 'job',
+                            link_url: `/job/${jobCard.id}`
+                        }
+                    });
+                }
             }
 
             return { vehicle, serviceTicket, jobCard };
@@ -128,6 +141,15 @@ export async function POST(req: NextRequest) {
             ticketId: result.serviceTicket.id,
             technicianId: technician_id
         });
+
+        if (technician_id) {
+            await broadcast('notification:new', {
+                technician_id: technician_id,
+                title: "New Job Assigned",
+                message: `You have been assigned to Job Card: ${result.serviceTicket.service_number}`,
+                type: 'job'
+            });
+        }
 
         return NextResponse.json({
             success: true,

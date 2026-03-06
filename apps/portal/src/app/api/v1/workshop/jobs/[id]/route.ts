@@ -26,13 +26,45 @@ export async function PATCH(
             return NextResponse.json({ error: "Job card not found or forbidden" }, { status: 404 });
         }
 
-        const updatedJob = await prisma.job_cards.update({
-            where: { id },
-            data: {
-                ...(body.status && { status: body.status }),
-                ...(body.technician_id && { technician_id: body.technician_id }),
-                ...(body.notes && { notes: body.notes })
+        const updatedJob = await prisma.$transaction(async (tx) => {
+            const job = await tx.job_cards.update({
+                where: { id },
+                data: {
+                    ...(body.status && { status: body.status }),
+                    ...(body.technician_id && { technician_id: body.technician_id }),
+                    ...(body.notes && { notes: body.notes })
+                },
+                include: {
+                    service_tickets: {
+                        include: {
+                            service_vehicles: true
+                        }
+                    }
+                }
+            });
+
+            // If technician was updated, create notification
+            if (body.technician_id || body.status) {
+                const staff = await tx.service_staff.findUnique({
+                    where: { id: job.technician_id || "" },
+                    select: { profile_id: true }
+                });
+
+                if (staff?.profile_id) {
+                    await tx.notifications.create({
+                        data: {
+                            user_id: staff.profile_id,
+                            title: body.technician_id ? "New Job Assigned" : "Job Status Updated",
+                            message: body.technician_id
+                                ? `You have been assigned to Job Card: ${job.service_tickets?.service_number} (${job.service_tickets?.service_vehicles?.engine_number || 'N/A'})`
+                                : `Job status for ${job.service_tickets?.service_number} changed to ${body.status}`,
+                            type: 'job',
+                            link_url: `/job/${job.id}`
+                        }
+                    });
+                }
             }
+            return job;
         });
 
         // Broadcast update
@@ -42,6 +74,17 @@ export async function PATCH(
             technicianId: updatedJob.technician_id,
             status: updatedJob.status
         });
+
+        if (updatedJob.technician_id) {
+            await broadcast('notification:new', {
+                technician_id: updatedJob.technician_id,
+                title: body.technician_id ? "New Job Assigned" : "Job Status Updated",
+                message: body.technician_id
+                    ? `You have been assigned to Job Card: ${updatedJob.service_tickets?.service_number}`
+                    : `Job ${updatedJob.service_tickets?.service_number} status: ${body.status}`,
+                type: 'job'
+            });
+        }
 
         return NextResponse.json({ success: true, data: updatedJob });
     } catch (error: any) {

@@ -104,6 +104,11 @@ export const TechnicianAPI = {
     registerPushToken: (token: string, deviceType: string, deviceName?: string) =>
         api.post('/push-tokens', { token, deviceType, deviceName }),
     removePushToken: (token: string) => api.delete('/push-tokens', { data: { token } }),
+
+    // In-app Notifications
+    getNotifications: () => api.get('/notifications'),
+    markNotificationsRead: (id?: string) => api.patch('/notifications', { id }),
+    deleteNotifications: (id?: string) => api.delete('/notifications', { data: { id } }),
 };
 
 export default api;
