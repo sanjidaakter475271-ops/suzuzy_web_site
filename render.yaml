@@ -22,17 +22,20 @@ services:
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
         sync: false
+      - key: NEXT_PUBLIC_SOCKET_URL
+        value: "https://royal-suzuky-realtime.onrender.com"
       - key: NEXT_PUBLIC_REALTIME_URL
-        fromService:
-          name: royal-suzuky-realtime
-          type: web
-          property: host
+        value: "https://royal-suzuky-realtime.onrender.com"
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
         sync: false
       - key: DIRECT_URL
         sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: INTERNAL_SOCKET_URL
+        value: "https://royal-suzuky-realtime.onrender.com/broadcast"
       - key: BETTER_AUTH_SECRET
         sync: false
       - key: BETTER_AUTH_URL
@@ -55,11 +58,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: JWT_SECRET
+        sync: false
       - key: CORS_ORIGIN
-        fromService:
-          name: royal-suzuky-portal
-          type: web
-          property: host
+        value: "*"
 
   # ============================================
   # Storefront App (Public Website)

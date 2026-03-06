@@ -11,9 +11,9 @@ export async function broadcast(event: string, data: Record<string, unknown> = {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ event, data })
         });
-    } catch (error) {
+    } catch (error: any) {
         // Fail silently so we don't block the main thread if socket server is down
-        console.warn("Failed to broadcast signal:", error);
+        console.warn(`[BROADCAST_ERROR] Failed to signal ${SOCKET_API}:`, error.message);
     }
 }
 

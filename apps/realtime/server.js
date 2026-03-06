@@ -103,7 +103,7 @@ io.use((socket, next) => {
         next();
     } catch (err) {
         // If token provided but invalid, still allow as anonymous if it's for public tracking
-        console.warn('Invalid token provided, falling back to anonymous');
+        console.warn(`[AUTH] Invalid token: ${err.message}`);
         socket.user = { role: 'anonymous' };
         next();
     }
