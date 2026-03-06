@@ -13,8 +13,11 @@ const CreateJobCard = () => {
     const searchParams = useSearchParams();
     const appointmentId = searchParams.get('appointmentId');
 
-    const { addJobCard, autoAssignRamp, ramps } = useWorkshopStore();
+    const { addJobCard, autoAssignRamp, ramps, technicians } = useWorkshopStore();
     const [step, setStep] = useState(1);
+
+    // Explicit technician selection
+    const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
 
     // Form States
     const [customer, setCustomer] = useState({ mobile: '', name: '', address: '' });
@@ -86,7 +89,7 @@ const CreateJobCard = () => {
                 customComplaint: customComplaint,
                 estimatedCompletion: deliveryDate?.toISOString(),
                 assignedRampId: availableRamp?.id,
-                assignedTechnicianId: availableRamp?.assignedTechnicianId || availableRamp?.dedicatedTechnicianId,
+                assignedTechnicianId: selectedTechnicianId || availableRamp?.assignedTechnicianId || availableRamp?.dedicatedTechnicianId,
                 appointmentId: appointmentId || undefined,
             });
 
@@ -336,6 +339,21 @@ const CreateJobCard = () => {
                                                 <span key={c} className="text-[10px] font-black text-ink-heading dark:text-white bg-surface-page dark:bg-dark-page px-3 py-1.5 rounded-full border border-surface-border dark:border-dark-border">{c}</span>
                                             ))}
                                             {customComplaint && <span className="text-[10px] font-black text-ink-heading dark:text-white bg-surface-page dark:bg-dark-page px-3 py-1.5 rounded-full border border-surface-border dark:border-dark-border">{customComplaint}</span>}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4 pt-4 border-t border-surface-border dark:border-dark-border">
+                                        <div className="flex justify-between items-center group">
+                                            <span className="text-[10px] font-black text-ink-muted uppercase tracking-wider">Assign Technician</span>
+                                            <select
+                                                className="bg-surface-page dark:bg-black/20 border-2 border-surface-border dark:border-white/5 rounded-xl px-4 py-2 text-xs font-bold text-ink-heading dark:text-white focus:border-brand outline-none transition-all cursor-pointer w-[200px]"
+                                                value={selectedTechnicianId || ''}
+                                                onChange={(e) => setSelectedTechnicianId(e.target.value || null)}
+                                            >
+                                                <option value="">Waitlist / Auto-assign</option>
+                                                {technicians.filter(t => t.status === 'active').map(tech => (
+                                                    <option key={tech.id} value={tech.id}>{tech.name}</option>
+                                                ))}
+                                            </select>
                                         </div>
                                     </div>
                                 </div>

@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
                     full_name: name,
                     password_hash: hashedPassword,
                     role_id: role.id,
+                    role: roleName, // Also set the string role for backward compatibility
                     dealer_id: dealer?.id,
                     status: isTechnician ? "pending" : "active",
                 },

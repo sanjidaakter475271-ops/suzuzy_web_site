@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 const JobCardDetailPage = () => {
     const { id } = useParams();
     const router = useRouter();
-    const { jobCards, updateJobCardStatus, fetchWorkshopData, deleteJobCard, addServiceTask } = useWorkshopStore();
+    const { jobCards, updateJobCardStatus, fetchWorkshopData, deleteJobCard, addServiceTask, technicians, assignTechnician } = useWorkshopStore();
     const [showDeleteModal, setShowDeleteModal] = React.useState(false);
     const [isDeleting, setIsDeleting] = React.useState(false);
 
@@ -24,6 +24,22 @@ const JobCardDetailPage = () => {
     const [taskDescription, setTaskDescription] = React.useState('');
     const [taskCost, setTaskCost] = React.useState(0);
     const [isAddingTask, setIsAddingTask] = React.useState(false);
+
+    const [showAssignTechModal, setShowAssignTechModal] = React.useState(false);
+    const [isAssigningTech, setIsAssigningTech] = React.useState(false);
+
+    const handleAssignTechnician = async (techId: string) => {
+        setIsAssigningTech(true);
+        try {
+            await assignTechnician(job!.id, techId);
+            setShowAssignTechModal(false);
+        } catch (error) {
+            console.error('Failed to assign technician', error);
+            alert("Failed to assign technician");
+        } finally {
+            setIsAssigningTech(false);
+        }
+    };
 
     const [history, setHistory] = React.useState<any[]>([]);
     const [isLoadingHistory, setIsLoadingHistory] = React.useState(true);
@@ -347,6 +363,23 @@ const JobCardDetailPage = () => {
                                         <p className="text-[10px] font-black text-ink-muted uppercase mb-1">Ramp ID</p>
                                         <p className="text-sm font-black text-brand">{job.assignedRampId || 'WAITING'}</p>
                                     </div>
+                                    <div className="col-span-2 p-4 bg-surface-page dark:bg-dark-page rounded-2xl border border-dotted border-surface-border dark:border-dark-border flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[10px] font-black text-ink-muted uppercase mb-1">Technician</p>
+                                            <p className="text-sm font-black text-brand">
+                                                {job.assignedTechnicianId
+                                                    ? technicians.find(t => t.id === job.assignedTechnicianId)?.name || 'Unknown'
+                                                    : 'UNASSIGNED'}
+                                            </p>
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setShowAssignTechModal(true)}
+                                            className="text-xs py-1 h-8 rounded-lg"
+                                        >
+                                            Assign
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>
@@ -461,6 +494,49 @@ const JobCardDetailPage = () => {
                                     </Button>
                                 </div>
                             </form>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* Assign Tech Modal */}
+            {showAssignTechModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm print:hidden">
+                    <Card className="w-full max-w-md rounded-[2rem] border-2 border-surface-border dark:border-dark-border bg-white dark:bg-dark-card shadow-2xl animate-fade-up">
+                        <CardContent className="p-8 space-y-6">
+                            <h3 className="text-xl font-black text-ink-heading dark:text-white uppercase tracking-tight">Assign Technician</h3>
+                            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin">
+                                {technicians.filter(t => t.status === 'active').map((tech) => (
+                                    <div
+                                        key={tech.id}
+                                        className="p-4 bg-surface-page dark:bg-black/20 rounded-2xl border border-surface-border dark:border-white/5 flex items-center justify-between group hover:border-brand/40 transition-all cursor-pointer"
+                                        onClick={() => handleAssignTechnician(tech.id)}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-brand text-white flex items-center justify-center font-black">
+                                                {tech.name.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <p className="font-black text-ink-heading dark:text-white">{tech.name}</p>
+                                                <p className="text-[10px] font-black uppercase text-ink-muted tracking-widest">{tech.activeJobs} Jobs Active</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {technicians.filter(t => t.status === 'active').length === 0 && (
+                                    <div className="py-10 text-center space-y-2">
+                                        <p className="text-ink-muted font-bold">No active technicians available.</p>
+                                    </div>
+                                )}
+                            </div>
+                            <Button
+                                variant="outline"
+                                className="w-full h-12 rounded-2xl font-black uppercase tracking-widest text-xs border-2 mt-4"
+                                onClick={() => setShowAssignTechModal(false)}
+                            >
+                                Cancel
+                            </Button>
                         </CardContent>
                     </Card>
                 </div>

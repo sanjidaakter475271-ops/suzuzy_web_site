@@ -82,9 +82,14 @@ export async function GET(req: NextRequest) {
                 service_end_time: job.service_end_time,
                 created_at: job.created_at,
                 service_number: ticket?.service_number,
+                ticket: {
+                    id: ticket?.id,
+                    ticket_number: ticket?.service_number || 'ST-0000',
+                    status: ticket?.status || 'waiting'
+                },
                 vehicle: {
                     model_name: vehicle?.bike_models?.name || vehicle?.model_id || 'Unknown Model',
-                    license_plate: vehicle?.engine_number || 'N/A', // The original code uses engine_number for license_plate
+                    license_plate: vehicle?.license_plate || vehicle?.engine_number || 'N/A',
                     customer_name: customer?.full_name || vehicle?.customer_name || 'Walk-in Customer',
                     issue_description: ticket?.service_description || 'No description provided',
                     color: vehicle?.color,

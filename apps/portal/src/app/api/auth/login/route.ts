@@ -50,6 +50,10 @@ export async function POST(req: NextRequest) {
                     include: {
                         business_units: true
                     }
+                },
+                service_staff: {
+                    where: { is_active: true },
+                    take: 1
                 }
             }
         });
@@ -198,7 +202,10 @@ export async function POST(req: NextRequest) {
 
     const response = NextResponse.json({
         success: true,
-        user,
+        user: {
+            ...user,
+            staff_id: user.service_staff?.[0]?.id || null
+        },
         requirePasswordChange: payload.requirePasswordChange,
         session: {
             accessToken: session.accessToken,
