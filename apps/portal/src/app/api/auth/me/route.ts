@@ -21,6 +21,14 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
+    // If technician, also fetch service_staff record
+    let staffData = null;
+    if (profile.roles?.name === 'technician') {
+        staffData = await prisma.service_staff.findFirst({
+            where: { profile_id: profile.id }
+        });
+    }
+
     return NextResponse.json({
         user: {
             id: profile.id,
@@ -33,6 +41,7 @@ export async function GET(req: NextRequest) {
             emailVerified: profile.email_verified,
             phoneVerified: profile.phone_verified,
             mfaEnabled: profile.mfa_enabled,
+            staff_id: staffData?.id || null,
         }
     });
 }

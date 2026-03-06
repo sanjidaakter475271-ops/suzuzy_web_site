@@ -353,28 +353,12 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
 
     approveTechnician: async (id) => {
         try {
-            // 1. Get staff record to find profile_id
-            const staff = get().technicians.find(t => t.id === id);
-
-            // 2. Update service_staff status
-            const res = await fetch(`/api/v1/service_staff/${id}`, {
+            const res = await fetch(`/api/v1/workshop/staff/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: 'approved' })
             });
             if (!res.ok) throw new Error('Failed to approve technician');
-
-            // 3. Update linked profile status if exists
-            const staffData = await res.json();
-            const profileId = staffData.data?.profile_id;
-
-            if (profileId) {
-                await fetch(`/api/v1/profiles/${profileId}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: 'active' })
-                });
-            }
 
             await get().fetchWorkshopData(); // Refresh list
         } catch (error: any) {
@@ -407,10 +391,8 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
 
     deleteTechnician: async (id: string) => {
         try {
-            const res = await fetch(`/api/v1/service_staff/${id}`, {
-                method: 'PATCH', // Using PATCH for soft delete or PUT/DELETE if supported
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ is_active: false })
+            const res = await fetch(`/api/v1/workshop/staff/${id}`, {
+                method: 'DELETE',
             });
             if (!res.ok) throw new Error('Failed to delete technician');
             await get().fetchWorkshopData();

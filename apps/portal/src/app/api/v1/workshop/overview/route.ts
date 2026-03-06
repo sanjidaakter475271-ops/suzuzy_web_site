@@ -60,7 +60,10 @@ export async function GET(req: NextRequest) {
             prisma.service_staff.findMany({
                 where: {
                     is_active: true,
-                    dealer_id: dealerId
+                    OR: [
+                        { dealer_id: dealerId },
+                        { status: 'pending', dealer_id: null }
+                    ]
                 },
                 include: { profiles: true }
             }),
