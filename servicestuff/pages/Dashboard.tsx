@@ -22,6 +22,7 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
   const [loading, setLoading] = useState(true);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [newAlert, setNewAlert] = useState<{ message: string, type: 'info' | 'success' } | null>(null);
   const navigate = useNavigate();
 
   const fetchData = async () => {
@@ -49,18 +50,30 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
 
     // Listen for realtime updates
     const socket = SocketService.getInstance();
-    const handleUpdate = () => {
-      console.log("[REALTIME] Update received, refreshing dashboard...");
+
+    const handleUpdate = (data?: any) => {
+      console.log("[REALTIME] Update received:", data);
+
+      // Notify user if needed
+      if (data?.action === 'created') {
+        setNewAlert({ message: "New Job Card Assigned! 🚀", type: 'success' });
+        setTimeout(() => setNewAlert(null), 5000);
+      } else if (data?.action === 'deleted') {
+        setNewAlert({ message: "Job card deleted or unassigned.", type: 'info' });
+        setTimeout(() => setNewAlert(null), 5000);
+      }
+
+      // Always refresh data on any relevant change
       fetchData();
     };
 
-    socket.on('order:update', handleUpdate);
     socket.on('job_cards:changed', handleUpdate);
+    socket.on('order:update', handleUpdate);
     socket.on('inventory:changed', handleUpdate);
 
     return () => {
-      socket.off('order:update', handleUpdate);
       socket.off('job_cards:changed', handleUpdate);
+      socket.off('order:update', handleUpdate);
       socket.off('inventory:changed', handleUpdate);
     };
   }, []);
@@ -117,6 +130,24 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
         />
       )}
       <TopBar onMenuClick={onMenuClick} title="Dashboard" />
+
+      {/* Real-time Alert Banner */}
+      {newAlert && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`mx-4 mt-4 p-3 rounded-lg shadow-md flex items-center justify-between z-10 ${newAlert.type === 'success' ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'
+            }`}
+        >
+          <div className="flex items-center gap-2">
+            <AlertCircle size={18} />
+            <p className="text-sm font-bold">{newAlert.message}</p>
+          </div>
+          <button onClick={() => setNewAlert(null)}>
+            <RefreshCw size={14} className="hover:rotate-180 transition-transform" />
+          </button>
+        </motion.div>
+      )}
 
       {/* Attendance Widget */}
       <div className="p-4 pb-0 animate-slide-up">

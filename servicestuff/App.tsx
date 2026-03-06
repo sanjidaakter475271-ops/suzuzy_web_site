@@ -77,7 +77,9 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (session?.token && user?.id) {
       import('./services/socket').then(({ SocketService }) => {
-        SocketService.getInstance().connect(user.id);
+        // Use staff_id for technicians, fallback to user.id
+        const connectionId = user.staff_id || user.id;
+        SocketService.getInstance().connect(connectionId);
       });
     }
   }, [session, user]);

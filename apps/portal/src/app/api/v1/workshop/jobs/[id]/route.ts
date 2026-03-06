@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma/client";
+import { broadcast } from "@/lib/socket-server";
 
 export async function PATCH(
     request: NextRequest,
@@ -34,6 +35,14 @@ export async function PATCH(
             }
         });
 
+        // Broadcast update
+        await broadcast('job_cards:changed', {
+            action: 'updated',
+            id: updatedJob.id,
+            technicianId: updatedJob.technician_id,
+            status: updatedJob.status
+        });
+
         return NextResponse.json({ success: true, data: updatedJob });
     } catch (error: any) {
         console.error("[JOB_CARD_PATCH_ERROR]", error);
@@ -63,8 +72,15 @@ export async function DELETE(
             return NextResponse.json({ error: "Job card not found or forbidden" }, { status: 404 });
         }
 
-        await prisma.job_cards.delete({
+        const deletedJob = await prisma.job_cards.delete({
             where: { id }
+        });
+
+        // Broadcast deletion
+        await broadcast('job_cards:changed', {
+            action: 'deleted',
+            id: id,
+            technicianId: deletedJob.technician_id
         });
 
         return NextResponse.json({ success: true, message: "Job card deleted" });
