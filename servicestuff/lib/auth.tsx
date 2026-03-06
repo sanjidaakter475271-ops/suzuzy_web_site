@@ -43,7 +43,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     useEffect(() => {
         refreshSession();
-    }, []);
+
+        // Handle offline to online transition
+        const handleOnline = () => {
+            console.log("App back online - checking for pending offline actions...");
+
+            // If session is cached or user data is missing, verify with server
+            if (session?.token === "cached" || !user?.id) {
+                console.log("Was in offline mode, waiting for sync and verifying session...");
+
+                // Wait 2s for OfflineService.syncQueue (automatically triggered in OfflineService) to try syncing
+                setTimeout(async () => {
+                    const { data, error } = await authClient.getMe();
+                    if (error || !data) {
+                        console.log("Session invalid on server, forcing re-login");
+                        signOut();
+                        window.location.reload();
+                    } else {
+                        console.log("Session verified, restoring real session state");
+                        setUser(data.user);
+                        setSession(data.session);
+                    }
+                }, 2000);
+            }
+        };
+
+        window.addEventListener('online', handleOnline);
+        return () => window.removeEventListener('online', handleOnline);
+    }, [session?.token, user?.id]);
 
     const signIn = async (email: string, password: any) => {
         const { data, error } = await authClient.signIn.email({ email, password });
