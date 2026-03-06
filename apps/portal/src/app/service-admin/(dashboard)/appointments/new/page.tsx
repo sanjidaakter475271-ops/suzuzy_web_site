@@ -2,22 +2,25 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
-    Calendar,
+    Calendar as CalendarIcon,
     Clock,
     User,
     Bike,
-    Search,
-    AlertCircle,
     CheckCircle2,
     ChevronDown,
-    Loader2
+    Loader2,
+    X,
+    Search as SearchIcon,
+    AlertCircle,
 } from 'lucide-react';
 import Breadcrumb from '@/components/service-admin/Breadcrumb';
-import { Card, CardContent } from '@/components/service-admin/ui';
+import { Card, CardContent, Button } from '@/components/service-admin/ui';
+import { Calendar } from '@/components/service-admin/ui/Calendar';
 import { useAppointmentStore } from '@/stores/service-admin/appointmentStore';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Appointment } from '@/types/service-admin/index';
+import { toast } from 'sonner';
 
 const NewAppointmentPage = () => {
     const router = useRouter();
@@ -30,6 +33,11 @@ const NewAppointmentPage = () => {
         date: '',
         time: '',
     });
+
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [selectedTime, setSelectedTime] = useState<string>('');
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showTimePicker, setShowTimePicker] = useState(false);
 
     const [customerQuery, setCustomerQuery] = useState('');
     const [customerResults, setCustomerResults] = useState<any[]>([]);
@@ -106,12 +114,18 @@ const NewAppointmentPage = () => {
                 source: 'walk_in',
                 status: 'scheduled'
             });
+
+            toast.success("Appointment Created", {
+                description: "Customer has been added to today's queue."
+            });
+
             setIsSuccess(true);
             setTimeout(() => {
                 router.push('/service-admin/appointments/queue');
             }, 1000);
         } catch (err: any) {
-            setSubmitError('Failed to save appointment. Please try again.');
+            setSubmitError(err.message || 'Failed to save appointment. Please try again.');
+            toast.error("Error saving appointment");
         }
     };
 
@@ -156,7 +170,7 @@ const NewAppointmentPage = () => {
                                 <div className="space-y-2 relative">
                                     <label className="text-xs font-bold text-ink-muted uppercase">Search Customer</label>
                                     <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" size={16} />
+                                        <SearchIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
                                         <input
                                             type="text"
                                             required
@@ -172,7 +186,7 @@ const NewAppointmentPage = () => {
                                             onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
                                             className="w-full bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-xl pl-10 pr-4 py-3 outline-none focus:border-brand transition-colors"
                                         />
-                                        {isSearchingCustomer && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-ink-muted" size={16} />}
+                                        {isSearchingCustomer && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-brand" size={16} />}
                                     </div>
 
                                     {showCustomerDropdown && (
@@ -184,7 +198,10 @@ const NewAppointmentPage = () => {
                                                     <div
                                                         key={cust.id}
                                                         className="px-4 py-3 hover:bg-surface-page dark:hover:bg-white/5 cursor-pointer border-b border-surface-border/50 dark:border-white/5 flex flex-col"
-                                                        onClick={() => selectCustomer(cust)}
+                                                        onMouseDown={(e) => {
+                                                            e.preventDefault(); // Prevent input onBlur
+                                                            selectCustomer(cust);
+                                                        }}
                                                     >
                                                         <span className="font-bold text-sm text-ink-heading dark:text-white">{cust.full_name || 'Unknown'}</span>
                                                         <span className="text-xs text-ink-muted">{cust.phone || 'No phone'}</span>
@@ -223,13 +240,13 @@ const NewAppointmentPage = () => {
                         </div>
 
                         {/* Scheduling */}
-                        <div className="space-y-4 pt-4 border-t border-surface-border dark:border-dark-border/50">
+                        <div className="space-y-6 pt-6 border-t border-surface-border dark:border-dark-border/50">
                             <div className="flex items-center gap-2 text-brand font-bold uppercase text-xs tracking-wider mb-2">
-                                <Calendar size={16} />
+                                <CalendarIcon size={16} />
                                 Schedule Information
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                 <div className="space-y-2 relative">
                                     <label className="text-xs font-bold text-ink-muted uppercase">Service Type</label>
                                     <div className="relative">
@@ -248,25 +265,80 @@ const NewAppointmentPage = () => {
                                         <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" size={16} />
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-ink-muted uppercase">Date</label>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={formData.date}
-                                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                        className="w-full bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-xl px-4 py-3 outline-none focus:border-brand transition-colors"
-                                    />
+
+                                {/* Custom Premium Date Picker */}
+                                <div className="space-y-2 relative">
+                                    <label className="text-xs font-bold text-ink-muted uppercase">Select Date</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowDatePicker(!showDatePicker)}
+                                        className={cn(
+                                            "w-full bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-xl px-4 py-3 text-left font-bold transition-all flex items-center justify-between",
+                                            showDatePicker ? "border-brand ring-4 ring-brand/10" : "hover:border-brand/30",
+                                            !selectedDate && "text-ink-muted/60"
+                                        )}
+                                    >
+                                        {selectedDate ? selectedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Pick a date'}
+                                        <CalendarIcon size={16} className="text-brand" />
+                                    </button>
+
+                                    {showDatePicker && (
+                                        <div className="absolute top-[105%] left-0 z-[60] animate-fade">
+                                            <div className="bg-white dark:bg-dark-card rounded-3xl shadow-2xl border border-brand/20 p-2 overflow-hidden">
+                                                <Calendar
+                                                    value={selectedDate}
+                                                    onChange={(date) => {
+                                                        setSelectedDate(date);
+                                                        setFormData(prev => ({ ...prev, date: date.toISOString().split('T')[0] }));
+                                                        setShowDatePicker(false);
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-ink-muted uppercase">Time Slot</label>
-                                    <input
-                                        type="time"
-                                        required
-                                        value={formData.time}
-                                        onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                                        className="w-full bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-xl px-4 py-3 outline-none focus:border-brand transition-colors"
-                                    />
+
+                                {/* Custom Premium Time Picker */}
+                                <div className="space-y-2 relative">
+                                    <label className="text-xs font-bold text-ink-muted uppercase">Select Time</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowTimePicker(!showTimePicker)}
+                                        className={cn(
+                                            "w-full bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-xl px-4 py-3 text-left font-bold transition-all flex items-center justify-between",
+                                            showTimePicker ? "border-brand ring-4 ring-brand/10" : "hover:border-brand/30",
+                                            !selectedTime && "text-ink-muted/60"
+                                        )}
+                                    >
+                                        {selectedTime ? selectedTime : 'Pick a time'}
+                                        <Clock size={16} className="text-brand" />
+                                    </button>
+
+                                    {showTimePicker && (
+                                        <div className="absolute top-[105%] right-0 w-64 bg-white dark:bg-dark-card rounded-3xl shadow-2xl border border-brand/20 p-4 z-[60] animate-fade max-h-60 overflow-y-auto custom-scrollbar">
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00'].map(t => (
+                                                    <button
+                                                        key={t}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setSelectedTime(t);
+                                                            setFormData(p => ({ ...p, time: t }));
+                                                            setShowTimePicker(false);
+                                                        }}
+                                                        className={cn(
+                                                            "py-2 px-3 rounded-lg text-xs font-bold transition-all",
+                                                            selectedTime === t
+                                                                ? "bg-brand text-white shadow-md shadow-brand/20"
+                                                                : "hover:bg-brand/10 text-ink-heading dark:text-white"
+                                                        )}
+                                                    >
+                                                        {t}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

@@ -16,7 +16,11 @@ import { cn } from '@/lib/utils';
 import { useAppointmentStore } from '@/stores/service-admin/appointmentStore';
 import { Appointment } from '@/types/service-admin/index';
 
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+
 const OnlineBookingPage = () => {
+    const router = useRouter();
     const { appointments, fetchAppointments, isLoading, updateStatus } = useAppointmentStore();
 
     React.useEffect(() => {
@@ -27,13 +31,41 @@ const OnlineBookingPage = () => {
         (a: Appointment) => a.source === 'online' && a.status === 'pending'
     );
 
-    const handleApprove = (id: string) => {
-        updateStatus(id, 'scheduled');
+    const handleApprove = async (appointment: Appointment) => {
+        const id = appointment.id;
+        const name = appointment.customerName;
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        try {
+            // If the appointment is from the past, move it to today so it shows in the Queue
+            const isStale = new Date(appointment.date) < new Date(todayStr);
+
+            await updateStatus(id, 'scheduled');
+
+            toast.success(`Approved: ${name}`, {
+                description: isStale
+                    ? `Moved to Today's Queue (was scheduled for ${appointment.date})`
+                    : "Moved to Service Queue",
+                action: {
+                    label: "View Queue",
+                    onClick: () => router.push('/service-admin/appointments/queue')
+                },
+                duration: 5000,
+            });
+        } catch (err: any) {
+            toast.error(`Failed to approve: ${err.message}`);
+        }
     };
 
-    const handleReject = (id: string) => {
-        if (confirm("Are you sure you want to reject this request?")) {
-            updateStatus(id, 'cancelled');
+    const handleReject = async (id: string, name: string) => {
+        try {
+            await updateStatus(id, 'cancelled');
+            toast.warning(`Rejected appointment for ${name}`, {
+                description: "The customer will be notified.",
+                duration: 3000,
+            });
+        } catch (err: any) {
+            toast.error(`Error: ${err.message}`);
         }
     };
 
@@ -46,6 +78,14 @@ const OnlineBookingPage = () => {
                     <h1 className="text-2xl font-black text-ink-heading dark:text-white">Online Booking Requests</h1>
                     <p className="text-sm text-ink-muted">Approve or reject customer web bookings.</p>
                 </div>
+                {onlineBookings.length > 0 && (
+                    <button
+                        onClick={() => window.location.href = '/service-admin/appointments/queue'}
+                        className="text-xs font-bold text-brand hover:underline flex items-center gap-1"
+                    >
+                        View Today's Queue <Calendar size={14} />
+                    </button>
+                )}
             </div>
 
             {isLoading ? (
@@ -74,14 +114,14 @@ const OnlineBookingPage = () => {
 
                                 <div className="flex items-center gap-3 w-full md:w-auto shrink-0 mt-4 md:mt-0">
                                     <button
-                                        onClick={() => handleReject(booking.id)}
+                                        onClick={() => handleReject(booking.id, booking.customerName)}
                                         className="flex-1 md:flex-none px-4 py-2 bg-surface-page dark:bg-dark-page hover:bg-danger-bg text-danger font-bold rounded-xl transition-colors flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
                                     >
                                         <XCircle size={16} />
                                         Reject
                                     </button>
                                     <button
-                                        onClick={() => handleApprove(booking.id)}
+                                        onClick={() => handleApprove(booking)}
                                         className="flex-1 md:flex-none px-6 py-2 bg-brand text-white font-bold rounded-xl shadow-lg shadow-brand/20 hover:bg-brand-hover active:scale-95 transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
                                     >
                                         <CheckCircle2 size={16} />

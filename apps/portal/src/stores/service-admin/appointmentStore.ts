@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { Appointment } from '@/types/service-admin/index';
-import { MOCK_APPOINTMENTS } from '@/constants/service-admin/appointmentData';
 
 interface AppointmentState {
     appointments: Appointment[];
@@ -27,7 +26,8 @@ export const useAppointmentStore = create<AppointmentState>((set, get) => ({
             const res = await fetch(`/api/v1/workshop/appointments?${query.toString()}`);
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.error || 'Failed to fetch appointments');
+                const errorMessage = errData.message || errData.error || errData.details || 'Failed to fetch appointments';
+                throw new Error(errorMessage);
             }
             const { data } = await res.json();
             set({ appointments: data, isLoading: false });
@@ -45,28 +45,50 @@ export const useAppointmentStore = create<AppointmentState>((set, get) => ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(appointmentData),
             });
-            if (!res.ok) throw new Error('Failed to create appointment');
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || 'Failed to create appointment');
+            }
             const { data } = await res.json();
             set((state) => ({ appointments: [...state.appointments, data], isLoading: false }));
+            return data;
         } catch (error: any) {
             console.error('addAppointment error:', error);
             set({ error: error.message, isLoading: false });
+            throw error;
         }
     },
 
     updateStatus: async (id, status) => {
+        const previousAppointments = get().appointments;
+
+        // Optimistic update
         set((state) => ({
             appointments: state.appointments.map((apt) => apt.id === id ? { ...apt, status } : apt)
         }));
+
         try {
-            await fetch(`/api/v1/workshop/appointments/${id}`, {
+            const res = await fetch(`/api/v1/workshop/appointments/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status }),
             });
-        } catch (error) {
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.error || 'Failed to update status');
+            }
+
+            // Sync with server data (token number might have been assigned)
+            const { data } = await res.json();
+            set((state) => ({
+                appointments: state.appointments.map((apt) => apt.id === id ? data : apt)
+            }));
+        } catch (error: any) {
             console.error('updateStatus error:', error);
-            // Optional: rollback on error
+            // Rollback
+            set({ appointments: previousAppointments });
+            throw error; // Re-throw so component can show error toast
         }
     },
 

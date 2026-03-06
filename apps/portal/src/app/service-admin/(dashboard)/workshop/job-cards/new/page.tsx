@@ -5,11 +5,14 @@ import { Button, Card, CardContent, DatePicker } from '@/components/service-admi
 import Breadcrumb from '@/components/service-admin/Breadcrumb';
 import { User, Car, ClipboardList, Camera, Save, ArrowRight, History, CheckCircle2, Plus } from 'lucide-react';
 import { useWorkshopStore } from '@/stores/service-admin/workshopStore';
-import { useRouter } from 'next/navigation';
-import { JobCard } from '@/types/service-admin/workshop';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 
 const CreateJobCard = () => {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const appointmentId = searchParams.get('appointmentId');
+
     const { addJobCard, autoAssignRamp, ramps } = useWorkshopStore();
     const [step, setStep] = useState(1);
 
@@ -19,6 +22,37 @@ const CreateJobCard = () => {
     const [serviceType, setServiceType] = useState('Paid Service');
     const [deliveryDate, setDeliveryDate] = useState<Date | null>(new Date());
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Fetch appointment details if appointmentId is present
+    React.useEffect(() => {
+        if (appointmentId) {
+            const fetchAppointment = async () => {
+                try {
+                    const res = await fetch(`/api/v1/workshop/appointments/${appointmentId}`);
+                    const json = await res.json();
+                    if (json.success) {
+                        const apt = json.data;
+                        setCustomer({
+                            mobile: apt.customerPhone || '',
+                            name: apt.customerName || '',
+                            address: ''
+                        });
+                        setVehicle({
+                            regNo: apt.vehicleRegNo || '',
+                            model: apt.vehicleModel || '',
+                            chassisNo: '',
+                            mileage: ''
+                        });
+                        setServiceType(apt.serviceType || 'Paid Service');
+                        toast.success("Details pre-filled from appointment");
+                    }
+                } catch (error) {
+                    console.error("Failed to pre-fill from appointment:", error);
+                }
+            };
+            fetchAppointment();
+        }
+    }, [appointmentId]);
 
     const complaintsList = [
         "Engine Noise", "Brake Issue", "Oil Change", "General Service", "Starting Problem", "Mileage Drop"
@@ -53,6 +87,7 @@ const CreateJobCard = () => {
                 estimatedCompletion: deliveryDate?.toISOString(),
                 assignedRampId: availableRamp?.id,
                 assignedTechnicianId: availableRamp?.assignedTechnicianId || availableRamp?.dedicatedTechnicianId,
+                appointmentId: appointmentId || undefined,
             });
 
             // Success redirect

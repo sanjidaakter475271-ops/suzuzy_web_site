@@ -70,26 +70,25 @@ export async function GET(request: NextRequest) {
             vehicleModel: apt.service_vehicles?.bike_models?.name || '',
             serviceType: apt.service_type || '',
             source: apt.source || 'walk_in',
-            date: apt.appointment_date.toISOString().split('T')[0],
+            date: apt.appointment_date instanceof Date
+                ? apt.appointment_date.toISOString().split('T')[0]
+                : (typeof apt.appointment_date === 'string' ? apt.appointment_date.split('T')[0] : ''),
             time: apt.time_slot,
             notes: apt.notes,
             status: apt.status || 'pending',
             token: apt.token_number || 0,
-            checkedInAt: apt.checked_in_at?.toISOString(),
-            completedAt: apt.completed_at?.toISOString(),
-            createdAt: apt.created_at?.toISOString() || new Date().toISOString()
+            checkedInAt: apt.checked_in_at instanceof Date ? apt.checked_in_at.toISOString() : (apt.checked_in_at || undefined),
+            completedAt: apt.completed_at instanceof Date ? apt.completed_at.toISOString() : (apt.completed_at || undefined),
+            createdAt: apt.created_at instanceof Date ? apt.created_at.toISOString() : (apt.created_at || new Date().toISOString())
         }));
 
         return NextResponse.json({ success: true, data: appointments });
     } catch (error: any) {
-        console.error("[APPOINTMENTS_GET] Detailed Error:", {
-            message: error.message,
-            stack: error.stack,
-            code: error.code
-        });
+        console.error("[APPOINTMENTS_GET] Error:", error);
         return NextResponse.json({
             error: "Failed to fetch appointments",
-            details: error.message
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         }, { status: 500 });
     }
 }

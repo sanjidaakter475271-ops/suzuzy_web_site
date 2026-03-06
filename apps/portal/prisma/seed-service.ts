@@ -12,11 +12,15 @@ async function main() {
         { name: 'Suzuki Gixxer SF 150', cc: '155', engine_type: 'Single Cylinder', brand: 'Suzuki', code: 'GSX150' },
         { name: 'Suzuki Gixxer 150', cc: '155', engine_type: 'Single Cylinder', brand: 'Suzuki', code: 'GX150' },
         { name: 'Suzuki Hayabusa', cc: '1340', engine_type: '4-Cylinder', brand: 'Suzuki', code: 'GSX1300R' },
-        { name: 'Suzuki Access 125', cc: '124', engine_type: 'Single Cylinder', brand: 'Suzuki', code: 'AC125' },
+        { name: 'Suzuki GSX-R150', cc: '147', engine_type: 'Single Cylinder', brand: 'Suzuki', code: 'GSXR150' },
+        { name: 'Suzuki GSX-S150', cc: '147', engine_type: 'Single Cylinder', brand: 'Suzuki', code: 'GSXS150' },
+        { name: 'Suzuki Intruder', cc: '155', engine_type: 'Single Cylinder', brand: 'Suzuki', code: 'IN150' },
         { name: 'Suzuki Burgman Street', cc: '124', engine_type: 'Single Cylinder', brand: 'Suzuki', code: 'BS125' },
+        { name: 'Suzuki Access 125', cc: '124', engine_type: 'Single Cylinder', brand: 'Suzuki', code: 'AC125' },
+        { name: 'Suzuki Avenis 125', cc: '124', engine_type: 'Single Cylinder', brand: 'Suzuki', code: 'AV125' },
         { name: 'Suzuki V-Strom SX', cc: '249', engine_type: 'Single Cylinder', brand: 'Suzuki', code: 'DS250' },
         { name: 'Suzuki Katana', cc: '999', engine_type: '4-Cylinder', brand: 'Suzuki', code: 'GSX-S1000' },
-        { name: 'Suzuki GSX-R150', cc: '147', engine_type: 'Single Cylinder', brand: 'Suzuki', code: 'GSXR150' },
+        { name: 'Suzuki Gixxer SF 250', cc: '249', engine_type: 'Single Cylinder', brand: 'Suzuki', code: 'GSX250' },
     ];
 
     for (const model of bikeModelsData) {

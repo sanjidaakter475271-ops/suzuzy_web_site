@@ -1,6 +1,7 @@
 export interface JobCard {
     id: string;
     ticketId?: string;
+    appointmentId?: string;
     jobNo: string;
     customerId: string;
     customerName: string;

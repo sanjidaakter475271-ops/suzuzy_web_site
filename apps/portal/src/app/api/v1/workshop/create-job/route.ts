@@ -34,7 +34,8 @@ export async function POST(req: NextRequest) {
             custom_complaint,
             estimated_completion,
             ramp_id,
-            technician_id
+            technician_id,
+            appointment_id
         } = body;
 
         if (!customer_phone || !vehicle_reg_no || !vehicle_model) {
@@ -43,11 +44,18 @@ export async function POST(req: NextRequest) {
 
         // 1. Perform transaction to create Vehicle -> Ticket -> Job Card
         const result = await prisma.$transaction(async (tx) => {
+            // Find existing customer by phone
+            const customer = await tx.profiles.findFirst({
+                where: { phone: customer_phone, dealer_id: user.dealerId }
+            });
+            const customer_id = customer?.id || null;
+
             // A. Create/Update Vehicle
             const vehicle = await tx.service_vehicles.upsert({
                 where: { engine_number: vehicle_reg_no },
                 update: {
                     customer_name,
+                    customer_id: customer_id,
                     phone_number: customer_phone,
                     district_city: customer_address || '',
                     chassis_number: vehicle_chassis_no || '',
@@ -56,6 +64,7 @@ export async function POST(req: NextRequest) {
                     engine_number: vehicle_reg_no,
                     chassis_number: vehicle_chassis_no || '',
                     customer_name,
+                    customer_id: customer_id,
                     phone_number: customer_phone,
                     district_city: customer_address || '',
                 }
@@ -66,13 +75,15 @@ export async function POST(req: NextRequest) {
             const serviceTicket = await tx.service_tickets.create({
                 data: {
                     vehicle_id: vehicle.id,
+                    customer_id: customer_id,
                     service_number: serviceNumber,
                     status: 'waiting',
                     service_description: complaints + (custom_complaint ? `\nNote: ${custom_complaint}` : ''),
                     admin_notes: `Manual creation via portal. Type: ${service_type}`,
                     ramp_id: ramp_id || null,
                     staff_id: technician_id || null,
-                }
+                    appointment_id: appointment_id || null,
+                } as any
             });
 
             // C. Create Job Card
@@ -82,6 +93,7 @@ export async function POST(req: NextRequest) {
                     technician_id: technician_id || null,
                     status: 'pending',
                     notes: complaints,
+                    dealer_id: user.dealerId,
                     estimated_completion_at: estimated_completion ? new Date(estimated_completion) : null
                 },
             });
@@ -95,6 +107,14 @@ export async function POST(req: NextRequest) {
                         current_ticket_id: serviceTicket.id,
                         staff_id: technician_id || null
                     }
+                });
+            }
+
+            // E. Update Appointment status if provided
+            if (appointment_id) {
+                await tx.service_appointments.update({
+                    where: { id: appointment_id },
+                    data: { status: 'completed' }
                 });
             }
 

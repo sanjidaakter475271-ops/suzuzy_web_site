@@ -175,7 +175,8 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
                 custom_complaint: jobCard.customComplaint,
                 estimated_completion: jobCard.estimatedCompletion,
                 ramp_id: jobCard.assignedRampId,
-                technician_id: jobCard.assignedTechnicianId
+                technician_id: jobCard.assignedTechnicianId,
+                appointment_id: jobCard.appointmentId
             };
 
             const res = await fetch('/api/v1/workshop/create-job', {
@@ -210,7 +211,7 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
         const backendStatus = map[status] || status;
 
         try {
-            await fetch(`/api/v1/job_cards/${id}`, {
+            await fetch(`/api/v1/workshop/jobs/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: backendStatus })
@@ -230,7 +231,7 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
 
     deleteJobCard: async (id: string) => {
         try {
-            const res = await fetch(`/api/v1/job_cards/${id}`, {
+            const res = await fetch(`/api/v1/workshop/jobs/${id}`, {
                 method: 'DELETE',
             });
             if (!res.ok) throw new Error('Failed to delete job card');
@@ -263,7 +264,7 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
 
     assignTechnician: async (jobCardId, technicianId) => {
         try {
-            await fetch(`/api/v1/job_cards/${jobCardId}`, {
+            await fetch(`/api/v1/workshop/jobs/${jobCardId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ technician_id: technicianId })

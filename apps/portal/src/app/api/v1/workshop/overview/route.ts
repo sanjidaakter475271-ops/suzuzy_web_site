@@ -48,6 +48,7 @@ export async function GET(req: NextRequest) {
                 take: 50
             }),
             prisma.service_ramps.findMany({
+                where: { dealer_id: dealerId },
                 include: {
                     service_staff: true,
                     service_tickets_service_ramps_current_ticket_idToservice_tickets: {

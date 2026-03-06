@@ -12,12 +12,15 @@ import {
 } from 'lucide-react';
 import Breadcrumb from '@/components/service-admin/Breadcrumb';
 import { Card, CardContent } from '@/components/service-admin/ui';
+import { useRouter } from 'next/navigation';
 import { useAppointmentStore } from '@/stores/service-admin/appointmentStore';
 import { cn } from '@/lib/utils';
 import { Appointment } from '@/types/service-admin/index';
 // import AppointmentQueue from '@/components/appointments/QueueBoard'; // To be implemented
+import { toast } from 'sonner';
 
 const QueuePage = () => {
+    const router = useRouter();
     const { appointments, fetchAppointments, isLoading, updateStatus } = useAppointmentStore();
 
     React.useEffect(() => {
@@ -50,7 +53,7 @@ const QueuePage = () => {
                 <div className="flex items-center gap-4">
                     <div className="bg-brand text-white px-4 py-2 rounded-xl text-center shadow-lg shadow-brand/20">
                         <p className="text-[10px] font-black uppercase tracking-wider opacity-80">Serving Now</p>
-                        <p className="text-2xl font-black mt-0.5">{queueAppointments.length > 0 ? queueAppointments[0].token : '--'}</p>
+                        <p className="text-2xl font-black mt-0.5">{queueAppointments.length > 0 ? (queueAppointments.find(a => a.status === 'scheduled')?.token || '--') : '--'}</p>
                     </div>
                     <div className="bg-surface-card dark:bg-dark-card border border-surface-border dark:border-dark-border px-4 py-2 rounded-xl text-center">
                         <p className="text-[10px] font-black uppercase tracking-wider text-ink-muted">Next Token</p>
@@ -95,15 +98,42 @@ const QueuePage = () => {
 
                                     <div className="flex items-center gap-2">
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); updateStatus(apt.id, 'scheduled'); }}
-                                            className={cn("p-2 rounded-lg transition-colors", apt.status === 'scheduled' ? 'bg-success/20 text-success' : 'hover:bg-success-bg text-success/60')}
-                                            title="Check In"
+                                            onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                    await updateStatus(apt.id, 'scheduled');
+                                                    toast.success(`Check-in: ${apt.customerName}`, {
+                                                        description: "Redirecting to create Job Card...",
+                                                        duration: 2000
+                                                    });
+                                                    // Move to Create Job Card with pre-fill data
+                                                    setTimeout(() => {
+                                                        router.push(`/service-admin/workshop/job-cards/new?appointmentId=${apt.id}`);
+                                                    }, 1000);
+                                                } catch (err: any) {
+                                                    toast.error(err.message || "Failed to check in");
+                                                }
+                                            }}
+                                            className={cn("px-4 py-2 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all flex items-center gap-2",
+                                                apt.status === 'scheduled'
+                                                    ? 'bg-brand text-white shadow-lg shadow-brand/20'
+                                                    : 'bg-brand/10 text-brand hover:bg-brand hover:text-white')}
+                                            title="Check In & Create Job Card"
                                         >
-                                            <Clock size={20} />
+                                            <Clock size={16} />
+                                            {apt.status === 'scheduled' ? 'CHECKED IN' : 'CHECK IN'}
                                         </button>
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); updateStatus(apt.id, 'completed'); }}
-                                            className="p-2 hover:bg-brand-soft text-brand rounded-lg transition-colors opacity-60 hover:opacity-100"
+                                            onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                    await updateStatus(apt.id, 'completed');
+                                                    toast.success(`Marked as completed: ${apt.customerName}`);
+                                                } catch (err: any) {
+                                                    toast.error(err.message || "Failed to complete appointment");
+                                                }
+                                            }}
+                                            className="p-2 hover:bg-brand-soft text-brand rounded-xl transition-colors opacity-60 hover:opacity-100"
                                             title="Complete"
                                         >
                                             <CheckCircle2 size={20} />
