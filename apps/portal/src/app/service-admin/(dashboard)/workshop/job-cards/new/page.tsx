@@ -40,7 +40,7 @@ const CreateJobCard = () => {
                         setVehicle({
                             regNo: apt.vehicleRegNo || '',
                             model: apt.vehicleModel || '',
-                            chassisNo: '',
+                            chassisNo: apt.vehicleChassisNo || '',
                             mileage: ''
                         });
                         setServiceType(apt.serviceType || 'Paid Service');

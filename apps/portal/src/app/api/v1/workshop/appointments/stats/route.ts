@@ -9,11 +9,10 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
+        const now = new Date();
+        const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
         const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 
         const count = await prisma.service_appointments.count({
             where: {

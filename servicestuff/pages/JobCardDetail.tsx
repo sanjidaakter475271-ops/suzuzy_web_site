@@ -680,18 +680,33 @@ export const JobCardDetail: React.FC = () => {
                         </button>
                         <button
                             onClick={handleRequestQC}
-                            className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 py-4 px-6 rounded-2xl font-bold flex items-center justify-center gap-2 border border-blue-500/30 transition-all active:scale-95"
-                        >
-                            QC
-                        </button>
-                        <button
-                            onClick={() => handleStatusUpdate('completed')}
-                            className="flex-1 bg-green-600 hover:bg-green-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-900/20 transition-all active:scale-95"
+                            className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 transition-all active:scale-95"
                         >
                             <CheckCircle2 size={20} />
-                            Complete
+                            Request QC
                         </button>
                     </>
+                ) : job.status === 'qc_requested' ? (
+                    <div className="flex-1 bg-amber-500/10 text-amber-400 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 border border-amber-500/30">
+                        <Clock size={20} />
+                        Awaiting QC Review...
+                    </div>
+                ) : job.status === 'qc_passed' ? (
+                    <button
+                        onClick={() => handleStatusUpdate('completed')}
+                        className="flex-1 bg-green-600 hover:bg-green-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-900/20 transition-all active:scale-95"
+                    >
+                        <CheckCircle2 size={20} />
+                        Mark Complete
+                    </button>
+                ) : job.status === 'qc_failed' ? (
+                    <button
+                        onClick={() => handleStatusUpdate('in_progress')}
+                        className="flex-1 bg-rose-600 hover:bg-rose-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-rose-900/20 transition-all active:scale-95"
+                    >
+                        <PlayCircle size={20} />
+                        Resume Work (QC Failed)
+                    </button>
                 ) : null}
             </div>
 

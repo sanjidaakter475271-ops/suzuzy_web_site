@@ -89,7 +89,7 @@ export interface Appointment {
     date: string;
     time: string;
     notes?: string;
-    status: 'pending' | 'scheduled' | 'cancelled' | 'completed' | 'no-show';
+    status: 'pending' | 'scheduled' | 'in_progress' | 'cancelled' | 'completed' | 'no-show';
     token?: number;
     checkedInAt?: string;
     completedAt?: string;

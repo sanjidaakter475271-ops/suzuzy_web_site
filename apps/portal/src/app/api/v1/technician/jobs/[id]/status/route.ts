@@ -74,6 +74,28 @@ export async function POST(req: NextRequest, { params }: { params: Params }) {
 
         await prisma.$transaction(operations);
 
+        // AUTO-COMPLETE: If job is completed, also complete linked appointment
+        if (status === 'completed') {
+            try {
+                const ticket = await prisma.service_tickets.findFirst({
+                    where: { job_cards: { some: { id: id } } },
+                    select: { appointment_id: true }
+                });
+                if (ticket?.appointment_id) {
+                    await prisma.service_appointments.update({
+                        where: { id: ticket.appointment_id },
+                        data: {
+                            status: 'completed',
+                            completed_at: new Date(),
+                        }
+                    });
+                }
+            } catch (linkErr) {
+                console.error('[JOB_STATUS] Failed to auto-complete appointment:', linkErr);
+                // Non-blocking — don't fail the main operation
+            }
+        }
+
         // Broadcast change for real-time dashboard updates
         await broadcast('job_cards:changed', {
             id: id,

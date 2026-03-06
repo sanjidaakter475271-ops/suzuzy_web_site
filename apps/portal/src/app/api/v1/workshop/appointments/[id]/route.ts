@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 
 const updateSchema = z.object({
-    status: z.enum(['pending', 'scheduled', 'cancelled', 'completed', 'no-show']).optional(),
+    status: z.enum(['pending', 'scheduled', 'in_progress', 'cancelled', 'completed', 'no-show']).optional(),
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD").optional(),
     time: z.string().optional(),
     notes: z.string().optional(),

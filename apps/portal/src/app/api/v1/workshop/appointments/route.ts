@@ -34,10 +34,11 @@ export async function GET(request: NextRequest) {
         };
 
         if (dateStr) {
-            const startDate = new Date(dateStr);
-            startDate.setUTCHours(0, 0, 0, 0);
-            const endDate = new Date(dateStr);
-            endDate.setUTCHours(23, 59, 59, 999);
+            // Parse as YYYY-MM-DD to avoid timezone shifting
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const startDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+            const endDate = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+
             whereClause.appointment_date = {
                 gte: startDate,
                 lte: endDate,

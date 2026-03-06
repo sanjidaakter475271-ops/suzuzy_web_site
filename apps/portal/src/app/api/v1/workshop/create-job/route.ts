@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
             if (appointment_id) {
                 await tx.service_appointments.update({
                     where: { id: appointment_id },
-                    data: { status: 'completed' }
+                    data: { status: 'in_progress' }
                 });
             }
 
