@@ -1,12 +1,18 @@
 import React, { useEffect } from 'react';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Device } from '@capacitor/device';
+import { Capacitor } from '@capacitor/core';
 import { TechnicianAPI } from '../services/api';
 
 export const PushNotificationManager: React.FC = () => {
     useEffect(() => {
         const initializePush = async () => {
             try {
+                if (!Capacitor.isNativePlatform()) {
+                    console.log('[PUSH] Push notifications are not supported on web. Skipping initialization.');
+                    return;
+                }
+
                 // 1. Check/Request Permissions
                 let permStatus = await PushNotifications.checkPermissions();
 
@@ -61,7 +67,9 @@ export const PushNotificationManager: React.FC = () => {
 
         // Cleanup on unmount (optional, but keep listeners active while app is open)
         return () => {
-            PushNotifications.removeAllListeners();
+            if (Capacitor.isNativePlatform()) {
+                PushNotifications.removeAllListeners();
+            }
         };
     }, []);
 

@@ -3,6 +3,7 @@
  * Socket.io server for real-time features
  */
 
+require('dotenv').config();
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 

@@ -36,8 +36,13 @@ api.interceptors.response.use(
         if (error.response?.status === 401) {
             // Token expired or invalid
             await Preferences.remove({ key: 'auth_token' });
+            await Preferences.remove({ key: 'cached_profile' }); // Clear offline profile to prevent login loop
+
             // Redirect to login or trigger re-auth
-            // window.location.href = '/login'; // Or use an event emitter
+            if (!window.location.hash.includes('/login')) {
+                window.location.hash = '#/login';
+                window.location.reload();
+            }
         }
         return Promise.reject(error);
     }

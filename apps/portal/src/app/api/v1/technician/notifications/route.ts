@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/get-user";
+import { getCurrentTechnician } from "@/lib/auth/get-technician";
 import { prisma } from "@/lib/prisma/client";
 
 export async function GET(request: NextRequest) {
     try {
-        const user = await getCurrentUser();
-        if (!user || user.role !== 'service_technician') {
-            // Check if they have the profile but just need it confirmed
-            // For now, let's be strict or allow if they are staff
+        const user = await getCurrentTechnician();
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         const profile = await prisma.profiles.findUnique({
-            where: { id: user?.userId },
+            where: { id: user.userId },
             include: { roles: true }
         });
 
@@ -37,7 +36,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
     try {
-        const user = await getCurrentUser();
+        const user = await getCurrentTechnician();
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         const { id, is_read } = await request.json();
@@ -65,7 +64,7 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
     try {
-        const user = await getCurrentUser();
+        const user = await getCurrentTechnician();
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         const { id } = await request.json();

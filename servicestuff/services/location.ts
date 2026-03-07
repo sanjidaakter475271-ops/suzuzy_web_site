@@ -1,4 +1,5 @@
 import { Geolocation } from '@capacitor/geolocation';
+import { Capacitor } from '@capacitor/core';
 
 export interface Location {
     lat: number;
@@ -19,6 +20,11 @@ export class LocationService {
 
     async getCurrentLocation(): Promise<Location> {
         try {
+            if (!Capacitor.isNativePlatform()) {
+                console.warn('[LOCATION] Running on web, returning dummy location to prevent unhandled web implementation error.');
+                return { lat: 0, lng: 0 };
+            }
+
             const permissions = await Geolocation.checkPermissions();
 
             if (permissions.location === 'denied') {
