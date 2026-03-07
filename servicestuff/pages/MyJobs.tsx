@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { OfflineService } from '../services/offline';
 import { SocketService } from '../services/socket';
 import { WifiOff } from 'lucide-react';
+import { JobCardSkeleton } from '../components/Skeleton';
 
 export const MyJobs: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
     const [jobs, setJobs] = useState<JobCard[]>([]);
@@ -159,9 +160,8 @@ export const MyJobs: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) =
                 {/* Content */}
                 <div className="space-y-4 mt-6">
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center py-20 gap-3">
-                            <Loader2 className="animate-spin text-blue-500" size={32} />
-                            <p className="text-slate-500 text-sm">Fetching your assignments...</p>
+                        <div className="space-y-4">
+                            {[1, 2, 3, 4].map(i => <JobCardSkeleton key={i} />)}
                         </div>
                     ) : (
                         <AnimatePresence mode="popLayout">

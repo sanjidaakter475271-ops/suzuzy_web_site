@@ -13,6 +13,7 @@ import { Scan } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { RoutePath, JobStatus } from '../types';
 import { SocketService } from '../services/socket';
+import { DashboardSkeleton } from '../components/Skeleton';
 // import { toast } from 'sonner';
 
 export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
@@ -250,11 +251,8 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
         </button>
       </div>
 
-      {loading && tasks.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="animate-spin text-blue-500 mb-4" size={32} />
-          <p className="text-gray-500">Loading tasks...</p>
-        </div>
+      {loading && stats === null && tasks.length === 0 && (
+        <DashboardSkeleton />
       )}
 
       {/* Task List */}

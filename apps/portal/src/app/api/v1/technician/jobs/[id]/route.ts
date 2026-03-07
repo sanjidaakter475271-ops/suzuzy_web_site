@@ -119,6 +119,7 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
                 category: i.category,
                 is_completed: i.is_completed,
                 condition: i.condition,
+                photo_url: i.photo_url,
             })) || [],
             checklist_stats: {
                 total: totalChecklist,

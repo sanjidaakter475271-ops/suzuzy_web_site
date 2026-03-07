@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ChevronLeft,
@@ -30,6 +30,7 @@ import { LocationService } from '../services/location';
 import { MediaService } from '../services/media';
 import { SocketService } from '../services/socket';
 import { WifiOff, Cloud, ImageIcon } from 'lucide-react';
+import { DetailSkeleton } from '../components/Skeleton';
 
 type Tab = 'summary' | 'checklist' | 'parts' | 'photos' | 'notes';
 
@@ -51,6 +52,7 @@ export const JobCardDetail: React.FC = () => {
 
     // Note State
     const [newNote, setNewNote] = useState('');
+    const syncTimeout = useRef<any>(null);
 
     useEffect(() => {
         if (id) {
@@ -99,8 +101,24 @@ export const JobCardDetail: React.FC = () => {
 
             const res = await TechnicianAPI.getJobDetail(id);
             const jobData = res.data.data;
-            setJob(jobData);
-            await offlineService.cacheJobDetail(id, jobData);
+
+            // Ensure tasks and checklist are arrays and formatted
+            const sanitizedJob = {
+                ...jobData,
+                tasks: jobData.tasks || [],
+                checklist: (jobData.checklist || jobData.service_checklist_items || []).map((i: any) => ({
+                    id: i.id,
+                    name: i.name,
+                    category: i.category,
+                    is_completed: i.is_completed || false,
+                    condition: i.condition || 'na',
+                    photo_url: i.photo_url || i.photoUrl
+                })),
+                photos: jobData.photos || jobData.job_photos || []
+            };
+
+            setJob(sanitizedJob);
+            await offlineService.cacheJobDetail(id, sanitizedJob);
         } catch (err) {
             console.error("Error fetching job:", err);
             // Fallback
@@ -131,8 +149,18 @@ export const JobCardDetail: React.FC = () => {
 
     const handleStatusUpdate = async (newStatus: string) => {
         if (!job) return;
+        const prevStatus = job.status;
+        let location = null;
+
+        // Optimistic Update
+        setJob({ ...job, status: newStatus as any });
+
         try {
-            const location = await LocationService.getInstance().getCurrentLocation();
+            try {
+                location = await LocationService.getInstance().getCurrentLocation();
+            } catch (le) {
+                console.warn("Location fetch failed, continuing without it");
+            }
 
             if (newStatus === 'completed') {
                 if (!isOnline) {
@@ -147,13 +175,13 @@ export const JobCardDetail: React.FC = () => {
 
             if (!isOnline) {
                 await offlineService.queueAction('update_status', { jobId: job.id, status: newStatus });
-                setJob({ ...job, status: newStatus as any });
                 return;
             }
 
             await TechnicianAPI.updateJobStatus(job.id, newStatus, location);
             fetchJobDetails();
         } catch (err) {
+            setJob({ ...job, status: prevStatus });
             console.error("Error updating status:", err);
             alert("Failed to update status");
         }
@@ -163,53 +191,73 @@ export const JobCardDetail: React.FC = () => {
         fetchJobDetails();
     };
 
-    const handleChecklistToggle = async (item: ChecklistItem) => {
+    const handleChecklistUpdate = async (itemId: string, completed: boolean, condition: ServiceCondition, photoUrl?: string) => {
         if (!job) return;
-        try {
-            const newStatus = !item.is_completed;
-            if (!isOnline) {
-                await offlineService.queueAction('update_checklist', {
-                    jobId: job.id,
-                    itemId: item.id,
-                    condition: item.condition,
-                    completed: newStatus
-                });
-                const updatedChecklist = job.checklist?.map(c => c.id === item.id ? { ...c, is_completed: newStatus } : c);
-                setJob({ ...job, checklist: updatedChecklist });
-                return;
-            }
 
-            await TechnicianAPI.updateChecklist(job.id, [{
-                id: item.id,
-                condition: item.condition,
-            }]);
-            fetchJobDetails();
-        } catch (err) {
-            console.error("Error updating checklist:", err);
-        }
-    };
+        // Optimistic Update
+        const updatedChecklist = job.checklist?.map(c =>
+            c.id === itemId ? { ...c, condition, is_completed: completed, photo_url: photoUrl } : c
+        );
+        setJob({ ...job, checklist: updatedChecklist });
 
-    const handleChecklistUpdate = async (itemId: string, completed: boolean, condition: ServiceCondition) => {
-        if (!job) return;
         try {
             if (!isOnline) {
-                await offlineService.queueAction('update_checklist', { jobId: job.id, itemId, condition, completed });
-                const updatedChecklist = job.checklist?.map(c => c.id === itemId ? { ...c, condition, is_completed: completed } : c);
-                setJob({ ...job, checklist: updatedChecklist });
+                await offlineService.queueAction('update_checklist', { jobId: job.id, itemId, condition, completed, photoUrl });
                 return;
             }
 
             await TechnicianAPI.updateChecklist(job.id, [{
                 id: itemId,
                 condition: condition,
-                completed: completed
+                completed: completed,
+                photoUrl: photoUrl
             }]);
             fetchJobDetails();
         } catch (error) {
             console.error("Failed to update checklist item:", error);
+            fetchJobDetails();
         }
     };
 
+    const handleChecklistToggle = async (item: ChecklistItem) => {
+        if (!job) return;
+        const newStatus = !item.is_completed;
+
+        // Optimistic Update
+        const updatedChecklist = job.checklist?.map(c =>
+            c.id === item.id ? { ...c, is_completed: newStatus } : c
+        );
+        setJob({ ...job, checklist: updatedChecklist });
+
+        try {
+            await handleChecklistUpdate(item.id, newStatus, item.condition, (item as any).photo_url);
+        } catch (err) {
+            console.error("Checklist toggle failed", err);
+            fetchJobDetails();
+        }
+    };
+
+    const handleChecklistPhoto = async (item: ChecklistItem) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = async (e: any) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+
+            setLoading(true);
+            try {
+                const url = await MediaService.uploadImage(file, 'service-docs', `checklist/${job?.id}`);
+                await handleChecklistUpdate(item.id, true, item.condition, url);
+            } catch (err) {
+                console.error("Checklist photo upload failed:", err);
+                alert("Photo upload failed");
+            } finally {
+                setLoading(false);
+            }
+        };
+        input.click();
+    };
 
     const handleAddNote = async () => {
         if (!job || !newNote.trim()) return;
@@ -217,7 +265,6 @@ export const JobCardDetail: React.FC = () => {
             if (!isOnline) {
                 await offlineService.queueAction('add_note', { jobId: job.id, note: newNote });
                 setNewNote('');
-                // Optionally add to local state if notes are displayed
                 return;
             }
             await TechnicianAPI.addNote(job.id, newNote);
@@ -230,8 +277,7 @@ export const JobCardDetail: React.FC = () => {
 
     const handleAIAnalysis = async (photoId: string) => {
         try {
-            // toast.loading('AI is analyzing the photo...', { id: 'ai-analysis' }); // Assuming toast is available
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/ai/diagnostics`, {
+            await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/ai/diagnostics`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -239,16 +285,9 @@ export const JobCardDetail: React.FC = () => {
                 },
                 body: JSON.stringify({ photoId })
             });
-
-            if (!response.ok) throw new Error('AI analysis failed');
-            const result = await response.json();
-
-            // toast.success('AI Analysis Completed', { id: 'ai-analysis' }); // Assuming toast is available
-            // Re-fetch job details to show updated metadata
             fetchJobDetails();
         } catch (error) {
             console.error(error);
-            // toast.error('AI Analysis failed', { id: 'ai-analysis' }); // Assuming toast is available
         }
     };
 
@@ -257,36 +296,12 @@ export const JobCardDetail: React.FC = () => {
         setLoading(true);
         try {
             const file = event.target.files[0];
-
-            // 1. Compress Image
-            console.log(`[MEDIA] Original size: ${MediaService.formatBytes(file.size)}`);
-            const compressedBlob = await MediaService.compressImage(file);
-            console.log(`[MEDIA] Compressed size: ${MediaService.formatBytes(compressedBlob.size)}`);
-
-            const fileExt = 'jpg'; // We compress to jpeg
-            const fileName = `${job.id}/${Date.now()}.${fileExt}`;
-            const filePath = `job-photos/${fileName}`;
-
-            // 2. Upload to Supabase
-            const { data, error } = await supabase.storage
-                .from('service-docs')
-                .upload(filePath, compressedBlob, {
-                    contentType: 'image/jpeg'
-                });
-
-            if (error) throw error;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('service-docs')
-                .getPublicUrl(filePath);
-
-            // 3. Save to Central API
+            const publicUrl = await MediaService.uploadImage(file, 'service-docs', `jobs/${job.id}`);
             await TechnicianAPI.uploadPhoto(job.id, {
                 url: publicUrl,
-                tag: 'during', // Default to during, can be enhanced later
-                caption: `Uploaded from mobile - ${MediaService.formatBytes(compressedBlob.size)}`
+                tag: 'during',
+                caption: `Uploaded from technician app`
             });
-
             fetchJobDetails();
         } catch (err) {
             console.error("Error uploading photo:", err);
@@ -320,28 +335,42 @@ export const JobCardDetail: React.FC = () => {
         }
     };
 
-    const handleUpdateQuantity = async (newQty: number) => {
+    const handleUpdateQuantity = (newQty: number) => {
         if (!adjustingPart) return;
-        setUpdatingPart(true);
-        try {
-            if (newQty <= 0) {
-                await TechnicianAPI.deleteRequisition(adjustingPart.id);
-                setAdjustingPart(null);
-            } else {
-                await TechnicianAPI.updateRequisition(adjustingPart.id, newQty);
-                // Update local state temporarily for better UI response
-                setAdjustingPart({ ...adjustingPart, quantity: newQty });
+
+        // 1. Instant UI update for the modal
+        const updatedPart = { ...adjustingPart, quantity: Math.max(0, newQty) };
+        setAdjustingPart(updatedPart);
+
+        // 2. Optimistic update for the main list
+        setRequisitions(prev => prev.map(r => r.id === adjustingPart.id ? { ...r, quantity: Math.max(0, newQty) } : r));
+
+        // 3. Clear existing sync timeout
+        if (syncTimeout.current) clearTimeout(syncTimeout.current);
+
+        // 4. Set new sync timeout (500ms) to sync with DB
+        syncTimeout.current = setTimeout(async () => {
+            try {
+                if (newQty <= 0) {
+                    await TechnicianAPI.deleteRequisition(adjustingPart.id);
+                    setAdjustingPart(null);
+                    fetchRequisitions();
+                } else {
+                    await TechnicianAPI.updateRequisition(adjustingPart.id, newQty);
+                }
+            } catch (err) {
+                console.error("Sync failed:", err);
+                // Refresh to correct any inconsistencies
+                fetchRequisitions();
             }
-            fetchRequisitions();
-        } catch (err) {
-            console.error("Error updating qty:", err);
-            alert("Failed to update quantity");
-        } finally {
-            setUpdatingPart(false);
-        }
+        }, 500);
     };
 
-    if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div></div>;
+    if (loading && !job) return (
+        <div className="min-h-screen bg-slate-950 p-4 pt-20">
+            <DetailSkeleton />
+        </div>
+    );
     if (!job) return <div className="p-8 text-white">Job not found.</div>;
 
     const tabs = [
@@ -571,17 +600,34 @@ export const JobCardDetail: React.FC = () => {
                                                     >
                                                         <CheckSquare size={20} className={item.is_completed ? 'scale-110' : ''} />
                                                     </button>
-                                                    <p className={`font-medium transition-colors ${item.is_completed ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
-                                                        {item.name}
-                                                    </p>
+                                                    <div>
+                                                        <p className={`font-medium transition-colors ${item.is_completed ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
+                                                            {item.name}
+                                                        </p>
+                                                        {(item as any).photo_url && (
+                                                            <div className="mt-2 flex items-center gap-2">
+                                                                <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-slate-700">
+                                                                    <img src={(item as any).photo_url} className="w-full h-full object-cover" />
+                                                                </div>
+                                                                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Evidence Attached</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
+
+                                                <button
+                                                    onClick={() => handleChecklistPhoto(item)}
+                                                    className={`p-2 rounded-xl transition-all ${(item as any).photo_url ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20' : 'bg-slate-800 text-slate-500 border border-slate-700 hover:text-blue-400'}`}
+                                                >
+                                                    <Camera size={20} />
+                                                </button>
                                             </div>
 
                                             <div className="flex gap-2 p-1 bg-slate-950/50 rounded-xl border border-slate-800/50">
                                                 {(['ok', 'fair', 'bad', 'na'] as ServiceCondition[]).map((cond) => (
                                                     <button
                                                         key={cond}
-                                                        onClick={() => handleChecklistUpdate(item.id, item.is_completed, cond)}
+                                                        onClick={() => handleChecklistUpdate(item.id, item.is_completed, cond, (item as any).photo_url)}
                                                         className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-lg transition-all ${item.condition === cond
                                                             ? cond === 'ok' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-900/40'
                                                                 : cond === 'fair' ? 'bg-amber-500 text-white shadow-lg shadow-amber-900/40'
@@ -856,8 +902,7 @@ export const JobCardDetail: React.FC = () => {
                                 <div className="flex items-center gap-8 mb-8">
                                     <button
                                         onClick={() => handleUpdateQuantity(adjustingPart.quantity - 1)}
-                                        disabled={updatingPart}
-                                        className="w-14 h-14 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-center text-slate-400 hover:text-rose-500 active:scale-90 transition-all disabled:opacity-50"
+                                        className="w-14 h-14 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-center text-slate-400 hover:text-rose-500 active:scale-90 transition-all"
                                     >
                                         <Trash2 size={24} className={adjustingPart.quantity === 1 ? 'text-rose-500' : ''} />
                                     </button>
@@ -871,7 +916,7 @@ export const JobCardDetail: React.FC = () => {
 
                                     <button
                                         onClick={() => handleUpdateQuantity(adjustingPart.quantity + 1)}
-                                        disabled={updatingPart || (productForAdjustment && adjustingPart.quantity >= productForAdjustment.stock_quantity)}
+                                        disabled={productForAdjustment && adjustingPart.quantity >= productForAdjustment.stock_quantity}
                                         className="w-14 h-14 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-center text-slate-400 hover:text-emerald-500 active:scale-90 transition-all disabled:opacity-50"
                                     >
                                         <Plus size={24} />

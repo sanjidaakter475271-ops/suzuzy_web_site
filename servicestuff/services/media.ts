@@ -1,4 +1,45 @@
+import { supabase } from '../lib/supabase';
+
 export class MediaService {
+    /**
+     * Compresses and uploads an image to Supabase Storage
+     * @param file The file to upload
+     * @param bucket Bucket name (default: 'service-docs')
+     * @param path Custom path within the bucket
+     * @returns The public URL of the uploaded image
+     */
+    static async uploadImage(file: File, bucket: string = 'service-docs', path: string = 'general'): Promise<string> {
+        try {
+            // 1. Compress
+            const compressedBlob = await this.compressImage(file);
+
+            // 2. Generate unique filename
+            const fileExt = 'jpg'; // We compress to jpeg
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+            const filePath = `${path}/${fileName}`;
+
+            // 3. Upload to Supabase
+            const { data, error } = await supabase.storage
+                .from(bucket)
+                .upload(filePath, compressedBlob, {
+                    contentType: 'image/jpeg',
+                    upsert: true
+                });
+
+            if (error) throw error;
+
+            // 4. Get Public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from(bucket)
+                .getPublicUrl(filePath);
+
+            return publicUrl;
+        } catch (error) {
+            console.error('[MEDIA_SERVICE] Upload failed:', error);
+            throw error;
+        }
+    }
+
     /**
      * Compresses an image file using Canvas
      * @param file The original image file
