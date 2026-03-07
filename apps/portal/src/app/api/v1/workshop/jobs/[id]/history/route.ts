@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma/client";
+import { ROLES } from "@/lib/auth/roles";
 
 export async function GET(
     request: NextRequest,
@@ -13,9 +14,13 @@ export async function GET(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // Define valid roles for viewing history
-        const validRoles = ['super_admin', 'service_admin', 'dealer_owner', 'service_manager', 'service_advisor'];
-        if (!validRoles.includes(user.role)) {
+        // Define valid roles for viewing history using central ROLES registry
+        const validRoles = [
+            ROLES.SUPER_ADMIN, ROLES.SERVICE_ADMIN, ROLES.DEALER_OWNER,
+            ROLES.SHOWROOM_ADMIN, ROLES.SERVICE_STUFF, ROLES.SERVICE_TECHNICIAN,
+            ROLES.SELLS_STUFF
+        ];
+        if (!validRoles.includes(user.role as any)) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 

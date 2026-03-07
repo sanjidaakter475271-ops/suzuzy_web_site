@@ -58,12 +58,12 @@ export async function createSession(
             }
         });
 
-        const accessToken = await generateAccessToken(payload);
+        const accessToken = await generateAccessToken(payload, rememberMe ? "30d" : "3d");
 
         return {
             accessToken,
             refreshToken,
-            expiresIn: 900, // 15 minutes
+            expiresIn: rememberMe ? 30 * 24 * 60 * 60 : 3 * 24 * 60 * 60, // 30 or 3 days
         };
     });
 }

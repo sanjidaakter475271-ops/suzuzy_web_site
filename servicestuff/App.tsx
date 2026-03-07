@@ -9,7 +9,6 @@ import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { Sidebar } from './components/Sidebar';
 import { Settings } from './pages/Settings';
-import { ServiceAssistant } from './pages/ServiceAssistant';
 import { JobCardDetail } from './pages/JobCardDetail';
 import { MyJobs } from './pages/MyJobs';
 import { Profile } from './pages/Profile';
@@ -161,17 +160,6 @@ const AppContent: React.FC = () => {
           </ProtectedRoute>
         } />
 
-        <Route path={RoutePath.ASSISTANT} element={
-          <ProtectedRoute
-            isAuthenticated={isAuthenticated}
-            isSidebarOpen={isSidebarOpen}
-            onCloseSidebar={() => setIsSidebarOpen(false)}
-            onLogout={handleLogout}
-            userName={userName}
-          >
-            <ServiceAssistant onMenuClick={toggleSidebar} />
-          </ProtectedRoute>
-        } />
 
         <Route path={RoutePath.JOB_CARD} element={
           <ProtectedRoute

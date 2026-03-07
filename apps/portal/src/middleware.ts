@@ -1,50 +1,46 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifyToken } from "@/lib/auth/jwt";
-import { ROLES, ROLE_GROUPS } from "@/lib/auth/roles";
+import { PORTAL_CONFIG } from "@/lib/auth-config";
 
 export default async function authMiddleware(request: NextRequest) {
     const token = request.cookies.get("access_token")?.value;
     const payload = token ? await verifyToken(token) : null;
 
     const isAuthRoute = request.nextUrl.pathname.startsWith("/login") || request.nextUrl.pathname.startsWith("/register");
-    const isDashboardRoute = request.nextUrl.pathname.startsWith("/admin") ||
+    const isDashboardRoute =
+        request.nextUrl.pathname.startsWith("/admin") ||
         request.nextUrl.pathname.startsWith("/super-admin") ||
         request.nextUrl.pathname.startsWith("/service-admin") ||
         request.nextUrl.pathname.startsWith("/dealer") ||
-        request.nextUrl.pathname.startsWith("/sales-admin");
+        request.nextUrl.pathname.startsWith("/showroom-admin") ||
+        request.nextUrl.pathname.startsWith("/customer");
 
     if (!payload && isDashboardRoute) {
         return NextResponse.redirect(new URL("/login", request.url));
     }
 
     if (payload && isAuthRoute) {
-        const role = payload.role || "customer";
+        const role = (payload.role as string) || "customer";
 
-        if (role === ROLES.SUPER_ADMIN) return NextResponse.redirect(new URL("/super-admin/dashboard", request.url));
+        if (PORTAL_CONFIG.SUPER_ADMIN.homeRoles.includes(role as any))
+            return NextResponse.redirect(new URL("/super-admin/dashboard", request.url));
 
-        // Showroom roles
-        if ((ROLE_GROUPS.SHOWROOM as string[]).includes(role)) {
+        if (PORTAL_CONFIG.ADMIN.homeRoles.includes(role as any))
             return NextResponse.redirect(new URL("/admin/dashboard", request.url));
-        }
 
-        // Service Center roles
-        if ((ROLE_GROUPS.SERVICE as string[]).includes(role)) {
+        if (PORTAL_CONFIG.SHOWROOM.homeRoles.includes(role as any))
+            return NextResponse.redirect(new URL("/showroom-admin/dashboard", request.url));
+
+        if (PORTAL_CONFIG.SERVICE_ADMIN.homeRoles.includes(role as any))
             return NextResponse.redirect(new URL("/service-admin/dashboard", request.url));
-        }
 
-        // General Admin / Support roles
-        if ((ROLE_GROUPS.GENERAL_ADMIN as string[]).includes(role)) {
-            return NextResponse.redirect(new URL("/admin/dashboard", request.url));
-        }
-
-        // Dealer roles
-        if ((ROLE_GROUPS.DEALER as string[]).includes(role) || role.includes('dealer') || role === 'sub_dealer') {
+        if (PORTAL_CONFIG.DEALER.homeRoles.includes(role as any))
             return NextResponse.redirect(new URL("/dealer/dashboard", request.url));
-        }
 
-        if (role.includes(ROLES.SALES_ADMIN)) return NextResponse.redirect(new URL("/sales-admin/dashboard", request.url));
+        if (PORTAL_CONFIG.CLIENTS.homeRoles.includes(role as any))
+            return NextResponse.redirect(new URL("/customer/dashboard", request.url));
 
-        return NextResponse.redirect(new URL("/dashboard", request.url));
+        return NextResponse.redirect(new URL("/unauthorized", request.url));
     }
 
     return NextResponse.next();

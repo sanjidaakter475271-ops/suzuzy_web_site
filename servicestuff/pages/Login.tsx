@@ -29,7 +29,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   useEffect(() => {
     if (authUser) {
-      const allowedRoles = ['super_admin', 'service_admin', 'service_technician', 'service_sales_admin'];
+      const allowedRoles = ['super_admin', 'service_admin', 'service_technician'];
       if (!allowedRoles.includes(authUser.role)) {
         signOut();
         setError("Access denied: Service Personnel Only.");

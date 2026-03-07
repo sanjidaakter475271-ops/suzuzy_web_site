@@ -18,12 +18,10 @@ export const ROLES = {
 
     // Showroom Wing
     SHOWROOM_ADMIN: 'showroom_admin',
-    SHOWROOM_SALES_ADMIN: 'showroom_sales_admin',
     SELLS_STUFF: 'sells_stuff',
 
     // Service Wing
     SERVICE_ADMIN: 'service_admin',
-    SERVICE_SALES_ADMIN: 'service_sales_admin',
     SERVICE_STUFF: 'service_stuff',
     SERVICE_TECHNICIAN: 'service_technician',
 
@@ -31,11 +29,9 @@ export const ROLES = {
     ADMIN: 'admin',
     SUPPORT: 'support',
     ACCOUNTANT: 'accountant',
-    SALES_ADMIN: 'sales_admin',
 
     // Dealer Hierarchy
     DEALER_OWNER: 'dealer_owner',
-    DEALER_MANAGER: 'dealer_manager',
     DEALER_STAFF: 'dealer_staff',
     DEALER: 'dealer',             // legacy alias → treated as dealer_owner
     SUB_DEALER: 'sub_dealer',
@@ -52,24 +48,20 @@ export type RoleName = (typeof ROLES)[keyof typeof ROLES];
 export const ROLE_LEVELS: Record<string, number> = {
     // Platform Staff (1-8)
     [ROLES.SUPER_ADMIN]: 1,
-    [ROLES.SHOWROOM_ADMIN]: 2,
-    [ROLES.SERVICE_ADMIN]: 3,
-    [ROLES.SHOWROOM_SALES_ADMIN]: 4,
-    [ROLES.SERVICE_SALES_ADMIN]: 5,
-    [ROLES.SALES_ADMIN]: 4,          // alias — same level as showroom_sales_admin
+    [ROLES.ADMIN]: 5,
     [ROLES.SUPPORT]: 6,
-    [ROLES.ACCOUNTANT]: 7,
-    [ROLES.ADMIN]: 7,                // generic admin, same tier as accountant
-    [ROLES.SELLS_STUFF]: 8,          // showroom floor staff
-    [ROLES.SERVICE_STUFF]: 8,        // service floor staff
-    [ROLES.SERVICE_TECHNICIAN]: 8,
 
-    // Dealers (10-15)
+    // Dealer Hierarchy (10-20)
     [ROLES.DEALER_OWNER]: 10,
-    [ROLES.DEALER]: 10,              // legacy alias
-    [ROLES.DEALER_MANAGER]: 11,
-    [ROLES.DEALER_STAFF]: 12,
-    [ROLES.SUB_DEALER]: 15,
+    [ROLES.DEALER]: 10,
+    [ROLES.SERVICE_ADMIN]: 11,
+    [ROLES.SHOWROOM_ADMIN]: 11,
+    [ROLES.ACCOUNTANT]: 12,
+    [ROLES.SERVICE_STUFF]: 14,
+    [ROLES.SELLS_STUFF]: 14,
+    [ROLES.SERVICE_TECHNICIAN]: 15,
+    [ROLES.DEALER_STAFF]: 16,
+    [ROLES.SUB_DEALER]: 20,
 
     // Customer
     [ROLES.CUSTOMER]: 99,
@@ -82,13 +74,11 @@ export const ROLE_GROUPS = {
     /** Showroom wing roles */
     SHOWROOM: [
         ROLES.SHOWROOM_ADMIN,
-        ROLES.SHOWROOM_SALES_ADMIN,
         ROLES.SELLS_STUFF,
     ],
     /** Service center roles */
     SERVICE: [
         ROLES.SERVICE_ADMIN,
-        ROLES.SERVICE_SALES_ADMIN,
         ROLES.SERVICE_STUFF,
         ROLES.SERVICE_TECHNICIAN,
     ],
@@ -99,27 +89,30 @@ export const ROLE_GROUPS = {
         ROLES.ACCOUNTANT,
     ],
     /** All dealer tiers */
-    DEALER: [
+    DEALER_TIERS: [
         ROLES.DEALER_OWNER,
-        ROLES.DEALER_MANAGER,
         ROLES.DEALER_STAFF,
         ROLES.SUB_DEALER,
         ROLES.DEALER,
     ],
-    /** All platform staff (non-dealer, non-customer) */
-    ALL_STAFF: [
-        ROLES.SUPER_ADMIN,
-        ROLES.SHOWROOM_ADMIN,
+    /** All dealer personnel (including admins) */
+    DEALER_PERSONNEL: [
+        ROLES.DEALER_OWNER,
         ROLES.SERVICE_ADMIN,
-        ROLES.SHOWROOM_SALES_ADMIN,
-        ROLES.SERVICE_SALES_ADMIN,
-        ROLES.SALES_ADMIN,
+        ROLES.SHOWROOM_ADMIN,
+        ROLES.ACCOUNTANT,
+        ROLES.SERVICE_STUFF,
+        ROLES.SELLS_STUFF,
+        ROLES.SERVICE_TECHNICIAN,
+        ROLES.DEALER_STAFF,
+        ROLES.SUB_DEALER,
+        ROLES.DEALER,
+    ],
+    /** All platform staff (top-level only) */
+    PLATFORM_STAFF: [
+        ROLES.SUPER_ADMIN,
         ROLES.ADMIN,
         ROLES.SUPPORT,
-        ROLES.ACCOUNTANT,
-        ROLES.SELLS_STUFF,
-        ROLES.SERVICE_STUFF,
-        ROLES.SERVICE_TECHNICIAN,
     ],
 };
 
@@ -132,24 +125,38 @@ export function getRoleLevel(role: string): number {
     if (ROLE_LEVELS[role] !== undefined) return ROLE_LEVELS[role];
 
     // Fuzzy fallback for legacy dealer variants
-    if (role?.includes('dealer')) return ROLE_LEVELS[ROLES.DEALER_STAFF]; // 12
+    if (role?.includes('dealer')) return ROLE_LEVELS[ROLES.DEALER_STAFF]; // 16
 
     return 99;
 }
 
-/** True if role is any kind of platform admin (level ≤ 8) */
-export const isAnyAdmin = (role: string): boolean =>
-    getRoleLevel(role) <= 8;
+/** True if role is a dealer-scoped role (needs dealer_id) */
+export const isDealerRole = (role: string): boolean => {
+    const lvl = getRoleLevel(role);
+    return lvl >= 10 && lvl <= 20;
+};
 
-/** True if role is any kind of dealer staff (level 10-15) */
+/** True if role requires a dealer_id to function */
+export const requiresDealerId = (role: string): boolean =>
+    isDealerRole(role);
+
+/** True if role is platform admin (super_admin, admin, support) */
+export const isPlatformAdmin = (role: string): boolean =>
+    getRoleLevel(role) <= 6;
+
+/** True if role is any kind of platform admin (level ≤ 6) */
+export const isAnyAdmin = (role: string): boolean =>
+    getRoleLevel(role) <= 6;
+
+/** True if role is any kind of dealer staff (level 10-20) */
 export const isDealerStaff = (role: string): boolean => {
     const lvl = getRoleLevel(role);
-    return lvl >= 10 && lvl <= 15;
+    return lvl >= 10 && lvl <= 20;
 };
 
 /** True if role is platform staff (not dealer, not customer) */
 export const isPlatformStaff = (role: string): boolean =>
-    getRoleLevel(role) >= 1 && getRoleLevel(role) <= 8;
+    getRoleLevel(role) >= 1 && getRoleLevel(role) <= 6;
 
 /** True if role is super_admin specifically */
 export const isSuperAdmin = (role: string): boolean =>

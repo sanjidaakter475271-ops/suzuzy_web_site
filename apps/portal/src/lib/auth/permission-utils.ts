@@ -131,37 +131,7 @@ export const ROLE_PERMISSIONS_MAPPING: Record<string, string[]> = {
         'view_reports', 'export_reports',
     ],
 
-    // ── SHOWROOM SALES ADMIN ── sales operations in showroom
-    [ROLES.SHOWROOM_SALES_ADMIN]: [
-        'view_dashboard',
-        'view_products', 'create_product', 'edit_product',
-        'view_orders', 'create_order', 'update_order_status',
-        'view_payments', 'create_payment', 'manage_payments',
-        'view_shipments', 'create_shipment',
-        'view_returns', 'approve_return',
-        'view_reports', 'export_reports',
-    ],
 
-    // ── SERVICE SALES ADMIN ── sales operations in service center
-    [ROLES.SERVICE_SALES_ADMIN]: [
-        'view_dashboard',
-        'view_products',
-        'view_orders', 'create_order', 'update_order_status',
-        'view_payments', 'create_payment', 'manage_payments',
-        'view_service_tasks',
-        'view_reports', 'export_reports',
-    ],
-
-    // ── SALES ADMIN ── generic sales admin (alias-level same as showroom_sales_admin)
-    [ROLES.SALES_ADMIN]: [
-        'view_dashboard',
-        'view_products', 'create_product', 'edit_product',
-        'view_orders', 'create_order', 'update_order_status',
-        'view_payments', 'create_payment', 'manage_payments',
-        'view_shipments', 'create_shipment',
-        'view_returns', 'approve_return',
-        'view_reports', 'export_reports',
-    ],
 
     // ── GENERIC ADMIN ── back-office admin
     [ROLES.ADMIN]: [
@@ -237,15 +207,7 @@ export const ROLE_PERMISSIONS_MAPPING: Record<string, string[]> = {
         'view_reports', 'export_reports',
     ],
 
-    // ── DEALER MANAGER ── manages dealer operations
-    [ROLES.DEALER_MANAGER]: [
-        'view_dashboard', 'view_products', 'manage_inventory',
-        'view_orders', 'create_order', 'update_order_status',
-        'view_payments',
-        'view_shipments',
-        'view_returns',
-        'view_reports',
-    ],
+
 
     // ── DEALER STAFF ── basic dealer employee
     [ROLES.DEALER_STAFF]: [

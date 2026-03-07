@@ -3,7 +3,7 @@ import { TechnicianAPI } from '../services/api'; // Import API service
 import { JobCard, DashboardStats, TechnicianAttendance } from '../types';
 import {
   Clock, CheckCircle, AlertCircle, Calendar, RefreshCw,
-  Loader2, PlayCircle, StopCircle, ClipboardList, ChevronRight
+  Loader2, PlayCircle, StopCircle, ClipboardList, ChevronRight, X
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { TopBar } from '../components/TopBar';
@@ -30,8 +30,8 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
     try {
       // 1. Get Dashboard Stats & Attendance
       const statsRes = await TechnicianAPI.getDashboardStats();
-      setStats(statsRes.data.stats);
-      setAttendance(statsRes.data.attendance);
+      setStats(statsRes.data.data.stats);
+      setAttendance(statsRes.data.data.attendance);
 
       // 2. Get Recent Jobs
       const jobsRes = await TechnicianAPI.getJobs({ limit: 5 }); // Default sort is created_at desc
@@ -143,8 +143,8 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
             <AlertCircle size={18} />
             <p className="text-sm font-bold">{newAlert.message}</p>
           </div>
-          <button onClick={() => setNewAlert(null)}>
-            <RefreshCw size={14} className="hover:rotate-180 transition-transform" />
+          <button onClick={() => setNewAlert(null)} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
+            <X size={16} />
           </button>
         </motion.div>
       )}

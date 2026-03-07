@@ -93,6 +93,7 @@ export const TechnicianAPI = {
     clockIn: (location: { lat: number; lng: number }) => api.post('/attendance/clock-in', { location }),
     clockOut: (location: { lat: number; lng: number }) => api.post('/attendance/clock-out', { location }),
     getAttendanceHistory: () => api.get('/attendance'),
+    getDateStats: (date: string) => api.get(`/attendance/stats-by-date?date=${date}`),
 
     // Profile
     getProfile: () => api.get('/profile'),

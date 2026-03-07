@@ -1,6 +1,6 @@
 "use client";
 
-import { SalesAdminGuard } from "@/components/guards/auth-guards";
+import { ShowroomGuard } from "@/components/guards/auth-guards";
 import SidebarNav from "../super-admin/_components/sidebar-nav";
 import { CommandMenu } from "@/components/dashboard/CommandMenu";
 import { Search, Zap } from "lucide-react";
@@ -12,11 +12,11 @@ export default function SalesAdminLayout({
     children: React.ReactNode;
 }) {
     return (
-        <SalesAdminGuard>
+        <ShowroomGuard>
             <div className="flex min-h-screen bg-[#0D0D0F] text-[#F8F8F8]">
                 <CommandMenu />
 
-                {/* Sidebar - Reusing standard sidebar which now supports SALES_ADMIN */}
+                {/* Sidebar - Reusing standard sidebar which now supports SHOWROOM_ADMIN */}
                 <div className="hidden md:block border-r border-[#D4AF37]/10 bg-[#0D0D0F]">
                     <SidebarNav />
                 </div>
@@ -47,7 +47,7 @@ export default function SalesAdminLayout({
 
                         <div className="flex items-center gap-4">
                             <div className="text-right">
-                                <p className="text-xs font-bold text-[#F8F8F8]">Sales Admin</p>
+                                <p className="text-xs font-bold text-[#F8F8F8]">Showroom Admin</p>
                                 <p className="text-[10px] text-[#10B981]/60 font-medium">REVENUE CONTROL</p>
                             </div>
                             <div className="w-8 h-8 rounded-full border border-[#10B981]/20 bg-[#10B981]/10 flex items-center justify-center text-[10px] text-[#10B981]">
@@ -61,6 +61,6 @@ export default function SalesAdminLayout({
                     </main>
                 </div>
             </div>
-        </SalesAdminGuard>
+        </ShowroomGuard>
     );
 }

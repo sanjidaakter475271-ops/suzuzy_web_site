@@ -133,7 +133,7 @@ export default function AdminPOSPage() {
         const { data } = await supabase
             .from("profiles")
             .select("id, full_name, phone, email, role")
-            .in("role", ["customer", "dealer_staff", "dealer_manager"]) // Expanded customer pool
+            .in("role", ["customer", "dealer_staff"]) // Expanded customer pool
             .ilike("full_name", `%${customerSearch}%`)
             .limit(10);
 

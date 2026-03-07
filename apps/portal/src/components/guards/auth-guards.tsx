@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ShieldCheck } from 'lucide-react';
 import { MetallicText } from '@/components/ui/premium/MetallicText';
-import { getRoleLevel } from '@/middlewares/checkRole';
+
 import { PORTAL_CONFIG } from '@/lib/auth-config';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -85,8 +85,7 @@ export const RoleGuard = ({
 
         if (!isAuthorized) {
             console.warn('Unauthorized access attempt. User role:', userRole);
-            const userLevel = getRoleLevel(userRole);
-            const redirectPath = getRedirectPath(userLevel);
+            const redirectPath = getRedirectPath(userRole);
             if (redirectPath) router.push(redirectPath);
         }
     }, [user, loading, router, isAuthorized, userRole]);
@@ -96,11 +95,13 @@ export const RoleGuard = ({
     return <>{children}</>;
 };
 
-function getRedirectPath(level: number) {
-    if (level === 1) return '/super-admin/dashboard';
-    if (level >= 4 && level <= 5) return '/sales-admin/dashboard';
-    if (level <= 7) return '/admin/dashboard';
-    if (level <= 15) return '/dealer/dashboard';
+function getRedirectPath(role: string) {
+    if (PORTAL_CONFIG.SUPER_ADMIN.homeRoles.includes(role as any)) return '/super-admin/dashboard';
+    if (PORTAL_CONFIG.ADMIN.homeRoles.includes(role as any)) return '/admin/dashboard';
+    if (PORTAL_CONFIG.SHOWROOM.homeRoles.includes(role as any)) return '/showroom-admin/dashboard';
+    if (PORTAL_CONFIG.SERVICE_ADMIN.homeRoles.includes(role as any)) return '/service-admin/dashboard';
+    if (PORTAL_CONFIG.DEALER.homeRoles.includes(role as any)) return '/dealer/dashboard';
+    if (PORTAL_CONFIG.CLIENTS.homeRoles.includes(role as any)) return '/customer/dashboard';
     return '/login';
 }
 
@@ -115,19 +116,18 @@ export const AdminGuard = ({ children }: { children: React.ReactNode }) => (
     <RoleGuard allowedRoles={PORTAL_CONFIG.ADMIN.allowedRoles}>{children}</RoleGuard>
 );
 
-export const SalesAdminGuard = ({ children }: { children: React.ReactNode }) => (
-    <RoleGuard allowedRoles={PORTAL_CONFIG.SALES_ADMIN.allowedRoles}>{children}</RoleGuard>
+
+export const ShowroomGuard = ({ children }: { children: React.ReactNode }) => (
+    <RoleGuard allowedRoles={PORTAL_CONFIG.SHOWROOM.allowedRoles}>{children}</RoleGuard>
 );
 
 export const ServiceAdminGuard = ({ children }: { children: React.ReactNode }) => (
     <RoleGuard allowedRoles={PORTAL_CONFIG.SERVICE_ADMIN.allowedRoles}>{children}</RoleGuard>
 );
 
-export const DealerGuard = ({ children }: { children: React.ReactNode }) => {
-    // We include 'dealer' for backward compatibility with existing DB records
-    const allowedRoles = [...PORTAL_CONFIG.DEALER.allowedRoles, 'dealer', ...PORTAL_CONFIG.ADMIN.allowedRoles];
-    return <RoleGuard allowedRoles={allowedRoles}>{children}</RoleGuard>;
-};
+export const DealerGuard = ({ children }: { children: React.ReactNode }) => (
+    <RoleGuard allowedRoles={PORTAL_CONFIG.DEALER.allowedRoles}>{children}</RoleGuard>
+);
 
 /**
  * SubscriptionGuard checks if a dealer has an active plan

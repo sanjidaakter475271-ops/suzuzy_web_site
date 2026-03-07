@@ -53,9 +53,9 @@ export async function GET(req: NextRequest) {
             sku: p.sku || '',
             part_number: p.part_number || '',
             brand: p.brand || '',
-            base_price: Number(p.base_price || 0),
+            base_price: p.base_price ? Number(p.base_price) : 0,
             sale_price: p.sale_price ? Number(p.sale_price) : undefined,
-            stock_quantity: p.stock_quantity || 0,
+            stock_quantity: Number(p.stock_quantity || 0),
             stock_status: p.stock_status || 'in_stock',
             image_url: p.product_images?.[0]?.image_url || null,
             category_id: categoryId

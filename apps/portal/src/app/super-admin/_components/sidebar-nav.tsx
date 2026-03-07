@@ -34,7 +34,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "@/hooks/useUser";
-import { ROLE_LEVELS, getRoleLevel } from "@/middlewares/checkRole";
 import { authClient } from "@/lib/auth/client";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -72,22 +71,23 @@ const ADMIN_NAV: NavItem[] = [
     { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
-const SALES_ADMIN_NAV: NavItem[] = [
-    { name: "Sales Dashboard", href: "/sales-admin/dashboard", icon: BarChart3 },
-    { name: "Live Monitor", href: "/sales-admin/live", icon: Activity },
-    { name: "Quick POS", href: "/sales-admin/pos", icon: Zap },
-    { name: "Transactions", href: "/sales-admin/transactions", icon: ReceiptText },
-    { name: "Revenue", href: "/sales-admin/revenue", icon: TrendingUp },
-    { name: "Daily Reports", href: "/sales-admin/reports/daily", icon: Calendar },
-    { name: "Calculator", href: "/sales-admin/calculator", icon: Calculator },
-    { name: "Analytics", href: "/sales-admin/analytics", icon: PieChart },
-];
+
 
 const SERVICE_ADMIN_NAV: NavItem[] = [
-    { name: "Dashboard", href: "/service-admin", icon: BarChart3 },
-    { name: "Workshop", href: "/service-admin/workshop", icon: LayoutGrid },
-    { name: "Team Members", href: "/service-admin/members", icon: UserPlus },
-    { name: "Settings", href: "/service-admin/settings", icon: Settings },
+    { name: "Dashboard", href: "/service-admin/dashboard", icon: BarChart3 },
+    { name: "Operational POS", href: "/service-admin/pos", icon: LayoutGrid },
+    { name: "My Customers", href: "/service-admin/customer", icon: Users },
+];
+
+const SHOWROOM_NAV: NavItem[] = [
+    { name: "Dashboard", href: "/showroom-admin/dashboard", icon: BarChart3 },
+    { name: "POS Terminal", href: "/showroom-admin/pos", icon: LayoutGrid },
+    { name: "Revenue Flow", href: "/showroom-admin/revenue", icon: TrendingUp },
+    { name: "Analytics", href: "/showroom-admin/analytics", icon: PieChart },
+    { name: "Transactions", href: "/showroom-admin/transactions", icon: ReceiptText },
+    { name: "Calculator", href: "/showroom-admin/calculator", icon: Calculator },
+    { name: "Live Feed", href: "/showroom-admin/live", icon: Activity },
+    { name: "Operational Reports", href: "/showroom-admin/reports", icon: FileText },
 ];
 
 const DEALER_NAV: NavItem[] = [
@@ -133,26 +133,26 @@ export default function SidebarNav({ mode = "desktop" }: SidebarNavProps) {
     const getNavItems = () => {
         if (!profile) return [];
 
-        const roleLevel = getRoleLevel(profile.role);
+        const role = profile.role || "customer";
 
-        if (roleLevel === ROLE_LEVELS.super_admin) return SUPER_ADMIN_NAV;
+        // Level 1: Super Admin
+        if (role === 'super_admin') return SUPER_ADMIN_NAV;
 
-        // Sales Admin (Levels 4 & 5)
-        if (roleLevel === ROLE_LEVELS.showroom_sales_admin || roleLevel === ROLE_LEVELS.service_sales_admin) return SALES_ADMIN_NAV;
+        // Level 5-6: Admin & Support
+        if (role === 'admin' || role === 'support') return ADMIN_NAV;
 
-        // Service Admin (Level 3)
-        if (roleLevel === ROLE_LEVELS.service_admin) return SERVICE_ADMIN_NAV;
+        // Showroom (showroom_admin, sells_stuff)
+        if (role === 'showroom_admin' || role === 'sells_stuff') return SHOWROOM_NAV;
 
-        // General Admins (Levels 2-7) - excluding super_admin (1)
-        // showroom_admin(2), service_admin(3), support(6), accountant(7)
-        if (roleLevel <= 7 && roleLevel !== 1) return ADMIN_NAV;
+        // Service (service_admin, service_stuff, service_technician)
+        if (role === 'service_admin' || role === 'service_stuff' || role === 'service_technician') return SERVICE_ADMIN_NAV;
 
-        // Dealers (Levels 10-15)
-        // dealer_owner(10) to sub_dealer(15)
-        if (roleLevel >= 10 && roleLevel <= 15) return DEALER_NAV;
+        // Dealer personnel (dealer_owner, dealer, dealer_staff, sub_dealer, accountant)
+        const dealerRoles = ['dealer_owner', 'dealer', 'dealer_staff', 'sub_dealer', 'accountant'];
+        if (dealerRoles.includes(role)) return DEALER_NAV;
 
         // Fallback for custom dealer roles
-        if (profile?.role?.includes('dealer')) return DEALER_NAV;
+        if (role.toLowerCase().includes('dealer')) return DEALER_NAV;
 
         return [];
     };

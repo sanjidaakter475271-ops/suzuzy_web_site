@@ -31,30 +31,41 @@ export async function GET(req: NextRequest) {
         const completed = jobStats.find((s) => s.status === 'completed' || s.status === 'verified' || s.status === 'qc_requested')?._count.id || 0;
         const total = pending + active + completed;
 
-        // 2. Get Today's Attendance
+        // 2. Get Today's Attendance or Active Session
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const attendance = await prisma.technician_attendance.findFirst({
+        // First check for ANY active session (even from past days)
+        let attendance = await prisma.technician_attendance.findFirst({
             where: {
                 staff_id: staffId,
-                OR: [
-                    { clock_out: null },
-                    { clock_in: { gte: today } }
-                ]
+                clock_out: null,
             },
             orderBy: {
                 clock_in: 'desc',
             },
-            take: 1,
         });
+
+        // If no active session, get the most recent one from TODAY
+        if (!attendance) {
+            attendance = await prisma.technician_attendance.findFirst({
+                where: {
+                    staff_id: staffId,
+                    clock_in: { gte: today },
+                },
+                orderBy: {
+                    clock_in: 'desc',
+                },
+            });
+        }
 
         // Calculate hours worked today
         let hoursWorked = 0;
         if (attendance && attendance.clock_in) {
+            const startTime = new Date(attendance.clock_in) < today ? today : new Date(attendance.clock_in);
             const endTime = attendance.clock_out ? new Date(attendance.clock_out) : new Date();
-            const diffMs = endTime.getTime() - new Date(attendance.clock_in).getTime();
-            hoursWorked = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100;
+            const diffMs = endTime.getTime() - startTime.getTime();
+            hoursWorked = Math.max(0, Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100);
         }
 
         const efficiencyScore = 95; // Placeholder

@@ -14,13 +14,13 @@ export interface TokenPayload {
 }
 
 /**
- * Generate an Access Token (valid for 15 minutes)
+ * Generate an Access Token
  */
-export async function generateAccessToken(payload: TokenPayload): Promise<string> {
+export async function generateAccessToken(payload: TokenPayload, expiresIn: string | number = "30d"): Promise<string> {
     return await new SignJWT(payload)
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
-        .setExpirationTime("15m")
+        .setExpirationTime(expiresIn)
         .sign(JWT_SECRET);
 }
 

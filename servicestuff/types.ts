@@ -2,7 +2,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'super_admin' | 'service_admin' | 'service_technician' | 'service_sales_admin';
+  role: 'super_admin' | 'service_admin' | 'service_stuff' | 'service_technician';
   staff_id?: string; // Link to service_staff
   avatar_url?: string;
   designation?: string;
@@ -57,7 +57,6 @@ export enum RoutePath {
   REGISTER = '/register',
   DASHBOARD = '/',
   SETTINGS = '/settings',
-  ASSISTANT = '/assistant',
   JOB_CARD = '/job/:id',
   SCANNER = '/scanner',
   MY_JOBS = '/my-jobs',
@@ -69,8 +68,7 @@ export enum RoutePath {
   PERFORMANCE = '/performance',
   WORK_HISTORY = '/work-history',
 
-  ISSUE_REPORT = '/issue-report',
-  HELP = '/help'
+  ISSUE_REPORT = '/issue-report'
 }
 
 export interface BikeModel {
@@ -177,7 +175,7 @@ export interface TechnicianAttendance {
   id: string;
   clockIn: string;
   clockOut?: string;
-  status: 'present' | 'absent' | 'leave';
+  status: 'present' | 'absent' | 'leave' | 'sick_leave';
   duration_hours?: number;
 }
 

@@ -33,7 +33,16 @@ export async function POST(req: NextRequest) {
 
         const duration = updated.clock_out!.getTime() - activeSession.clock_in.getTime();
 
-        return NextResponse.json({ success: true, data: { ...updated, durationMs: duration } });
+        return NextResponse.json({
+            success: true,
+            data: {
+                id: updated.id,
+                clockIn: updated.clock_in,
+                clockOut: updated.clock_out,
+                status: updated.status,
+                durationMs: duration
+            }
+        });
     } catch (error: any) {
         console.error('Error clocking out:', error);
         return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });

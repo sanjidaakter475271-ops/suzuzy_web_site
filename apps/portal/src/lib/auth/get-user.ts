@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { verifyToken } from "./jwt";
 import { prisma } from "@/lib/prisma/client";
+import { requiresDealerId } from "./roles";
 
 /**
  * Get current user from session in Server Actions or API routes
@@ -21,9 +22,18 @@ export async function getCurrentUser() {
         select: { dealer_id: true, full_name: true }
     });
 
+    const dealerId = profile?.dealer_id || payload.dealerId || null;
+
+    // Enforce dealer_id for dealer-scoped roles
+    if (requiresDealerId(payload.role) && !dealerId) {
+        console.error(`[AUTH] User ${payload.userId} has role ${payload.role} but no dealer_id`);
+        return null; // Block access
+    }
+
     return {
         ...payload,
-        dealerId: profile?.dealer_id || payload.dealerId || null,
-        fullName: profile?.full_name || null
+        dealerId,
+        fullName: profile?.full_name || null,
+        isDealerScoped: requiresDealerId(payload.role),
     };
 }

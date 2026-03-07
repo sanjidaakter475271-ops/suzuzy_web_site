@@ -19,8 +19,7 @@ export async function GET(req: NextRequest) {
                 products_products_category_idTocategories: {
                     some: {
                         dealer_id: technician.dealerId,
-                        status: 'approved',
-                        stock_quantity: { gt: 0 }
+                        status: 'approved'
                     }
                 }
             },

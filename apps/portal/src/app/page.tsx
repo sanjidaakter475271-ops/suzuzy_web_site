@@ -1,10 +1,10 @@
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { redirect } from 'next/navigation';
-import { getRoleLevel } from '@/lib/supabase/roles';
+import { PORTAL_CONFIG } from "@/lib/auth-config";
 
 /**
  * Root Page Redirection Logic
- * Standardized on custom session detection.
+ * Standardized on explicit role-to-dashboard mapping from PORTAL_CONFIG.
  */
 export default async function RootPage() {
     const user = await getCurrentUser();
@@ -14,26 +14,32 @@ export default async function RootPage() {
     }
 
     const role = user.role || "customer";
-    const level = getRoleLevel(role);
 
-    // Platform Authority Redirection
-    if (level === 1) {
+    // Explicit Role Redirection based on PORTAL_CONFIG homeRoles
+    if (PORTAL_CONFIG.SUPER_ADMIN.homeRoles.includes(role as any)) {
         redirect('/super-admin/dashboard');
-    } else if (level >= 3 && level <= 5) {
-        // Sales Admin or specialized staff
-        if (role.toLowerCase().includes('sales')) {
-            redirect('/sales-admin/dashboard');
-        } else {
-            redirect('/admin/dashboard');
-        }
-    } else if (level <= 6) {
-        // Other admin staff
-        redirect('/admin/dashboard');
-    } else if (level >= 10 && level <= 12) {
-        // Dealer network
-        redirect('/dealer/dashboard');
-    } else {
-        // Customers or unauthorized
-        redirect('/unauthorized');
     }
+
+    if (PORTAL_CONFIG.ADMIN.homeRoles.includes(role as any)) {
+        redirect('/admin/dashboard');
+    }
+
+    if (PORTAL_CONFIG.SHOWROOM.homeRoles.includes(role as any)) {
+        redirect('/showroom-admin/dashboard');
+    }
+
+    if (PORTAL_CONFIG.SERVICE_ADMIN.homeRoles.includes(role as any)) {
+        redirect('/service-admin/dashboard');
+    }
+
+    if (PORTAL_CONFIG.DEALER.homeRoles.includes(role as any)) {
+        redirect('/dealer/dashboard');
+    }
+
+    if (PORTAL_CONFIG.CLIENTS.homeRoles.includes(role as any)) {
+        redirect('/customer/dashboard');
+    }
+
+    // Default case for unknown roles or misconfigured accounts
+    redirect('/unauthorized');
 }

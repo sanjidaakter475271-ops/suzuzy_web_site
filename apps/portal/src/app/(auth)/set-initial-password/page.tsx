@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { useUser } from '@/hooks/useUser';
 import { useQueryClient } from '@tanstack/react-query';
+import { PORTAL_CONFIG } from '@/lib/auth-config';
 
 export default function SetInitialPasswordPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -61,18 +62,20 @@ export default function SetInitialPasswordPage() {
             await queryClient.invalidateQueries({ queryKey: ["auth-user"] });
 
             const role = profile?.role || "customer";
-            let redirectPath = "/dashboard";
+            let redirectPath = "/unauthorized";
 
-            if (role === "super_admin") {
+            if (PORTAL_CONFIG.SUPER_ADMIN.homeRoles.includes(role as any)) {
                 redirectPath = "/super-admin/dashboard";
-            } else if (role === "service_admin") {
-                redirectPath = "/service-admin/dashboard";
-            } else if (role.includes("sales_admin")) {
-                redirectPath = "/sales-admin/dashboard";
-            } else if (role.includes("showroom") || role.includes("service") || role === "support" || role === "accountant" || role === "admin") {
+            } else if (PORTAL_CONFIG.ADMIN.homeRoles.includes(role as any)) {
                 redirectPath = "/admin/dashboard";
-            } else if (role.includes("dealer") || role === "sub_dealer") {
+            } else if (PORTAL_CONFIG.SHOWROOM.homeRoles.includes(role as any)) {
+                redirectPath = "/showroom-admin/dashboard";
+            } else if (PORTAL_CONFIG.SERVICE_ADMIN.homeRoles.includes(role as any)) {
+                redirectPath = "/service-admin/dashboard";
+            } else if (PORTAL_CONFIG.DEALER.homeRoles.includes(role as any)) {
                 redirectPath = "/dealer/dashboard";
+            } else if (PORTAL_CONFIG.CLIENTS.homeRoles.includes(role as any)) {
+                redirectPath = "/customer/dashboard";
             }
 
             setTimeout(() => {

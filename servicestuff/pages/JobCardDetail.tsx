@@ -95,8 +95,9 @@ export const JobCardDetail: React.FC = () => {
             }
 
             const res = await TechnicianAPI.getJobDetail(id);
-            setJob(res.data);
-            await offlineService.cacheJobDetail(id, res.data);
+            const jobData = res.data.data;
+            setJob(jobData);
+            await offlineService.cacheJobDetail(id, jobData);
         } catch (err) {
             console.error("Error fetching job:", err);
             // Fallback
@@ -369,7 +370,7 @@ export const JobCardDetail: React.FC = () => {
                                 </div>
                                 <div className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-tighter ${job.status === 'in_progress' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                                     }`}>
-                                    {job.status.replace('_', ' ')}
+                                    {job.status?.replace('_', ' ') || 'pending'}
                                 </div>
                             </div>
 
@@ -426,7 +427,7 @@ export const JobCardDetail: React.FC = () => {
                             <div className="space-y-2">
                                 {job.time_logs && job.time_logs.length > 0 ? job.time_logs.map((log) => (
                                     <div key={log.id} className="flex justify-between text-sm">
-                                        <span className="text-slate-400 capitalize">{log.event_type.replace('_', ' ')}</span>
+                                        <span className="text-slate-400 capitalize">{log.event_type?.replace('_', ' ') || 'event'}</span>
                                         <span className="font-mono text-slate-300">{new Date(log.timestamp).toLocaleTimeString()}</span>
                                     </div>
                                 )) : (

@@ -8,7 +8,9 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight, ShieldCheck, ChevronRight } from '
 import { authClient } from '@/lib/auth/client';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/hooks/useUser';
-import { ROLE_LEVELS } from '@/middlewares/checkRole';
+import { ROLES } from "@/lib/auth/roles";
+import { PORTAL_CONFIG } from '@/lib/auth-config';
+
 import Link from 'next/link';
 import { GlassCard } from '@/components/ui/premium/GlassCard';
 import { MetallicText } from '@/components/ui/premium/MetallicText';
@@ -27,19 +29,24 @@ export default function LoginPage() {
 
     useEffect(() => {
         if (profile) {
-            const level = ROLE_LEVELS[profile.role] || 99;
+            const role = profile.role || "customer";
 
-            if (level === 1) {
-                router.push('/super-admin/dashboard');
-            } else if (level === 3) {
-                router.push('/service-admin/dashboard');
-            } else if (level >= 4 && level <= 5) {
-                router.push('/sales-admin/dashboard');
-            } else if (level <= 7) {
-                router.push('/admin/dashboard');
-            } else if (level <= 15) {
-                router.push('/dealer/dashboard');
+            let redirectPath = "/dashboard";
+            if (role === ROLES.SUPER_ADMIN) {
+                redirectPath = "/super-admin/dashboard";
+            } else if (PORTAL_CONFIG.SHOWROOM.allowedRoles.includes(role as any)) {
+                redirectPath = "/showroom-admin/dashboard";
+            } else if (PORTAL_CONFIG.SERVICE_ADMIN.allowedRoles.includes(role as any)) {
+                redirectPath = "/service-admin/dashboard";
+            } else if (PORTAL_CONFIG.ADMIN.allowedRoles.includes(role as any)) {
+                redirectPath = "/admin/dashboard";
+            } else if (PORTAL_CONFIG.DEALER.allowedRoles.includes(role as any) || ["dealer", "sub_dealer"].includes(role)) {
+                redirectPath = "/dealer/dashboard";
+            } else if (role === ROLES.CUSTOMER) {
+                redirectPath = "/customer/dashboard";
             }
+
+            router.push(redirectPath);
         }
     }, [profile, router]);
 
@@ -113,16 +120,18 @@ export default function LoginPage() {
         const role = user.roles?.name || user.role || "customer";
 
         let redirectPath = "/dashboard";
-        if (role === "super_admin") {
+        if (role === ROLES.SUPER_ADMIN) {
             redirectPath = "/super-admin/dashboard";
-        } else if (role === "service_admin") {
+        } else if (PORTAL_CONFIG.SHOWROOM.allowedRoles.includes(role as any)) {
+            redirectPath = "/showroom-admin/dashboard";
+        } else if (PORTAL_CONFIG.SERVICE_ADMIN.allowedRoles.includes(role as any)) {
             redirectPath = "/service-admin/dashboard";
-        } else if (role.includes("sales_admin")) {
-            redirectPath = "/sales-admin/dashboard";
-        } else if (role.includes("showroom") || role.includes("service") || role === "support" || role === "accountant" || role === "admin") {
+        } else if (PORTAL_CONFIG.ADMIN.allowedRoles.includes(role as any)) {
             redirectPath = "/admin/dashboard";
-        } else if (role.includes("dealer") || role === "sub_dealer") {
+        } else if (PORTAL_CONFIG.DEALER.allowedRoles.includes(role as any) || ["dealer", "sub_dealer"].includes(role)) {
             redirectPath = "/dealer/dashboard";
+        } else if (role === ROLES.CUSTOMER) {
+            redirectPath = "/customer/dashboard";
         }
 
         router.push(redirectPath);

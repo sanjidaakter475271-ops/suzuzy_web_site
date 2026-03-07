@@ -2,22 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma/client";
 import { verifyToken } from "@/lib/auth/jwt";
 import { SYSTEM_PERMISSIONS, ROLE_PERMISSIONS_MAPPING } from "@/lib/auth/permission-utils";
+import { ROLES, ROLE_LEVELS } from "@/lib/auth/roles";
 
 const REQUIRED_ROLES = [
-    { name: "super_admin", display_name: "Super Admin", level: 1, role_type: "system", is_system_role: true, description: "Full system authority with access to all modules, settings, and consortium-level data." },
-    { name: "showroom_admin", display_name: "Showroom Admin", level: 2, role_type: "system", is_system_role: true, description: "Showroom manager responsible for branch operations, staff management, and sales oversight." },
-    { name: "service_admin", display_name: "Service Admin", level: 3, role_type: "system", is_system_role: true, description: "Service center manager overseeing technical staff, job cards, and workshop efficiency." },
-    { name: "sell_showroom_admin", display_name: "Showroom Sales Lead", level: 4, role_type: "system", is_system_role: true, description: "Head of showroom sales and billing, managing executive targets and customer transactions." },
-    { name: "sell_service_admin", display_name: "Service Billing Lead", level: 5, role_type: "system", is_system_role: true, description: "Responsible for service billing, spare parts inventory, and requisition management." },
-    { name: "support", display_name: "System Support", level: 6, role_type: "system", is_system_role: true, description: "Cross-unit support staff for technical maintenance and platform troubleshooting." },
-    { name: "accountant", display_name: "Financial Accountant", level: 7, role_type: "system", is_system_role: true, description: "Financial controller managing general ledgers, tax filings, and revenue reconciliations." },
-    { name: "sells_stuff", display_name: "Sales Executive", level: 10, role_type: "system", is_system_role: true, description: "Showroom floor sales staff focused on customer interaction and lead conversion." },
-    { name: "service_stuff", display_name: "Service Technician", level: 11, role_type: "system", is_system_role: true, description: "Technical staff performing repairs, maintenance, and vehicle servicing." },
-    { name: "dealer", display_name: "Dealer Owner", level: 12, role_type: "system", is_system_role: true, description: "Principal owner of a partner dealership with overall responsibility for their franchise." },
-    { name: "dealer_manager", display_name: "Dealer Manager", level: 13, role_type: "system", is_system_role: true, description: "Operational head of a partner dealer location managing day-to-day business flow." },
-    { name: "dealer_staff", display_name: "Dealer Staff", level: 14, role_type: "system", is_system_role: true, description: "General staff employed at a partner dealer location." },
-    { name: "inventory_manager", display_name: "Inventory Manager", level: 15, role_type: "system", is_system_role: true, description: "Stock controller responsible for warehouse management and inventory accuracy." },
-    { name: "customer", display_name: "End Customer", level: 99, role_type: "system", is_system_role: true, description: "Retail customer purchasing products and scheduling services through the platform." }
+    { name: ROLES.SUPER_ADMIN, display_name: "Super Admin", level: ROLE_LEVELS[ROLES.SUPER_ADMIN], role_type: "system", is_system_role: true, description: "Full system authority with access to all modules, settings, and consortium-level data." },
+    { name: ROLES.ADMIN, display_name: "General Admin", level: ROLE_LEVELS[ROLES.ADMIN], role_type: "system", is_system_role: true, description: "General system administrator and backend office operations." },
+    { name: ROLES.SUPPORT, display_name: "System Support", level: ROLE_LEVELS[ROLES.SUPPORT], role_type: "system", is_system_role: true, description: "Cross-unit support staff for technical maintenance and platform troubleshooting." },
+
+    { name: ROLES.DEALER_OWNER, display_name: "Dealer Owner", level: ROLE_LEVELS[ROLES.DEALER_OWNER], role_type: "system", is_system_role: true, description: "Principal owner of a partner dealership with overall responsibility for their franchise." },
+    { name: ROLES.DEALER, display_name: "Dealer (Legacy)", level: ROLE_LEVELS[ROLES.DEALER], role_type: "system", is_system_role: true, description: "Legacy primary dealer account alias." },
+
+    { name: ROLES.SERVICE_ADMIN, display_name: "Service Admin", level: ROLE_LEVELS[ROLES.SERVICE_ADMIN], role_type: "system", is_system_role: true, description: "Service center manager overseeing technical staff, job cards, and workshop efficiency." },
+    { name: ROLES.SHOWROOM_ADMIN, display_name: "Showroom Admin", level: ROLE_LEVELS[ROLES.SHOWROOM_ADMIN], role_type: "system", is_system_role: true, description: "Showroom manager responsible for branch operations, staff management, and sales oversight." },
+
+    { name: ROLES.ACCOUNTANT, display_name: "Financial Accountant", level: ROLE_LEVELS[ROLES.ACCOUNTANT], role_type: "system", is_system_role: true, description: "Financial controller managing general ledgers, tax filings, and revenue reconciliations." },
+
+    { name: ROLES.SERVICE_STUFF, display_name: "Service Staff", level: ROLE_LEVELS[ROLES.SERVICE_STUFF], role_type: "system", is_system_role: true, description: "General staff employed at the service shop." },
+    { name: ROLES.SELLS_STUFF, display_name: "Sales Executive", level: ROLE_LEVELS[ROLES.SELLS_STUFF], role_type: "system", is_system_role: true, description: "Showroom floor sales staff focused on customer interaction and lead conversion." },
+
+    { name: ROLES.SERVICE_TECHNICIAN, display_name: "Service Technician", level: ROLE_LEVELS[ROLES.SERVICE_TECHNICIAN], role_type: "system", is_system_role: true, description: "Technical staff performing repairs, maintenance, and vehicle servicing." },
+
+    { name: ROLES.DEALER_STAFF, display_name: "Dealer Staff", level: ROLE_LEVELS[ROLES.DEALER_STAFF], role_type: "system", is_system_role: true, description: "General staff employed at a partner dealer location." },
+
+    { name: ROLES.SUB_DEALER, display_name: "Sub Dealer", level: ROLE_LEVELS[ROLES.SUB_DEALER], role_type: "system", is_system_role: true, description: "Sub-dealer operating underneath a primary dealership." },
+
+    { name: ROLES.CUSTOMER, display_name: "End Customer", level: ROLE_LEVELS[ROLES.CUSTOMER], role_type: "system", is_system_role: true, description: "Retail customer purchasing products and scheduling services through the platform." }
 ];
 
 export async function POST(req: NextRequest) {

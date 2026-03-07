@@ -58,13 +58,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onLogout, use
             <span className="font-medium">My Jobs</span>
           </button>
 
-          <button
-            onClick={() => handleNavigate(RoutePath.ASSISTANT)}
-            className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors ${isActive(RoutePath.ASSISTANT) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
-          >
-            <Wrench size={20} className="mr-3" />
-            <span className="font-medium">AI Mechanic Helper</span>
-          </button>
 
           <button
             onClick={() => handleNavigate(RoutePath.ATTENDANCE)}

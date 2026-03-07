@@ -95,34 +95,41 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
 
         const formattedJob = {
             id: job.id,
-            jobNumber: ticket?.service_number || 'N/A',
+            service_number: ticket?.service_number || 'N/A',
             status: job.status,
             qc_status: latestQC ? latestQC.status : null,
-            ticket: ticket ? {
-                id: ticket.id,
-                serviceNumber: ticket.service_number,
-                status: ticket.status,
-                description: ticket.service_description,
-                customer: ticket.profiles ? {
-                    name: ticket.profiles.full_name,
-                    phone: ticket.profiles.phone,
-                } : null,
-                vehicle: vehicle ? {
-                    regNumber: vehicle.engine_number || 'N/A',
-                    model: vehicle.bike_models?.name || 'Unknown',
-                    registration: vehicle.engine_number || 'N/A',
-                    chassisNumber: vehicle.chassis_number || 'N/A',
-                } : null,
+            vehicle: vehicle ? {
+                model_name: vehicle.bike_models?.name || 'Unknown',
+                license_plate: vehicle.engine_number || 'N/A',
+                customer_name: vehicle.customer_name || ticket?.profiles?.full_name || 'Generic Customer',
+                issue_description: ticket?.service_description || 'Routine maintenance',
+                color: vehicle.color || 'N/A',
+                engine_number: vehicle.engine_number || 'N/A',
+                chassis_number: vehicle.chassis_number || 'N/A',
+                mileage: 0, // Could be enhanced to fetch from service_history
             } : null,
             tasks: job.service_tasks?.map((t) => ({
                 id: t.id,
                 name: t.name || 'Unnamed Task',
                 status: t.status,
             })) || [],
+            checklist: job.service_checklist_items?.map(i => ({
+                id: i.id,
+                name: i.name,
+                category: i.category,
+                is_completed: i.is_completed,
+                condition: i.condition,
+            })) || [],
+            checklist_stats: {
+                total: totalChecklist,
+                completed: completedChecklist,
+            },
             parts: job.parts_usage?.map((p) => ({
                 id: p.id,
-                name: p.part_variants?.parts?.name || p.part_variants?.brand || 'Unknown Part',
+                variant_id: p.variant_id,
+                part_name: p.part_variants?.parts?.name || p.part_variants?.brand || 'Unknown Part',
                 quantity: p.quantity,
+                price: p.part_variants?.price ? Number(p.part_variants.price) : 0,
             })) || [],
             requisitions: job.service_requisitions?.map((r) => ({
                 id: r.id,
@@ -134,13 +141,11 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
             })) || [],
             photos: job.job_photos?.map((p) => ({
                 id: p.id,
-                url: p.image_url,
-                type: p.tag,
+                image_url: p.image_url,
+                tag: p.tag,
+                metadata: p.metadata,
+                created_at: p.created_at
             })) || [],
-            checklist_stats: {
-                total: totalChecklist,
-                completed: completedChecklist,
-            },
             time_logs: job.technician_time_logs || [],
             notes: job.notes,
             created_at: job.created_at,

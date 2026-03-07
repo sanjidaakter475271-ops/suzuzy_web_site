@@ -37,7 +37,15 @@ export async function POST(req: NextRequest) {
             },
         });
 
-        return NextResponse.json({ success: true, data: attendance });
+        return NextResponse.json({
+            success: true,
+            data: {
+                id: attendance.id,
+                clockIn: attendance.clock_in,
+                clockOut: attendance.clock_out,
+                status: attendance.status,
+            }
+        });
     } catch (error: any) {
         console.error('Error clocking in:', error);
         return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });

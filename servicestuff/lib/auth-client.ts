@@ -10,7 +10,7 @@ export const authClient = {
                 const res = await fetch(`${PORTAL_API_URL}/api/auth/login`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email, password }),
+                    body: JSON.stringify({ email, password, rememberMe: true }),
                 });
                 const data = await res.json();
 
