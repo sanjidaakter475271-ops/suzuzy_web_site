@@ -75,8 +75,11 @@ export const TechnicianAPI = {
     requestParts: (jobId: string, items: { productId: string; quantity: number; notes?: string }[]) =>
         api.post(`/requisitions`, { jobId, items }),
     getPartsHistory: () => api.get('/requisitions'),
+    updateRequisition: (id: string, quantity: number) => api.patch(`/requisitions/${id}`, { quantity }),
+    deleteRequisition: (id: string) => api.delete(`/requisitions/${id}`),
     getCategories: () => api.get('/categories'),
     getProductsByCategory: (categoryId: string) => api.get(`/products?categoryId=${categoryId}`),
+    getProductDetail: (id: string) => api.get(`/products/${id}`),
     getProductVariants: (productId: string) => api.get(`/products/${productId}/variants`),
 
     // Photos

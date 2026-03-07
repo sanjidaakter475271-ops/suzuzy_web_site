@@ -45,6 +45,9 @@ export const JobCardDetail: React.FC = () => {
     // Parts State
     const [showPartsSelector, setShowPartsSelector] = useState(false);
     const [requisitions, setRequisitions] = useState<PartsRequest[]>([]);
+    const [adjustingPart, setAdjustingPart] = useState<any>(null); // Requisition object
+    const [productForAdjustment, setProductForAdjustment] = useState<any>(null);
+    const [updatingPart, setUpdatingPart] = useState(false);
 
     // Note State
     const [newNote, setNewNote] = useState('');
@@ -304,6 +307,40 @@ export const JobCardDetail: React.FC = () => {
         }
     };
 
+    const handleOpenQuickAdjust = async (req: any) => {
+        setAdjustingPart(req);
+        setProductForAdjustment(null);
+        try {
+            const res = await TechnicianAPI.getProductDetail(req.product_id);
+            if (res.data?.success) {
+                setProductForAdjustment(res.data.data);
+            }
+        } catch (err) {
+            console.error("Error fetching product detail:", err);
+        }
+    };
+
+    const handleUpdateQuantity = async (newQty: number) => {
+        if (!adjustingPart) return;
+        setUpdatingPart(true);
+        try {
+            if (newQty <= 0) {
+                await TechnicianAPI.deleteRequisition(adjustingPart.id);
+                setAdjustingPart(null);
+            } else {
+                await TechnicianAPI.updateRequisition(adjustingPart.id, newQty);
+                // Update local state temporarily for better UI response
+                setAdjustingPart({ ...adjustingPart, quantity: newQty });
+            }
+            fetchRequisitions();
+        } catch (err) {
+            console.error("Error updating qty:", err);
+            alert("Failed to update quantity");
+        } finally {
+            setUpdatingPart(false);
+        }
+    };
+
     if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div></div>;
     if (!job) return <div className="p-8 text-white">Job not found.</div>;
 
@@ -418,6 +455,75 @@ export const JobCardDetail: React.FC = () => {
                                 <p className="text-sm leading-relaxed text-slate-300">
                                     {job.vehicle?.issue_description || 'General maintenance and checkup.'}
                                 </p>
+                            </div>
+
+                            {/* Added & Requested Parts Section */}
+                            <div className="mt-6">
+                                <div className="flex justify-between items-center mb-4 px-2">
+                                    <div className="flex items-center gap-2 text-slate-500 text-xs font-bold uppercase tracking-widest">
+                                        <Package size={12} className="text-blue-500" />
+                                        Parts & Requisitions
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {/* Issued Parts */}
+                                    {job.parts && job.parts.map((part) => (
+                                        <div
+                                            key={part.id}
+                                            className="flex justify-between items-center p-4 bg-slate-900/40 border border-slate-800/50 rounded-2xl transition-all group"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500">
+                                                    <CheckCircle2 size={16} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-bold text-slate-200">{part.part_name || 'Generic Part'}</h4>
+                                                    <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">Quantity: {part.quantity} • Issued</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-black text-slate-300">৳{part.price?.toLocaleString()}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    {/* Active Requisitions */}
+                                    {requisitions && requisitions.map((req: any) => (
+                                        <div
+                                            key={req.id}
+                                            onClick={() => handleOpenQuickAdjust(req)}
+                                            className="flex justify-between items-center p-4 bg-slate-900/40 border border-slate-800/50 rounded-2xl active:scale-[0.98] transition-all cursor-pointer group"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${req.status === 'rejected' ? 'bg-rose-500/10 text-rose-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                                                    <Clock size={16} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-bold text-slate-200 group-hover:text-blue-400 transition-colors">{req.productName || req.part_name || 'Generic Part'}</h4>
+                                                    <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">Quantity: {req.quantity} • {req.status}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-black text-slate-300">৳{req.unit_price?.toLocaleString()}</p>
+                                                <div className={`text-[8px] font-black uppercase mt-1 px-2 py-0.5 rounded-full inline-block ${req.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500' : req.status === 'rejected' ? 'bg-rose-500/10 text-rose-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                                                    {req.status}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    {(!job.parts?.length && !requisitions?.length) && (
+                                        <div
+                                            onClick={() => setShowPartsSelector(true)}
+                                            className="text-center py-8 bg-slate-900/20 rounded-3xl border border-dashed border-slate-800/50 hover:border-blue-500/30 transition-all cursor-pointer"
+                                        >
+                                            <Package size={24} className="mx-auto mb-2 text-slate-700" />
+                                            <p className="text-xs font-bold text-slate-600 uppercase tracking-widest">No parts requested yet</p>
+                                            <p className="text-[10px] text-slate-500 mt-1">Tap to add items</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -552,7 +658,11 @@ export const JobCardDetail: React.FC = () => {
                             <div className="space-y-3">
                                 {requisitions && requisitions.length > 0 ? (
                                     requisitions.map((req: any) => (
-                                        <div key={req.id} className="flex justify-between items-center p-4 bg-slate-900/40 border border-slate-800/50 rounded-2xl group">
+                                        <div
+                                            key={req.id}
+                                            onClick={() => handleOpenQuickAdjust(req)}
+                                            className="flex justify-between items-center p-4 bg-slate-900/40 border border-slate-800/50 rounded-2xl group active:scale-[0.98] transition-all cursor-pointer"
+                                        >
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center text-slate-500 group-hover:text-blue-500 transition-colors">
                                                     <Package size={20} />
@@ -710,6 +820,91 @@ export const JobCardDetail: React.FC = () => {
                     </button>
                 ) : null}
             </div>
+
+            {/* Quick Adjust Modal */}
+            <AnimatePresence>
+                {adjustingPart && (
+                    <div className="fixed inset-0 z-[100] flex items-end justify-center px-4 pb-8 sm:pb-0 sm:items-center">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setAdjustingPart(null)}
+                            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ y: 100, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 100, opacity: 0 }}
+                            className="relative w-full max-w-sm bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
+                        >
+                            {/* Decorative Background */}
+                            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl opacity-50" />
+
+                            <div className="flex flex-col items-center text-center relative z-10">
+                                <div className="w-16 h-16 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-center text-blue-500 mb-4 shadow-inner">
+                                    <Package size={28} />
+                                </div>
+                                <h3 className="text-xl font-bold text-white mb-1">
+                                    {adjustingPart.productName || adjustingPart.part_name || 'Generic Part'}
+                                </h3>
+                                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-6">
+                                    {productForAdjustment?.sku || 'NO SKU'}
+                                </p>
+
+                                {/* Quantity Control */}
+                                <div className="flex items-center gap-8 mb-8">
+                                    <button
+                                        onClick={() => handleUpdateQuantity(adjustingPart.quantity - 1)}
+                                        disabled={updatingPart}
+                                        className="w-14 h-14 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-center text-slate-400 hover:text-rose-500 active:scale-90 transition-all disabled:opacity-50"
+                                    >
+                                        <Trash2 size={24} className={adjustingPart.quantity === 1 ? 'text-rose-500' : ''} />
+                                    </button>
+
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-5xl font-black text-white tabular-nums">
+                                            {adjustingPart.quantity}
+                                        </span>
+                                        <span className="text-[10px] text-slate-500 font-black uppercase mt-1 tracking-widest">Quantity</span>
+                                    </div>
+
+                                    <button
+                                        onClick={() => handleUpdateQuantity(adjustingPart.quantity + 1)}
+                                        disabled={updatingPart || (productForAdjustment && adjustingPart.quantity >= productForAdjustment.stock_quantity)}
+                                        className="w-14 h-14 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-center text-slate-400 hover:text-emerald-500 active:scale-90 transition-all disabled:opacity-50"
+                                    >
+                                        <Plus size={24} />
+                                    </button>
+                                </div>
+
+                                {/* Stock & Price Info */}
+                                <div className="w-full grid grid-cols-2 gap-3 mb-8">
+                                    <div className="bg-slate-950/50 p-4 rounded-3xl border border-slate-800/50">
+                                        <p className="text-[10px] text-slate-500 font-black uppercase mb-1">Available</p>
+                                        <p className={`text-lg font-black ${productForAdjustment !== null && (productForAdjustment.stock_quantity - adjustingPart.quantity) > 5 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                            {productForAdjustment !== null ? `${productForAdjustment.stock_quantity - adjustingPart.quantity}` : '--'}
+                                        </p>
+                                    </div>
+                                    <div className="bg-slate-950/50 p-4 rounded-3xl border border-slate-800/50">
+                                        <p className="text-[10px] text-slate-500 font-black uppercase mb-1">Total</p>
+                                        <p className="text-lg font-black text-blue-400">
+                                            ৳{((adjustingPart.unit_price || 0) * adjustingPart.quantity).toLocaleString()}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => setAdjustingPart(null)}
+                                    className="w-full py-5 bg-slate-950 border border-slate-800 rounded-3xl text-sm font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
+                                >
+                                    Done
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* Parts Selector Modal */}
             <AnimatePresence>
