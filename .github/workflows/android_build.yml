@@ -4,7 +4,7 @@ on:
     branches: [ main ]
     paths:
       - 'servicestuff/**' # শুধুমাত্র servicestuff ফোল্ডারে কোড চেঞ্জ হলে বিল্ড হবে
-
+  workflow_dispatch:   # ← এই লাইন যোগ করো
 jobs:
   build:
     runs-on: ubuntu-latest
