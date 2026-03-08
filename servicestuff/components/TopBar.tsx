@@ -73,16 +73,16 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack }) 
       <div className="flex items-center">
         <button
           onClick={showBack ? onMenuClick : handleHomeClick}
-          className={`p-2 mr-4 -ml-2 rounded-xl transition-all active:scale-95 border border-transparent hover:border-slate-800 ${showBack ? 'text-blue-500 hover:bg-blue-500/10' : 'text-slate-500 hover:bg-slate-800/50'
+          className={`p-2 mr-4 -ml-2 rounded-xl transition-all active:scale-95 border border-transparent ${showBack ? 'text-blue-500 hover:bg-blue-500/10' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'
             }`}
         >
-          {showBack ? <ChevronLeft size={22} /> : <Home size={20} />}
+          {showBack ? <ChevronLeft size={22} strokeWidth={2.5} /> : <Home size={20} />}
         </button>
 
         <div className="flex items-center gap-2 overflow-hidden select-none">
           <button
             onClick={handleHomeClick}
-            className={`text-sm font-medium whitespace-nowrap transition-colors ${isHome ? 'text-blue-500 font-bold' : 'text-slate-500 hover:text-slate-300'
+            className={`text-sm tracking-tight transition-colors ${isHome ? 'text-blue-600 dark:text-blue-400 font-black italic uppercase text-[10px] tracking-[0.2em]' : 'text-slate-400 dark:text-slate-500 hover:text-blue-500 font-bold'
               }`}
           >
             Workshop
@@ -90,11 +90,11 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack }) 
 
           {!isHome && (
             <>
-              <ChevronRight size={14} className="text-slate-700 shrink-0" />
+              <ChevronRight size={14} className="text-slate-300 dark:text-slate-700 shrink-0" />
               <button
                 onClick={() => showBack && onMenuClick()}
                 disabled={!showBack}
-                className={`text-sm font-bold tracking-tight whitespace-nowrap truncate transition-colors ${showBack ? 'text-blue-500 hover:text-blue-400 cursor-pointer' : 'text-slate-400 cursor-default'
+                className={`text-sm font-black tracking-tight whitespace-nowrap truncate transition-colors ${showBack ? 'text-blue-600 dark:text-blue-400 hover:text-blue-500 cursor-pointer' : 'text-slate-400 dark:text-slate-500 cursor-default'
                   }`}
               >
                 {title === 'Dashboard' ? 'Home' : title}

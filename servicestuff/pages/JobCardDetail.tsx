@@ -382,7 +382,7 @@ export const JobCardDetail: React.FC = () => {
     ];
 
     return (
-        <div className="bg-slate-950 text-slate-200">
+        <div className="bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen">
             <TopBar
                 title={`Job #${job.service_number || id?.slice(0, 8)}`}
                 onMenuClick={() => navigate(-1)}
@@ -400,12 +400,12 @@ export const JobCardDetail: React.FC = () => {
             )}
 
             {/* Tab Navigation */}
-            <div className="flex overflow-x-auto border-b border-slate-800 bg-slate-900/50 sticky top-[60px] z-10 backdrop-blur-md">
+            <div className="flex overflow-x-auto border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/50 sticky top-[60px] z-10 backdrop-blur-md">
                 {tabs.map(tab => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as Tab)}
-                        className={`flex-1 min-w-[80px] py-3 flex flex-col items-center gap-1 text-xs font-medium transition-colors relative ${activeTab === tab.id ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'
+                        className={`flex-1 min-w-[80px] py-3 flex flex-col items-center gap-1 text-xs font-bold transition-colors relative ${activeTab === tab.id ? 'text-blue-500' : 'text-slate-400 dark:text-slate-500 hover:text-blue-500 dark:hover:text-slate-300'
                             }`}
                     >
                         <tab.icon size={20} />
@@ -424,10 +424,10 @@ export const JobCardDetail: React.FC = () => {
 
                 {activeTab === 'summary' && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                        <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl mb-6">
+                        <div className="glass-card rounded-3xl p-6 mb-6">
                             <div className="flex justify-between items-start mb-4">
                                 <div>
-                                    <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+                                    <h2 className="text-2xl font-black text-gray-900 dark:text-white font-display uppercase tracking-tight">
                                         {job.vehicle?.model_name || 'Generic Bike'}
                                     </h2>
                                     <p className="text-blue-400 font-mono text-sm tracking-widest mt-1">
@@ -451,7 +451,7 @@ export const JobCardDetail: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="mt-6 p-4 bg-slate-950/50 rounded-2xl border border-slate-800/50">
+                            <div className="mt-6 p-4 bg-slate-100/50 dark:bg-slate-950/50 rounded-2xl border border-slate-200 dark:border-slate-800/50">
                                 <div className="flex items-center gap-2 mb-2 text-slate-500 text-xs font-bold uppercase tracking-widest">
                                     <Info size={12} />
                                     Vehicle Details
@@ -476,7 +476,7 @@ export const JobCardDetail: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="mt-4 p-4 bg-slate-950/50 rounded-2xl border border-slate-800/50">
+                            <div className="mt-4 p-4 bg-slate-100/50 dark:bg-slate-950/50 rounded-2xl border border-slate-200 dark:border-slate-800/50">
                                 <div className="flex items-center gap-2 mb-2 text-slate-500 text-xs font-bold uppercase tracking-widest">
                                     <AlertTriangle size={12} className="text-amber-500" />
                                     Customer Issue
@@ -500,19 +500,19 @@ export const JobCardDetail: React.FC = () => {
                                     {job.parts && job.parts.map((part) => (
                                         <div
                                             key={part.id}
-                                            className="flex justify-between items-center p-4 bg-slate-900/40 border border-slate-800/50 rounded-2xl transition-all group"
+                                            className="flex justify-between items-center p-4 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/50 rounded-2xl transition-all group"
                                         >
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500">
                                                     <CheckCircle2 size={16} />
                                                 </div>
                                                 <div>
-                                                    <h4 className="text-sm font-bold text-slate-200">{part.part_name || 'Generic Part'}</h4>
+                                                    <h4 className="text-sm font-bold text-gray-900 dark:text-slate-200">{part.part_name || 'Generic Part'}</h4>
                                                     <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">Quantity: {part.quantity} • Issued</p>
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-sm font-black text-slate-300">৳{part.price?.toLocaleString()}</p>
+                                                <p className="text-sm font-black text-gray-700 dark:text-slate-300">৳{part.price?.toLocaleString()}</p>
                                             </div>
                                         </div>
                                     ))}
@@ -522,19 +522,19 @@ export const JobCardDetail: React.FC = () => {
                                         <div
                                             key={req.id}
                                             onClick={() => handleOpenQuickAdjust(req)}
-                                            className="flex justify-between items-center p-4 bg-slate-900/40 border border-slate-800/50 rounded-2xl active:scale-[0.98] transition-all cursor-pointer group"
+                                            className="flex justify-between items-center p-4 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/50 rounded-2xl active:scale-[0.98] transition-all cursor-pointer group"
                                         >
                                             <div className="flex items-center gap-3">
                                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${req.status === 'rejected' ? 'bg-rose-500/10 text-rose-500' : 'bg-amber-500/10 text-amber-500'}`}>
                                                     <Clock size={16} />
                                                 </div>
                                                 <div>
-                                                    <h4 className="text-sm font-bold text-slate-200 group-hover:text-blue-400 transition-colors">{req.productName || req.part_name || 'Generic Part'}</h4>
+                                                    <h4 className="text-sm font-bold text-gray-900 dark:text-slate-200 group-hover:text-blue-500 transition-colors">{req.productName || req.part_name || 'Generic Part'}</h4>
                                                     <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">Quantity: {req.quantity} • {req.status}</p>
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-sm font-black text-slate-300">৳{req.unit_price?.toLocaleString()}</p>
+                                                <p className="text-sm font-black text-gray-700 dark:text-slate-300">৳{req.unit_price?.toLocaleString()}</p>
                                                 <div className={`text-[8px] font-black uppercase mt-1 px-2 py-0.5 rounded-full inline-block ${req.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500' : req.status === 'rejected' ? 'bg-rose-500/10 text-rose-500' : 'bg-amber-500/10 text-amber-500'}`}>
                                                     {req.status}
                                                 </div>
@@ -594,14 +594,14 @@ export const JobCardDetail: React.FC = () => {
                                                     <button
                                                         onClick={() => handleChecklistToggle(item)}
                                                         className={`p-2 rounded-xl transition-all ${item.is_completed
-                                                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20'
-                                                            : 'bg-slate-800 text-slate-500 border border-slate-700'
+                                                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-inner'
+                                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 hover:border-blue-500/30'
                                                             }`}
                                                     >
                                                         <CheckSquare size={20} className={item.is_completed ? 'scale-110' : ''} />
                                                     </button>
                                                     <div>
-                                                        <p className={`font-medium transition-colors ${item.is_completed ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
+                                                        <p className={`font-bold transition-colors ${item.is_completed ? 'text-slate-400 dark:text-slate-500 line-through decoration-emerald-500/50' : 'text-gray-900 dark:text-slate-200'}`}>
                                                             {item.name}
                                                         </p>
                                                         {(item as any).photo_url && (
@@ -792,8 +792,8 @@ export const JobCardDetail: React.FC = () => {
                         <div className="space-y-4">
                             {/* Display existing notes if any (JobCard interface needs checking for notes array, usually it's just 'notes' string or joined) */}
                             {job.notes && (
-                                <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
-                                    <p className="text-slate-300 text-sm whitespace-pre-wrap">{job.notes}</p>
+                                <div className="bg-white dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                                    <p className="text-gray-700 dark:text-slate-300 text-sm whitespace-pre-wrap leading-relaxed">{job.notes}</p>
                                 </div>
                             )}
                         </div>

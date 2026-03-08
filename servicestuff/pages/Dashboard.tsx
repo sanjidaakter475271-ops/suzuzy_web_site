@@ -23,6 +23,7 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
   const [loading, setLoading] = useState(true);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [scanPurpose, setScanPurpose] = useState<'attendance' | 'job_card' | null>(null);
   const [newAlert, setNewAlert] = useState<{ message: string, type: 'info' | 'success' } | null>(null);
   const navigate = useNavigate();
 
@@ -81,22 +82,25 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
 
   const handleClockInOut = async () => {
     if (attendanceLoading) return;
-    setAttendanceLoading(true);
-    try {
-      const location = await LocationService.getInstance().getCurrentLocation();
-      if (attendance && !attendance.clockOut) {
+
+    // Clock Out: Call API directly
+    if (attendance && !attendance.clockOut) {
+      setAttendanceLoading(true);
+      try {
+        const location = await LocationService.getInstance().getCurrentLocation();
         await TechnicianAPI.clockOut(location);
-      } else {
-        await TechnicianAPI.clockIn(location);
+        await fetchData();
+      } catch (err: any) {
+        alert("Clock-out failed: " + (err.response?.data?.error || err.message));
+      } finally {
+        setAttendanceLoading(false);
       }
-      await fetchData();
-    } catch (err: any) {
-      console.error("Attendance error details:", err.response?.data || err);
-      const msg = err.response?.data?.error || err.message || "Failed to update attendance";
-      alert(`Attendance Error: ${msg}`);
-    } finally {
-      setAttendanceLoading(false);
+      return;
     }
+
+    // Clock In: Open Scanner first
+    setScanPurpose('attendance');
+    setIsScanning(true);
   };
 
   const getStatusColor = (status: string) => {
@@ -117,9 +121,33 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
 
   const handleScan = async (result: string) => {
     setIsScanning(false);
-    console.log("Scanned VIN/Job Card:", result);
-    // Ideally call an API to find job by scanner result
-    alert(`Scanned: ${result}. feature coming soon.`);
+
+    if (scanPurpose === 'attendance') {
+      setAttendanceLoading(true);
+      try {
+        const location = await LocationService.getInstance().getCurrentLocation();
+        await TechnicianAPI.clockIn(location);
+        await fetchData();
+        setNewAlert({ message: "Successfully Clocked In! ✅", type: 'success' });
+        setTimeout(() => setNewAlert(null), 3000);
+      } catch (err: any) {
+        alert("Clock-in failed: " + (err.response?.data?.error || err.message));
+      } finally {
+        setAttendanceLoading(false);
+        setScanPurpose(null);
+      }
+    } else {
+      // General scanning (VIN/Job Card)
+      console.log("Scanned VIN/Job Card:", result);
+      // Try to find if this task exists in the current list
+      const matchedIdx = tasks.findIndex(t => t.vehicle?.license_plate === result || t.id === result);
+      if (matchedIdx !== -1) {
+        navigate(RoutePath.JOB_CARD.replace(':id', tasks[matchedIdx].id));
+      } else {
+        alert(`Scanned: ${result}. feature coming soon.`);
+      }
+      setScanPurpose(null);
+    }
   };
 
   return (
@@ -127,7 +155,8 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
       {isScanning && (
         <BarcodeScannerComponent
           onScan={handleScan}
-          onClose={() => setIsScanning(false)}
+          onClose={() => { setIsScanning(false); setScanPurpose(null); }}
+          message={scanPurpose === 'attendance' ? "Scan Workshop QR to Clock In" : "Scan VIN or Job Ticket"}
         />
       )}
       <TopBar onMenuClick={onMenuClick} title="Dashboard" />
@@ -152,16 +181,16 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
 
       {/* Attendance Widget */}
       <div className="p-4 pb-0">
-        <div className="bg-gradient-to-br from-blue-600/20 to-indigo-700/20 backdrop-blur-md rounded-3xl p-6 text-white shadow-xl shadow-blue-950/20 border border-white/5 flex justify-between items-center relative overflow-hidden group">
+        <div className="bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-600/20 dark:to-indigo-700/20 backdrop-blur-md rounded-3xl p-6 shadow-xl shadow-blue-900/10 dark:shadow-blue-950/20 border border-white/50 dark:border-white/5 flex justify-between items-center relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -translate-y-12 translate-x-12 group-hover:bg-blue-500/20 transition-all duration-700" />
           <div className="relative z-10">
-            <p className="text-blue-100 text-xs font-medium uppercase tracking-wider mb-1">Attendance</p>
-            <h3 className="text-xl font-bold">
-              {attendance && !attendance.clockOut ? 'Clocked In' : 'Clocked Out'}
+            <p className="text-blue-600 dark:text-blue-100 text-[10px] font-black uppercase tracking-[0.15em] mb-1">Attendance</p>
+            <h3 className="text-2xl font-black text-gray-900 dark:text-white font-display">
+              {attendance && !attendance.clockOut ? 'CLOCKED IN' : 'CLOCKED OUT'}
             </h3>
             {attendance && !attendance.clockOut && (
-              <p className="text-sm text-blue-100 mt-1 flex items-center">
-                <Clock size={14} className="mr-1" />
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-100 mt-2 flex items-center">
+                <Clock size={14} className="mr-1.5" />
                 Since {new Date(attendance.clockIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </p>
             )}
@@ -169,10 +198,10 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
           <button
             onClick={handleClockInOut}
             disabled={attendanceLoading}
-            className={`w-12 h-12 rounded-full flex items-center justify-center shadow-md transition-transform active:scale-95 ${attendance && !attendance.clockOut
-              ? 'bg-white text-red-500 hover:bg-red-50'
-              : 'bg-white text-green-600 hover:bg-green-50'
-              } ${attendanceLoading ? 'opacity-50' : ''}`}
+            className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-90 ${attendance && !attendance.clockOut
+              ? 'bg-red-500 text-white hover:bg-red-600'
+              : 'bg-green-500 text-white hover:bg-green-600'
+              } ${attendanceLoading ? 'opacity-50' : 'hover:scale-110'}`}
           >
             {attendanceLoading ? (
               <RefreshCw size={24} className="animate-spin" />
@@ -185,7 +214,10 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
 
       {/* Stats Section */}
       <div className="p-4 grid grid-cols-2 gap-4">
-        <div className="glass p-5 rounded-3xl shadow-xl shadow-blue-950/20 flex items-center justify-between col-span-2 active:scale-95 cursor-pointer group" onClick={() => setIsScanning(true)}>
+        <div
+          className="glass p-5 rounded-3xl shadow-xl shadow-blue-950/20 flex items-center justify-between col-span-2 active:scale-95 cursor-pointer group"
+          onClick={() => { setScanPurpose('job_card'); setIsScanning(true); }}
+        >
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all">
               <Scan size={24} />

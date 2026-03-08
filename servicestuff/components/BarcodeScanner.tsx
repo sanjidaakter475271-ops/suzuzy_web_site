@@ -5,13 +5,20 @@ import { X, Camera, Zap } from 'lucide-react';
 interface ScannerProps {
     onScan: (result: string) => void;
     onClose: () => void;
+    message?: string;
 }
 
-export const BarcodeScannerComponent: React.FC<ScannerProps> = ({ onScan, onClose }) => {
+export const BarcodeScannerComponent: React.FC<ScannerProps> = ({ onScan, onClose, message }) => {
     const [error, setError] = useState<string | null>(null);
 
     const startScan = async () => {
         try {
+            // Check if we are running in a native environment
+            if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('localhost')) {
+                // Not a local dev and not native. Likely generic web.
+                // But better to just try and catch.
+            }
+
             // Check/request permission
             const { camera } = await BarcodeScanner.requestPermissions();
 
@@ -22,6 +29,7 @@ export const BarcodeScannerComponent: React.FC<ScannerProps> = ({ onScan, onClos
                 // Add listener
                 const listener = await BarcodeScanner.addListener('barcodesScanned', async (result) => {
                     if (result.barcodes.length > 0) {
+                        console.log("Barcode scanned:", result.barcodes[0].displayValue);
                         await listener.remove();
                         await stopScan();
                         onScan(result.barcodes[0].displayValue);
@@ -31,12 +39,18 @@ export const BarcodeScannerComponent: React.FC<ScannerProps> = ({ onScan, onClos
                 await BarcodeScanner.startScan({
                     lensFacing: LensFacing.Back
                 });
+                console.log("Scanner started successfully");
             } else {
                 setError("Camera permission denied");
+                alert("Camera permission is required for scanning.");
+                onClose();
             }
-        } catch (e) {
-            console.error(e);
-            setError("Failed to start scanner");
+        } catch (e: any) {
+            console.error("Scanner startup error:", e);
+            const errorMsg = e.message || "Could not start camera. Make sure you are using the mobile app and have granted permissions.";
+            setError(errorMsg);
+            alert(errorMsg);
+            onClose();
         }
     };
 
@@ -52,14 +66,17 @@ export const BarcodeScannerComponent: React.FC<ScannerProps> = ({ onScan, onClos
     };
 
     useEffect(() => {
-        startScan();
+        const timer = setTimeout(() => {
+            startScan();
+        }, 300);
         return () => {
+            clearTimeout(timer);
             stopScan();
         };
     }, []);
 
     return (
-        <div className="fixed inset-0 z-[100] flex flex-col bg-transparent">
+        <div className="fixed inset-0 z-[100] flex flex-col bg-transparent scanner-ui">
             {/* Scanner Overlay */}
             <div className="flex-1 flex flex-col relative">
                 <div className="absolute inset-0 border-[40px] border-black/60 md:border-[100px]">
@@ -85,7 +102,7 @@ export const BarcodeScannerComponent: React.FC<ScannerProps> = ({ onScan, onClos
                     <div className="bg-black/40 backdrop-blur-lg inline-block px-6 py-3 rounded-2xl border border-white/10 shadow-2xl">
                         <div className="flex items-center space-x-3">
                             <Camera size={18} className="text-blue-400" />
-                            <p className="text-white font-medium">Align barcode within the frame</p>
+                            <p className="text-white font-medium">{message || "Align barcode within the frame"}</p>
                         </div>
                         {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
                     </div>

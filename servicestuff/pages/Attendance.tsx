@@ -16,11 +16,15 @@ import {
     X
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { BarcodeScannerComponent } from '../components/BarcodeScanner';
 
 export const Attendance: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
     const [attendance, setAttendance] = useState<TechnicianAttendance[]>([]);
     const [currentStatus, setCurrentStatus] = useState<TechnicianAttendance | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isScanning, setIsScanning] = useState(false);
+    const [scanPurpose, setScanPurpose] = useState<'clock_in' | null>(null);
+    const [attendanceLoading, setAttendanceLoading] = useState(false);
 
     const fetchData = async () => {
         setLoading(true);
@@ -49,13 +53,26 @@ export const Attendance: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick 
     }, []);
 
     const handleClockIn = async () => {
-        try {
-            const location = await LocationService.getInstance().getCurrentLocation();
-            await TechnicianAPI.clockIn(location);
-            fetchData();
-        } catch (e: any) {
-            const msg = e.response?.data?.error || "Failed to clock in";
-            alert(msg);
+        if (attendanceLoading) return;
+        setScanPurpose('clock_in');
+        setIsScanning(true);
+    };
+
+    const handleScan = async (result: string) => {
+        setIsScanning(false);
+        if (scanPurpose === 'clock_in') {
+            setAttendanceLoading(true);
+            try {
+                const location = await LocationService.getInstance().getCurrentLocation();
+                await TechnicianAPI.clockIn(location);
+                await fetchData();
+            } catch (e: any) {
+                const msg = e.response?.data?.error || "Failed to clock in";
+                alert(msg);
+            } finally {
+                setAttendanceLoading(false);
+                setScanPurpose(null);
+            }
         }
     };
 
@@ -116,19 +133,26 @@ export const Attendance: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick 
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-200 pb-20">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 pb-20">
+            {isScanning && (
+                <BarcodeScannerComponent
+                    onScan={handleScan}
+                    onClose={() => { setIsScanning(false); setScanPurpose(null); }}
+                    message="Scan Workshop QR to Start Shift"
+                />
+            )}
             <TopBar onMenuClick={onMenuClick} title="Attendance" />
 
             <div className="p-4 space-y-6">
                 {/* Active Status Card */}
-                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 relative overflow-hidden shadow-2xl">
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 relative overflow-hidden shadow-2xl shadow-blue-900/5 dark:shadow-none">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 blur-3xl rounded-full -mr-16 -mt-16" />
                     <div className="relative z-10 flex flex-col items-center text-center">
-                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 border-2 transition-all duration-500 ${currentStatus && !currentStatus.clockOut ? 'bg-orange-500/20 border-orange-500/50 text-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.3)]' : 'bg-slate-800 border-slate-700 text-slate-500'}`}>
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 border-2 transition-all duration-500 ${currentStatus && !currentStatus.clockOut ? 'bg-orange-500/20 border-orange-500/50 text-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.3)]' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500'}`}>
                             <Clock size={32} className={currentStatus && !currentStatus.clockOut ? 'animate-pulse' : ''} />
                         </div>
 
-                        <h2 className="text-xl font-bold text-slate-100 font-display">
+                        <h2 className="text-xl font-black text-gray-900 dark:text-slate-100 font-display uppercase tracking-tight">
                             {currentStatus && !currentStatus.clockOut ? 'Currently Working' : 'Currently Offline'}
                         </h2>
 
@@ -144,14 +168,14 @@ export const Attendance: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick 
                         <div className="mt-6 w-full flex gap-3">
                             <button
                                 onClick={handleClockIn}
-                                disabled={!!(currentStatus && !currentStatus.clockOut)}
+                                disabled={!!(currentStatus && !currentStatus.clockOut) || attendanceLoading}
                                 className={`flex-1 py-4 rounded-2xl flex items-center justify-center gap-2 font-bold transition-all ${currentStatus && !currentStatus.clockOut
                                     ? 'bg-slate-800 text-slate-600 border border-slate-700 opacity-50'
                                     : 'bg-orange-600 text-white shadow-lg shadow-orange-900/40 hover:bg-orange-500 active:scale-95'
                                     }`}
                             >
-                                <PlayCircle size={20} />
-                                Start Shift
+                                {attendanceLoading ? <RefreshCw size={20} className="animate-spin" /> : <PlayCircle size={20} />}
+                                {attendanceLoading ? 'Starting...' : 'Start Shift'}
                             </button>
 
                             <button
@@ -174,17 +198,17 @@ export const Attendance: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick 
                     <div className="flex items-center justify-between px-2">
                         <div className="flex flex-col">
                             <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1 italic">Performance Calendar</h3>
-                            <h4 className="text-lg font-bold text-slate-100">
+                            <h4 className="text-lg font-black text-gray-900 dark:text-slate-100">
                                 {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                             </h4>
                         </div>
-                        <div className="flex bg-slate-900 rounded-xl p-1 border border-slate-800">
-                            <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))} className="p-2 hover:bg-slate-800 rounded-lg transition-colors"><ChevronLeft size={18} /></button>
-                            <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))} className="p-2 hover:bg-slate-800 rounded-lg transition-colors rotate-180"><ChevronLeft size={18} /></button>
+                        <div className="flex bg-white dark:bg-slate-900 rounded-xl p-1 border border-slate-100 dark:border-slate-800">
+                            <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))} className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors"><ChevronLeft size={18} /></button>
+                            <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))} className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors rotate-180"><ChevronLeft size={18} /></button>
                         </div>
                     </div>
 
-                    <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-4 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 backdrop-blur-sm shadow-xl shadow-blue-900/5">
                         <div className="grid grid-cols-7 mb-4">
                             {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
                                 <div key={d} className="text-center text-[10px] font-black text-slate-600">{d}</div>
@@ -204,7 +228,7 @@ export const Attendance: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick 
                                                         ? 'bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.2)]'
                                                         : status === 'sick_leave'
                                                             ? 'bg-yellow-500 text-slate-900 shadow-[0_0_15px_rgba(234,179,8,0.2)]'
-                                                            : 'bg-slate-800/40 text-slate-500 hover:bg-slate-800'
+                                                            : 'bg-slate-50 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
                                                     }`}
                                             >
                                                 {day}
