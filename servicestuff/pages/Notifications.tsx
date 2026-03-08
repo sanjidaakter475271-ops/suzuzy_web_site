@@ -14,11 +14,13 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { SocketService } from '../services/socket';
 import { useAuth } from '../lib/auth';
-import { Notification } from '../types';
+import { Notification, RoutePath } from '../types';
 import { TechnicianAPI } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
 export const Notifications: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -145,7 +147,12 @@ export const Notifications: React.FC<{ onMenuClick: () => void }> = ({ onMenuCli
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, scale: 0.95 }}
-                                    onClick={() => markAsRead(n.id)}
+                                    onClick={() => {
+                                        markAsRead(n.id);
+                                        if (n.link_url) {
+                                            navigate(n.link_url);
+                                        }
+                                    }}
                                     className={`relative p-4 rounded-2xl border transition-all cursor-pointer group hover:bg-slate-900/60 ${n.read
                                         ? 'bg-slate-900/40 border-slate-800/50'
                                         : 'bg-slate-900 border-blue-500/30 shadow-lg shadow-blue-900/10'

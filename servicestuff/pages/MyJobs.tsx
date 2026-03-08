@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TechnicianAPI } from '../services/api';
 import { JobCard, JobStatus } from '../types';
 import { TopBar } from '../components/TopBar';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { RoutePath } from '../types';
 import {
     Search,
@@ -26,9 +26,18 @@ export const MyJobs: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) =
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const location = useLocation();
     const navigate = useNavigate();
     const offlineService = OfflineService.getInstance();
     const [isOnline, setIsOnline] = useState(offlineService.getOnlineStatus());
+
+    useEffect(() => {
+        if (location.state?.status) {
+            setActiveTab(location.state.status);
+            // Clear state after reading to prevent sticky filter
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location]);
 
     useEffect(() => {
         fetchJobs();

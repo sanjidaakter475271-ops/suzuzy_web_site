@@ -29,6 +29,7 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
   // Timer for active shift
   const [elapsedTime, setElapsedTime] = useState(0);
   const timerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const fetchTimeoutReq = React.useRef<NodeJS.Timeout | null>(null);
 
   const navigate = useNavigate();
 
@@ -81,7 +82,6 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
     const socket = SocketService.getInstance();
 
     // Debounced fetch to prevent API storms from socket events
-    const fetchTimeoutReq = React.useRef<NodeJS.Timeout | null>(null);
 
     const debouncedFetchData = () => {
       if (fetchTimeoutReq.current) clearTimeout(fetchTimeoutReq.current);
@@ -297,7 +297,7 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
         </div>
 
         <div
-          onClick={() => navigate(RoutePath.MY_JOBS)}
+          onClick={() => navigate(RoutePath.MY_JOBS, { state: { status: JobStatus.PENDING } })}
           className="glass p-5 rounded-3xl shadow-lg shadow-black/20 active:scale-95 cursor-pointer"
         >
           <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Pending</p>
@@ -306,7 +306,7 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
           </p>
         </div>
         <div
-          onClick={() => navigate(RoutePath.MY_JOBS)}
+          onClick={() => navigate(RoutePath.MY_JOBS, { state: { status: JobStatus.IN_PROGRESS } })}
           className="glass p-5 rounded-3xl shadow-lg shadow-black/20 active:scale-95 cursor-pointer"
         >
           <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Active</p>

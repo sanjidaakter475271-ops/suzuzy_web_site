@@ -238,6 +238,7 @@ export interface Notification {
   type: 'job' | 'part' | 'admin' | 'alert' | 'info' | 'success' | 'warning' | 'error';
   read: boolean;
   created_at: string;
+  link_url?: string;
   data?: any;
   timestamp?: Date;
 }
