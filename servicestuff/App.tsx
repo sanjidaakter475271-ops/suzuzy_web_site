@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Router } from './lib/router';
 import { RoutePath } from './types';
 import { Splash } from './pages/Splash';
@@ -7,7 +8,7 @@ import { Welcome } from './pages/Welcome';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
-import { Sidebar } from './components/Sidebar';
+import { BottomBar } from './components/BottomBar';
 import { Settings } from './pages/Settings';
 import { JobCardDetail } from './pages/JobCardDetail';
 import { MyJobs } from './pages/MyJobs';
@@ -26,8 +27,6 @@ import { AuthProvider, useAuth } from './lib/auth';
 interface ProtectedRouteProps {
   isAuthenticated: boolean;
   children: React.ReactNode;
-  isSidebarOpen: boolean;
-  onCloseSidebar: () => void;
   onLogout: () => void;
   userName: string;
 }
@@ -35,30 +34,39 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   isAuthenticated,
   children,
-  isSidebarOpen,
-  onCloseSidebar,
   onLogout,
   userName
 }) => {
+  const location = useLocation();
+  const isJobCard = location.pathname.includes('/job/');
+
   if (!isAuthenticated) {
     return <Navigate to={RoutePath.LOGIN} replace />;
   }
   return (
-    <>
-      {children}
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onClose={onCloseSidebar}
-        onLogout={onLogout}
-        userName={userName}
-      />
-    </>
+    <div className="flex flex-col min-h-screen">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location.pathname}
+          initial={{ opacity: 0, scale: 0.98, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 1.02, y: -10 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="flex-1"
+        >
+          {children}
+          {!isJobCard && <div className="h-40 w-full" />} {/* No spacer on Job Card */}
+        </motion.div>
+      </AnimatePresence>
+      {!isJobCard && <BottomBar />}
+    </div>
   );
 };
 
 const AppContent: React.FC = () => {
   const { user, session, loading: isPending, signOut } = useAuth();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   // Load Theme
@@ -108,18 +116,13 @@ const AppContent: React.FC = () => {
 
   const handleLogout = async () => {
     await signOut();
-    setIsSidebarOpen(false);
-  };
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
   };
 
   return (
-    <Router>
+    <>
       {isAuthenticated && <LocationTracker />}
       {isAuthenticated && <PushNotificationManager />}
-      <Routes>
+      <Routes location={location} key={location.pathname}>
         <Route path={RoutePath.SPLASH} element={
           isAuthenticated ? <Navigate to={RoutePath.DASHBOARD} /> : <Splash />
         } />
@@ -139,24 +142,20 @@ const AppContent: React.FC = () => {
         <Route path={RoutePath.DASHBOARD} element={
           <ProtectedRoute
             isAuthenticated={isAuthenticated}
-            isSidebarOpen={isSidebarOpen}
-            onCloseSidebar={() => setIsSidebarOpen(false)}
             onLogout={handleLogout}
             userName={userName}
           >
-            <Dashboard onMenuClick={toggleSidebar} />
+            <Dashboard onMenuClick={() => navigate(RoutePath.PROFILE)} />
           </ProtectedRoute>
         } />
 
         <Route path={RoutePath.SETTINGS} element={
           <ProtectedRoute
             isAuthenticated={isAuthenticated}
-            isSidebarOpen={isSidebarOpen}
-            onCloseSidebar={() => setIsSidebarOpen(false)}
             onLogout={handleLogout}
             userName={userName}
           >
-            <Settings onMenuClick={toggleSidebar} userName={userName} onToggleTheme={toggleTheme} isDark={theme === 'dark'} />
+            <Settings onMenuClick={() => navigate(RoutePath.PROFILE)} userName={userName} onToggleTheme={toggleTheme} isDark={theme === 'dark'} />
           </ProtectedRoute>
         } />
 
@@ -164,8 +163,6 @@ const AppContent: React.FC = () => {
         <Route path={RoutePath.JOB_CARD} element={
           <ProtectedRoute
             isAuthenticated={isAuthenticated}
-            isSidebarOpen={isSidebarOpen}
-            onCloseSidebar={() => setIsSidebarOpen(false)}
             onLogout={handleLogout}
             userName={userName}
           >
@@ -176,60 +173,50 @@ const AppContent: React.FC = () => {
         <Route path={RoutePath.MY_JOBS} element={
           <ProtectedRoute
             isAuthenticated={isAuthenticated}
-            isSidebarOpen={isSidebarOpen}
-            onCloseSidebar={() => setIsSidebarOpen(false)}
             onLogout={handleLogout}
             userName={userName}
           >
-            <MyJobs onMenuClick={toggleSidebar} />
+            <MyJobs onMenuClick={() => navigate(RoutePath.PROFILE)} />
           </ProtectedRoute>
         } />
 
         <Route path={RoutePath.PROFILE} element={
           <ProtectedRoute
             isAuthenticated={isAuthenticated}
-            isSidebarOpen={isSidebarOpen}
-            onCloseSidebar={() => setIsSidebarOpen(false)}
             onLogout={handleLogout}
             userName={userName}
           >
-            <Profile onMenuClick={toggleSidebar} />
+            <Profile onMenuClick={() => navigate(RoutePath.PROFILE)} />
           </ProtectedRoute>
         } />
 
         <Route path={RoutePath.ATTENDANCE} element={
           <ProtectedRoute
             isAuthenticated={isAuthenticated}
-            isSidebarOpen={isSidebarOpen}
-            onCloseSidebar={() => setIsSidebarOpen(false)}
             onLogout={handleLogout}
             userName={userName}
           >
-            <Attendance onMenuClick={toggleSidebar} />
+            <Attendance onMenuClick={() => navigate(RoutePath.PROFILE)} />
           </ProtectedRoute>
         } />
 
         <Route path={RoutePath.PERFORMANCE} element={
           <ProtectedRoute
             isAuthenticated={isAuthenticated}
-            isSidebarOpen={isSidebarOpen}
-            onCloseSidebar={() => setIsSidebarOpen(false)}
             onLogout={handleLogout}
             userName={userName}
           >
-            <Performance onMenuClick={toggleSidebar} />
+            <Performance onMenuClick={() => navigate(RoutePath.PROFILE)} />
           </ProtectedRoute>
         } />
 
         <Route path={RoutePath.WORK_HISTORY} element={
           <ProtectedRoute
             isAuthenticated={isAuthenticated}
-            isSidebarOpen={isSidebarOpen}
-            onCloseSidebar={() => setIsSidebarOpen(false)}
             onLogout={handleLogout}
             userName={userName}
           >
-            <WorkHistory onMenuClick={toggleSidebar} />
+            <WorkHistory onMenuClick={() => navigate(RoutePath.PROFILE)} />
           </ProtectedRoute>
         } />
 
@@ -238,24 +225,20 @@ const AppContent: React.FC = () => {
         <Route path={RoutePath.NOTIFICATIONS} element={
           <ProtectedRoute
             isAuthenticated={isAuthenticated}
-            isSidebarOpen={isSidebarOpen}
-            onCloseSidebar={() => setIsSidebarOpen(false)}
             onLogout={handleLogout}
             userName={userName}
           >
-            <Notifications onMenuClick={toggleSidebar} />
+            <Notifications onMenuClick={() => navigate(RoutePath.PROFILE)} />
           </ProtectedRoute>
         } />
 
         <Route path={RoutePath.PARTS_REQUEST} element={
           <ProtectedRoute
             isAuthenticated={isAuthenticated}
-            isSidebarOpen={isSidebarOpen}
-            onCloseSidebar={() => setIsSidebarOpen(false)}
             onLogout={handleLogout}
             userName={userName}
           >
-            <Requisitions onMenuClick={toggleSidebar} />
+            <Requisitions onMenuClick={() => navigate(RoutePath.PROFILE)} />
           </ProtectedRoute>
         } />
 
@@ -267,15 +250,17 @@ const AppContent: React.FC = () => {
               : <Navigate to={RoutePath.SPLASH} />)
         } />
       </Routes>
-    </Router>
+    </>
   );
 };
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </Router>
   );
 };
 

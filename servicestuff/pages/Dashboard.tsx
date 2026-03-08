@@ -123,7 +123,7 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 pb-20 transition-colors duration-300">
+    <div className="bg-gray-50 dark:bg-slate-950 transition-colors duration-300">
       {isScanning && (
         <BarcodeScannerComponent
           onScan={handleScan}
@@ -137,7 +137,7 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`mx-4 mt-4 p-3 rounded-lg shadow-md flex items-center justify-between z-10 ${newAlert.type === 'success' ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'
+          className={`mx-4 mt-4 p-4 rounded-3xl shadow-2xl shadow-blue-900/20 backdrop-blur-xl border border-white/10 flex items-center justify-between z-10 ${newAlert.type === 'success' ? 'bg-green-600/20 text-green-400' : 'bg-blue-600/20 text-blue-400'
             }`}
         >
           <div className="flex items-center gap-2">
@@ -151,9 +151,10 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
       )}
 
       {/* Attendance Widget */}
-      <div className="p-4 pb-0 animate-slide-up">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-4 text-white shadow-lg flex justify-between items-center">
-          <div>
+      <div className="p-4 pb-0">
+        <div className="bg-gradient-to-br from-blue-600/20 to-indigo-700/20 backdrop-blur-md rounded-3xl p-6 text-white shadow-xl shadow-blue-950/20 border border-white/5 flex justify-between items-center relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -translate-y-12 translate-x-12 group-hover:bg-blue-500/20 transition-all duration-700" />
+          <div className="relative z-10">
             <p className="text-blue-100 text-xs font-medium uppercase tracking-wider mb-1">Attendance</p>
             <h3 className="text-xl font-bold">
               {attendance && !attendance.clockOut ? 'Clocked In' : 'Clocked Out'}
@@ -183,8 +184,8 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
       </div>
 
       {/* Stats Section */}
-      <div className="p-4 grid grid-cols-2 gap-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 transition-colors flex items-center justify-between col-span-2 active:scale-95 cursor-pointer group" onClick={() => setIsScanning(true)}>
+      <div className="p-4 grid grid-cols-2 gap-4">
+        <div className="glass p-5 rounded-3xl shadow-xl shadow-blue-950/20 flex items-center justify-between col-span-2 active:scale-95 cursor-pointer group" onClick={() => setIsScanning(true)}>
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all">
               <Scan size={24} />
@@ -199,27 +200,28 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
 
         <div
           onClick={() => navigate(RoutePath.MY_JOBS)}
-          className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 transition-colors active:scale-95 cursor-pointer"
+          className="glass p-5 rounded-3xl shadow-lg shadow-black/20 active:scale-95 cursor-pointer"
         >
-          <p className="text-gray-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest">Pending</p>
-          <p className="text-3xl font-bold text-amber-500 mt-2 font-display">
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Pending</p>
+          <p className="text-4xl font-black text-amber-400 mt-2 font-display italic">
             {stats?.pending || 0}
           </p>
         </div>
         <div
           onClick={() => navigate(RoutePath.MY_JOBS)}
-          className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 transition-colors active:scale-95 cursor-pointer"
+          className="glass p-5 rounded-3xl shadow-lg shadow-black/20 active:scale-95 cursor-pointer"
         >
-          <p className="text-gray-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest">Active</p>
-          <p className="text-3xl font-bold text-blue-600 dark:text-blue-400 mt-2 font-display">
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Active</p>
+          <p className="text-4xl font-black text-blue-400 mt-2 font-display italic">
             {stats?.active || 0}
           </p>
         </div>
 
         <div
           onClick={() => navigate(RoutePath.PERFORMANCE)}
-          className="bg-gradient-to-br from-white to-gray-50 dark:from-slate-900 dark:to-slate-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 transition-all col-span-2 flex justify-between items-center active:scale-[0.98] cursor-pointer group"
+          className="glass p-6 rounded-[2rem] shadow-2xl shadow-blue-950/20 col-span-2 flex justify-between items-center active:scale-[0.98] cursor-pointer group overflow-hidden relative"
         >
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
           <div className="flex items-center gap-4">
             <div className="relative w-14 h-14 flex items-center justify-center">
               <svg className="w-full h-full transform -rotate-90">
@@ -261,9 +263,9 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
           <div
             key={task.id}
             onClick={() => navigate(RoutePath.JOB_CARD.replace(':id', task.id))}
-            className="bg-white dark:bg-slate-900 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-slate-800 active:scale-[0.98] cursor-pointer hover:border-blue-500/30 transition-all duration-100 animate-slide-up"
-            style={{ animationDelay: `${index * 0.1}s` }}
+            className="glass p-5 rounded-3xl shadow-xl shadow-black/10 active:scale-[0.98] cursor-pointer hover:border-blue-500/40 relative overflow-hidden group"
           >
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="flex justify-between items-start mb-2">
               <h3 className="font-bold text-gray-900 dark:text-slate-100">{task.vehicle?.model_name || 'Unknown Model'}</h3>
               <span className={`px-2 py-1 rounded-md text-xs font-medium flex items-center border ${getStatusColor(task.status)}`}>

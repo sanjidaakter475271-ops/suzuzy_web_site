@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { RoutePath } from '../types';
 import React, { useState, useEffect } from 'react';
-import { Menu, Bell, ChevronLeft } from 'lucide-react';
+import { Menu, Bell, ChevronLeft, User, Home, ChevronRight } from 'lucide-react';
 import { TechnicianAPI } from '../services/api';
 import { SocketService } from '../services/socket';
 
@@ -59,26 +59,66 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack }) 
     };
   }, []);
 
+  const isHome = location.pathname === RoutePath.DASHBOARD || location.pathname === '/';
+  const isJobDetail = location.pathname.includes('/job/');
+
+  const handleHomeClick = () => {
+    if (!isHome) navigate(RoutePath.DASHBOARD);
+  };
+
+  const isNotifications = location.pathname === RoutePath.NOTIFICATIONS;
+
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 shadow-sm transition-colors duration-300">
+    <header className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 shadow-sm transition-colors duration-300 backdrop-blur-md bg-white/80 dark:bg-slate-900/80">
       <div className="flex items-center">
         <button
-          onClick={onMenuClick}
-          className="p-2 mr-3 -ml-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+          onClick={showBack ? onMenuClick : handleHomeClick}
+          className={`p-2 mr-4 -ml-2 rounded-xl transition-all active:scale-95 border border-transparent hover:border-slate-800 ${showBack ? 'text-blue-500 hover:bg-blue-500/10' : 'text-slate-500 hover:bg-slate-800/50'
+            }`}
         >
-          {showBack ? <ChevronLeft size={24} /> : <Menu size={24} />}
+          {showBack ? <ChevronLeft size={22} /> : <Home size={20} />}
         </button>
-        <h1 className="text-lg font-bold text-gray-800 dark:text-white font-display tracking-wide">{title}</h1>
+
+        <div className="flex items-center gap-2 overflow-hidden select-none">
+          <button
+            onClick={handleHomeClick}
+            className={`text-sm font-medium whitespace-nowrap transition-colors ${isHome ? 'text-blue-500 font-bold' : 'text-slate-500 hover:text-slate-300'
+              }`}
+          >
+            Workshop
+          </button>
+
+          {!isHome && (
+            <>
+              <ChevronRight size={14} className="text-slate-700 shrink-0" />
+              <button
+                onClick={() => showBack && onMenuClick()}
+                disabled={!showBack}
+                className={`text-sm font-bold tracking-tight whitespace-nowrap truncate transition-colors ${showBack ? 'text-blue-500 hover:text-blue-400 cursor-pointer' : 'text-slate-400 cursor-default'
+                  }`}
+              >
+                {title === 'Dashboard' ? 'Home' : title}
+              </button>
+            </>
+          )}
+        </div>
       </div>
       <button
         onClick={() => {
-          if (hasUnread) {
-            setHasUnread(false);
-            window.dispatchEvent(new Event('notifications:read'));
+          if (isNotifications) {
+            navigate(-1);
+          } else {
+            if (hasUnread) {
+              setHasUnread(false);
+              window.dispatchEvent(new Event('notifications:read'));
+            }
+            navigate(RoutePath.NOTIFICATIONS);
           }
-          navigate(RoutePath.NOTIFICATIONS);
         }}
-        className="p-2 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full relative transition-colors active:scale-90"
+        className={`p-2 rounded-full relative transition-all active:scale-90 ${isNotifications
+          ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20 shadow-inner'
+          : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800'
+          }`}
       >
         <Bell size={24} />
         {hasUnread && (

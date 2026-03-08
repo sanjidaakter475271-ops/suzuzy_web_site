@@ -73,9 +73,45 @@
     button,
     input,
     textarea {
-      transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
-      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-      transition-duration: 300ms;
+      transition-property: color, background-color, border-color, shadow, transform;
+      transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+      transition-duration: 400ms;
+    }
+
+    /* Mesh Background */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.05) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(37, 99, 235, 0.05) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(29, 78, 216, 0.05) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, rgba(30, 64, 175, 0.05) 0px, transparent 50%);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .dark body {
+      background-color: #020617;
+    }
+
+    /* Custom Glass Effects */
+    .glass {
+      background: rgba(30, 41, 59, 0.4);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .glass-light {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     /* Custom Input Autofill styling for dark mode */
@@ -83,7 +119,7 @@
     .dark input:-webkit-autofill:hover,
     .dark input:-webkit-autofill:focus,
     .dark input:-webkit-autofill:active {
-      -webkit-box-shadow: 0 0 0 30px #0f172a inset !important;
+      -webkit-box-shadow: 0 0 0 30px #020617 inset !important;
       -webkit-text-fill-color: white !important;
       transition: background-color 5000s ease-in-out 0s;
     }

@@ -382,7 +382,7 @@ export const JobCardDetail: React.FC = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-200 pb-20">
+        <div className="bg-slate-950 text-slate-200">
             <TopBar
                 title={`Job #${job.service_number || id?.slice(0, 8)}`}
                 onMenuClick={() => navigate(-1)}
