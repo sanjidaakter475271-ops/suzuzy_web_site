@@ -19,7 +19,7 @@ export const BottomBar: React.FC = () => {
     const isActive = (path: string) => location.pathname === path;
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-50 px-6 pb-4 pt-2 pointer-events-none">
+        <div className="fixed bottom-0 left-0 right-0 z-50 px-6 pb-[calc(1rem+var(--safe-area-bottom))] pt-2 pointer-events-none">
             <div className="max-w-md mx-auto bg-white/70 dark:bg-slate-900/45 backdrop-blur-2xl border border-slate-200 dark:border-white/5 rounded-[2.5rem] shadow-[0_20px_50px_-15px_rgba(0,0,0,0.1)] dark:shadow-[0_-20px_50px_-15px_rgba(0,0,0,0.5)] p-2 flex items-center justify-around pointer-events-auto relative overflow-visible">
                 {/* Visual Glass Effect Overlay */}
                 <div className="absolute inset-0 rounded-[2.5rem] bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />

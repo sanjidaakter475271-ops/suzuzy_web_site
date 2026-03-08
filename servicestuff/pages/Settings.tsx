@@ -103,6 +103,13 @@ export const Settings: React.FC<SettingsProps> = ({ onMenuClick, userName, onTog
     if (!biometrics) {
       setBioLoading(true);
 
+      const { Capacitor } = await import('@capacitor/core');
+      if (Capacitor.isNativePlatform()) {
+        alert("On mobile devices, please use the system settings to enable lock screen security. WebAuthn is not supported directly in the WebView.");
+        setBioLoading(false);
+        return;
+      }
+
       // 1. Check if browser supports WebAuthn
       if (!window.PublicKeyCredential) {
         alert("Biometric authentication is not supported on this device or browser.");

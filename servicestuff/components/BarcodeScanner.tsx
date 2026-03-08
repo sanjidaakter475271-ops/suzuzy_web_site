@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BarcodeScanner, LensFacing } from '@capacitor-mlkit/barcode-scanning';
+import { Capacitor } from '@capacitor/core';
 import { X, Camera, Zap } from 'lucide-react';
 
 interface ScannerProps {
@@ -13,14 +14,18 @@ export const BarcodeScannerComponent: React.FC<ScannerProps> = ({ onScan, onClos
 
     const startScan = async () => {
         try {
-            // Check if we are running in a native environment
-            if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('localhost')) {
-                // Not a local dev and not native. Likely generic web.
-                // But better to just try and catch.
+            if (!Capacitor.isNativePlatform()) {
+                setError('Scanner requires the native mobile app.');
+                alert('Scanner requires the native mobile app.');
+                onClose();
+                return;
             }
 
-            // Check/request permission
-            const { camera } = await BarcodeScanner.requestPermissions();
+            // Request permission with timeout catch mechanism
+            const { camera } = await Promise.race([
+                BarcodeScanner.requestPermissions(),
+                new Promise<{ camera: string }>((_, reject) => setTimeout(() => reject(new Error('Permission prompt timed out')), 5000))
+            ]);
 
             if (camera === 'granted' || camera === 'limited') {
                 // Prepare UI
