@@ -85,7 +85,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
   };
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 shadow-sm transition-colors duration-300 backdrop-blur-md bg-white/80 dark:bg-slate-900/80">
+    <header className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 pt-[var(--safe-area-top,env(safe-area-inset-top,0px))] bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 shadow-sm transition-colors duration-300 backdrop-blur-md bg-white/80 dark:bg-slate-900/80">
       <div className="flex items-center min-w-0 flex-1">
         <button
           onClick={handleBackAction}

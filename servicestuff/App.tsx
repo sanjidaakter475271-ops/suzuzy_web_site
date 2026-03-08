@@ -24,6 +24,9 @@ import { PushNotificationManager } from './components/PushNotificationManager';
 import { Loader2 } from 'lucide-react';
 import { AuthProvider, useAuth } from './lib/auth';
 
+import { OfflineBanner } from './components/OfflineBanner';
+import { PermissionManager } from './components/PermissionManager';
+
 interface ProtectedRouteProps {
   isAuthenticated: boolean;
   children: React.ReactNode;
@@ -45,17 +48,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
   return (
     <div className="flex flex-col min-h-screen">
+      <OfflineBanner />
       <AnimatePresence mode="wait">
         <motion.div
           key={location.pathname}
-          initial={{ opacity: 0, scale: 0.98, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 1.02, y: -10 }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          className="flex-1"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="flex-1 will-change-[opacity]"
         >
           {children}
-          {!isJobCard && <div className="h-40 w-full" />} {/* No spacer on Job Card */}
+          {!isJobCard && <div className="h-40 w-full" />} {/* Spacer */}
         </motion.div>
       </AnimatePresence>
       {!isJobCard && <BottomBar />}
@@ -68,6 +72,7 @@ const AppContent: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [permissionsDone, setPermissionsDone] = useState(false);
 
   // Load Theme
   useEffect(() => {
@@ -120,8 +125,11 @@ const AppContent: React.FC = () => {
 
   return (
     <>
-      {isAuthenticated && <LocationTracker />}
-      {isAuthenticated && <PushNotificationManager />}
+      {isAuthenticated && !permissionsDone && (
+        <PermissionManager onComplete={() => setPermissionsDone(true)} />
+      )}
+      {isAuthenticated && permissionsDone && <LocationTracker />}
+      {isAuthenticated && permissionsDone && <PushNotificationManager />}
       <Routes location={location} key={location.pathname}>
         <Route path={RoutePath.SPLASH} element={
           isAuthenticated ? <Navigate to={RoutePath.DASHBOARD} /> : <Splash />

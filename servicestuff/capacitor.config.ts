@@ -7,8 +7,14 @@ const config: CapacitorConfig = {
   android: {
     backgroundColor: '#020617',
     allowMixedContent: true,
+    adjustMarginsForEdgeToEdge: 'auto',
   },
   plugins: {
+    StatusBar: {
+      overlaysWebView: false,
+      style: 'DARK',
+      backgroundColor: '#020617',
+    },
     Keyboard: {
       resize: 'body',
       resizeOnFullScreen: true,

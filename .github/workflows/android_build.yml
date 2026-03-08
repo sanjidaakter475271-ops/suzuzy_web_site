@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd servicestuff
-          npm install
+          npm install --legacy-peer-deps
 
       - name: Build Web Project
         run: |

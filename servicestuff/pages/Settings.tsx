@@ -104,68 +104,35 @@ export const Settings: React.FC<SettingsProps> = ({ onMenuClick, userName, onTog
       setBioLoading(true);
 
       const { Capacitor } = await import('@capacitor/core');
-      if (Capacitor.isNativePlatform()) {
-        alert("On mobile devices, please use the system settings to enable lock screen security. WebAuthn is not supported directly in the WebView.");
-        setBioLoading(false);
-        return;
-      }
-
-      // 1. Check if browser supports WebAuthn
-      if (!window.PublicKeyCredential) {
-        alert("Biometric authentication is not supported on this device or browser.");
-        setBioLoading(false);
-        return;
-      }
-
-      // 2. Check if platform authenticator (TouchID/FaceID) is available
-      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      if (!available) {
-        alert("No biometric sensor detected or screen lock not set up. Please enable screen lock in your device settings.");
+      if (!Capacitor.isNativePlatform()) {
+        alert("Biometric authentication is only available on native mobile devices.");
         setBioLoading(false);
         return;
       }
 
       try {
-        // Generate random challenge
-        const challenge = new Uint8Array(32);
-        window.crypto.getRandomValues(challenge);
+        const { BiometricAuth } = await import('@aparajita/capacitor-biometric-auth');
+        const info = await BiometricAuth.checkBiometry();
 
-        // WebAuthn registration options to prompt user verification (Fingerprint/FaceID)
-        const publicKey: PublicKeyCredentialCreationOptions = {
-          challenge: challenge,
-          rp: {
-            name: "ServiceMate Pro",
-          },
-          user: {
-            id: new TextEncoder().encode(name),
-            name: email,
-            displayName: name,
-          },
-          pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
-          authenticatorSelection: {
-            authenticatorAttachment: "platform", // Forces device biometrics
-            requireResidentKey: false,
-            userVerification: "required" // Forces the prompt
-          },
-          timeout: 60000,
-          attestation: "none"
-        };
-
-        // This triggers the OS prompt
-        const credential = await navigator.credentials.create({ publicKey });
-
-        if (credential) {
-          setBiometrics(true);
-          localStorage.setItem('service_biometrics_enabled', 'true');
-          alert("Fingerprint authentication enabled successfully.");
+        if (!info.isAvailable) {
+          alert(`Biometric authentication is not set up on this device. Reason: ${info.reason}`);
+          setBioLoading(false);
+          return;
         }
-      } catch (err) {
+
+        await BiometricAuth.authenticate({
+          reason: "Authenticate to enable biometric login",
+          cancelTitle: "Cancel",
+          allowDeviceCredential: true,
+        });
+
+        setBiometrics(true);
+        localStorage.setItem('service_biometrics_enabled', 'true');
+        alert("Fingerprint authentication enabled successfully.");
+      } catch (err: any) {
         console.error("Biometric setup failed:", err);
-        // Do not alert if user cancelled, just log it. 
-        // Or specific alert if it wasn't a cancellation.
-        if (err instanceof DOMException && err.name === 'NotAllowedError') {
-          // User cancelled or timed out
-        } else {
+        // User cancellation has code '-128' or specific error type depending on OS
+        if (err?.code !== 'userCancel' && !err?.message?.includes('cancel')) {
           alert("Biometric verification failed. Please try again.");
         }
       } finally {

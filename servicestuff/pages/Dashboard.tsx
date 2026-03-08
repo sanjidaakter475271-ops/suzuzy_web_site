@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { TechnicianAPI } from '../services/api'; // Import API service
 import { JobCard, DashboardStats, TechnicianAttendance, AttendanceStatus } from '../types';
 import {
@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { RoutePath, JobStatus } from '../types';
 import { SocketService } from '../services/socket';
 import { DashboardSkeleton } from '../components/Skeleton';
+const DashboardJobCards = lazy(() => import('../components/DashboardJobCards'));
 // import { toast } from 'sonner';
 
 export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
@@ -79,6 +80,16 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
     // Listen for realtime updates
     const socket = SocketService.getInstance();
 
+    // Debounced fetch to prevent API storms from socket events
+    const fetchTimeoutReq = React.useRef<NodeJS.Timeout | null>(null);
+
+    const debouncedFetchData = () => {
+      if (fetchTimeoutReq.current) clearTimeout(fetchTimeoutReq.current);
+      fetchTimeoutReq.current = setTimeout(() => {
+        fetchData();
+      }, 300);
+    };
+
     const handleUpdate = (data?: any) => {
       console.log("[REALTIME] Update received:", data);
 
@@ -91,25 +102,20 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
         setTimeout(() => setNewAlert(null), 5000);
       }
 
-      // Always refresh data on any relevant change
-      fetchData();
+      // Refresh data (debounced)
+      debouncedFetchData();
     };
 
-    socket.on('job_cards:changed', handleUpdate);
-    socket.on('order:update', handleUpdate);
-    socket.on('inventory:changed', handleUpdate);
-    socket.on('attendance:changed', handleUpdate);
-    socket.on('attendance:shift_start', handleUpdate);
-    socket.on('attendance:shift_end', handleUpdate);
+    const events = [
+      'job_cards:changed', 'order:update', 'inventory:changed',
+      'attendance:changed', 'attendance:shift_start', 'attendance:shift_end'
+    ];
+    events.forEach(e => socket.on(e, handleUpdate));
 
     return () => {
-      socket.off('job_cards:changed', handleUpdate);
-      socket.off('order:update', handleUpdate);
-      socket.off('inventory:changed', handleUpdate);
-      socket.off('attendance:changed', handleUpdate);
-      socket.off('attendance:shift_start', handleUpdate);
-      socket.off('attendance:shift_end', handleUpdate);
+      events.forEach(e => socket.off(e, handleUpdate));
       if (timerRef.current) clearInterval(timerRef.current);
+      if (fetchTimeoutReq.current) clearTimeout(fetchTimeoutReq.current);
     };
   }, []);
 
@@ -351,32 +357,20 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
 
       {/* Task List */}
       <div className="px-4 space-y-4">
-        {tasks.map((task, index) => (
-          <div
-            key={task.id}
-            onClick={() => navigate(RoutePath.JOB_CARD.replace(':id', task.id))}
-            className="glass p-5 rounded-3xl shadow-xl shadow-black/10 active:scale-[0.98] cursor-pointer hover:border-blue-500/40 relative overflow-hidden group"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="font-bold text-gray-900 dark:text-slate-100">{task.vehicle?.model_name || 'Unknown Model'}</h3>
-              <span className={`px-2 py-1 rounded-md text-xs font-medium flex items-center border ${getStatusColor(task.status)}`}>
-                {getStatusIcon(task.status)}
-                {task.status === 'in_progress' ? 'Active' : task.status.charAt(0).toUpperCase() + task.status.slice(1)}
-              </span>
-            </div>
-            <p className="text-sm text-gray-500 dark:text-slate-400 mb-1 font-mono bg-gray-100 dark:bg-slate-800 inline-block px-1.5 py-0.5 rounded text-xs tracking-wider">{task.vehicle?.license_plate || 'N/A'}</p>
-            <p className="text-sm text-gray-600 dark:text-slate-300 mb-3 line-clamp-2">{task.vehicle?.issue_description || 'No Description'}</p>
-
-            <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-slate-800">
-              <div className="flex items-center text-xs text-gray-400 dark:text-slate-500">
-                <Calendar size={12} className="mr-1" />
-                {new Date(task.created_at).toLocaleDateString()}
-              </div>
-              <p className="text-xs font-medium text-gray-600 dark:text-slate-400">Owner: {task.vehicle?.customer_name || 'Unknown'}</p>
-            </div>
+        <Suspense fallback={
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="glass border border-gray-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 rounded-3xl h-36 animate-pulse shadow-sm" />
+            ))}
           </div>
-        ))}
+        }>
+          <DashboardJobCards
+            tasks={tasks}
+            onCardClick={(id) => navigate(RoutePath.JOB_CARD.replace(':id', id))}
+            getStatusColor={getStatusColor}
+            getStatusIcon={getStatusIcon}
+          />
+        </Suspense>
         {!loading && tasks.length === 0 && (
           <div className="text-center py-10">
             <ClipboardList className="mx-auto text-gray-300 mb-3" size={48} />

@@ -20,18 +20,25 @@ api.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
-
-        // Also try to get session from better-auth if token missing?
-        // Usually we rely on the stored token.
-
         return config;
     },
     (error) => Promise.reject(error)
 );
 
-// Response interceptor for 401
+// Response interceptor for caching, retries, and offline fallback
 api.interceptors.response.use(
-    (response) => response,
+    async (response) => {
+        // Cache successful GET responses
+        if (response.config.method?.toUpperCase() === 'GET') {
+            const cacheKey = `cache_${response.config.url}`;
+            try {
+                await Preferences.set({ key: cacheKey, value: JSON.stringify(response.data) });
+            } catch (e) {
+                console.warn('Failed to cache response', e);
+            }
+        }
+        return response;
+    },
     async (error: AxiosError) => {
         if (error.response?.status === 401) {
             // Token expired or invalid
@@ -43,7 +50,35 @@ api.interceptors.response.use(
                 window.location.hash = '#/login';
                 window.location.reload();
             }
+            return Promise.reject(error);
         }
+
+        const config: any = error.config;
+
+        // Exponential Backoff Retry (Max 2 retries) for Network / 500 errors
+        if (config && (!config._retryCount || config._retryCount < 2) && (!error.response || error.response.status >= 500)) {
+            config._retryCount = (config._retryCount || 0) + 1;
+            console.log(`[API Retry] Retrying request ${config.url} (Attempt ${config._retryCount})`);
+            await new Promise(r => setTimeout(r, config._retryCount * 1000));
+            return api(config);
+        }
+
+        // Offline Fallback for GET requests
+        if (config && config.method?.toUpperCase() === 'GET' && (!error.response || error.response.status >= 500)) {
+            const cacheKey = `cache_${config.url}`;
+            const { value } = await Preferences.get({ key: cacheKey });
+            if (value) {
+                console.log(`[Offline Fallback] Serving cached data for ${config.url}`);
+                return Promise.resolve({
+                    data: JSON.parse(value),
+                    status: 200,
+                    statusText: 'OK from Cache',
+                    headers: {},
+                    config
+                });
+            }
+        }
+
         return Promise.reject(error);
     }
 );
