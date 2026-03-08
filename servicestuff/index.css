@@ -54,6 +54,10 @@ body::before {
   z-index: -1;
 }
 
+body.scanner-active::before {
+  display: none !important;
+}
+
 .dark body {
   background-color: #020617;
 }
@@ -106,25 +110,38 @@ body::before {
   transition: background-color 5000s ease-in-out 0s;
 }
 
-/* Capacitor Barcode Scanner Styles */
+/* Capacitor Barcode Scanner Styles - Immersive Mode */
 body.scanner-active {
   background-color: transparent !important;
+  background: transparent !important;
 }
 
-body.scanner-active #root,
-body.scanner-active main,
-body.scanner-active .min-h-screen,
-body.scanner-active div[class*="bg-"],
-body.scanner-active .glass,
-body.scanner-active .glass-light {
+/* Hide everything except the scanner UI when active */
+body.scanner-active #root> :not(:has(.scanner-ui)) {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* If scanner-ui is nested, make its ancestors transparent but visible */
+body.scanner-active *:has(.scanner-ui) {
   background-color: transparent !important;
   background: transparent !important;
   border-color: transparent !important;
+  box-shadow: none !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
-/* Keep the scanner UI visible */
-body.scanner-active .scanner-ui,
-body.scanner-active .scanner-ui * {
-  background-color: transparent;
-  /* Allow camera to show through */
+/* Ensure the scanner UI remains visible and its internal opaque parts work */
+.scanner-ui {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Specifically target overlays that might interfere */
+body.scanner-active .bottom-bar,
+body.scanner-active .top-bar,
+body.scanner-active .offline-banner {
+  display: none !important;
 }

@@ -1,4 +1,5 @@
 import type { CapacitorConfig } from '@capacitor/cli';
+import { Style } from '@capacitor/status-bar';
 
 const config: CapacitorConfig = {
   appId: 'com.suzuki.servicepro',
@@ -11,8 +12,8 @@ const config: CapacitorConfig = {
   },
   plugins: {
     StatusBar: {
-      overlaysWebView: false,
-      style: 'DARK',
+      overlaysWebView: true,
+      style: Style.Dark,
       backgroundColor: '#020617',
     },
     Keyboard: {

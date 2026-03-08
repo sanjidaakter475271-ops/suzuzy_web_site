@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BarcodeScanner, LensFacing } from '@capacitor-mlkit/barcode-scanning';
 import { Capacitor } from '@capacitor/core';
 import { X, Camera, Loader2, RefreshCw } from 'lucide-react';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ScannerProps {
     onScan: (result: string) => void;
@@ -51,11 +53,16 @@ export const BarcodeScannerComponent: React.FC<ScannerProps> = ({ onScan, onClos
             const moduleReady = await checkAndInstallModule();
             if (!moduleReady) return;
 
-            // Request permission (no race timeout, wait for user)
+            // Request permission
             const { camera } = await BarcodeScanner.requestPermissions();
 
             if (camera === 'granted' || camera === 'limited') {
                 document.body.classList.add('scanner-active');
+
+                // Hide Status Bar for immersive mode
+                if (Capacitor.isNativePlatform()) {
+                    await StatusBar.hide().catch(() => { });
+                }
 
                 listenerRef.current = await BarcodeScanner.addListener('barcodesScanned', async (result) => {
                     if (result.barcodes.length > 0) {
@@ -87,6 +94,11 @@ export const BarcodeScannerComponent: React.FC<ScannerProps> = ({ onScan, onClos
             }
             await BarcodeScanner.stopScan().catch(() => { });
             await BarcodeScanner.removeAllListeners().catch(() => { });
+
+            // Restore Status Bar
+            if (Capacitor.isNativePlatform()) {
+                await StatusBar.show().catch(() => { });
+            }
         } catch (e) {
             console.error("Error stopping scan:", e);
         } finally {
@@ -96,7 +108,7 @@ export const BarcodeScannerComponent: React.FC<ScannerProps> = ({ onScan, onClos
     };
 
     useEffect(() => {
-        // Delay slighty to let mount animation finish
+        // Delay slightly to let mount animation finish
         const timer = setTimeout(() => {
             startScan();
         }, 300);
@@ -106,47 +118,71 @@ export const BarcodeScannerComponent: React.FC<ScannerProps> = ({ onScan, onClos
             BarcodeScanner.stopScan().catch(() => { });
             BarcodeScanner.removeAllListeners().catch(() => { });
             document.body.classList.remove('scanner-active');
+            if (Capacitor.isNativePlatform()) {
+                StatusBar.setOverlaysWebView({ overlay: true }).catch(() => { });
+                StatusBar.setStyle({ style: Style.Dark }).catch(() => { });
+                StatusBar.setBackgroundColor({ color: '#020617' }).catch(() => { });
+            }
         };
     }, []);
 
     return (
-        <div className="fixed inset-0 z-[100] flex flex-col bg-transparent scanner-ui">
+        <div className="fixed inset-0 z-[999] flex flex-col bg-transparent scanner-ui">
             {/* Scanner Overlay UI */}
             {!isDownloading && (
                 <div className="flex-1 flex flex-col relative">
-                    {/* The cutout window */}
-                    <div className="absolute inset-0 border-[60px] border-black/70 md:border-[100px] pointer-events-none">
-                        <div className="w-full h-full border-2 border-blue-500/50 relative">
-                            <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-500 -mt-1 -ml-1"></div>
-                            <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-blue-500 -mt-1 -mr-1"></div>
-                            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-blue-500 -mb-1 -ml-1"></div>
-                            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-blue-500 -mb-1 -mr-1"></div>
+                    {/* Immersive Dark Backdrop with Professional Cutout */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                        {/* The Cutout - Using massive box-shadow for perfect immersive blackout */}
+                        <div className="w-64 h-64 rounded-[2rem] border-2 border-blue-500/30 relative shadow-[0_0_0_2000px_rgba(2,6,23,0.85)]">
+                            {/* Corner Guards */}
+                            <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-400 rounded-tl-[1.5rem] -mt-[4px] -ml-[4px]"></div>
+                            <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-blue-400 rounded-tr-[1.5rem] -mt-[4px] -mr-[4px]"></div>
+                            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-blue-400 rounded-bl-[1.5rem] -mb-[4px] -ml-[4px]"></div>
+                            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-blue-400 rounded-br-[1.5rem] -mb-[4px] -mr-[4px]"></div>
+
+                            {/* Laser scanning line */}
+                            {!error && (
+                                <motion.div
+                                    initial={{ top: '10%', opacity: 0 }}
+                                    animate={{ top: '90%', opacity: 1 }}
+                                    transition={{ repeat: Infinity, duration: 1.5, ease: "linear", repeatType: "reverse" }}
+                                    className="absolute left-6 right-6 h-[1.5px] bg-red-500 shadow-[0_0_20px_rgba(239,68,68,1)] z-10"
+                                ></motion.div>
+                            )}
                         </div>
                     </div>
 
-                    {/* Top Right Close Button */}
-                    <div className="absolute top-12 right-6 z-50">
+                    {/* Top Header */}
+                    <div className="absolute top-0 w-full p-6 pt-12 flex justify-between items-center z-50">
+                        <div className="bg-black/40 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10">
+                            <h3 className="text-white font-bold text-lg tracking-tight">Scan</h3>
+                        </div>
+
                         <button
                             onClick={stopScan}
-                            className="p-3 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/40 transition-all shadow-xl"
+                            className="p-3 bg-white/10 backdrop-blur-xl rounded-full text-white hover:bg-white/20 transition-all border border-white/10 shadow-2xl"
                         >
                             <X size={24} />
                         </button>
                     </div>
 
                     {/* Bottom Status Panel */}
-                    <div className="absolute bottom-24 w-full text-center px-6">
-                        <div className="bg-black/60 backdrop-blur-lg inline-block px-6 py-4 rounded-2xl border border-white/20 shadow-2xl">
-                            <div className="flex items-center space-x-3 justify-center">
-                                <Camera size={20} className="text-blue-400" />
-                                <p className="text-white font-medium text-sm">{message || "Align barcode within the frame"}</p>
+                    <div className="absolute bottom-12 w-full text-center px-6 z-50">
+                        <div className="bg-black/40 backdrop-blur-2xl inline-block px-8 py-5 rounded-[2rem] border border-white/10 shadow-2xl max-w-sm w-full">
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center mb-1">
+                                    <Camera size={20} className="text-blue-400" />
+                                </div>
+                                <p className="text-white font-bold text-sm tracking-wide">{message || "Align within the frame"}</p>
+                                <p className="text-white/40 text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Scanning for Data</p>
                             </div>
                             {error && (
-                                <div className="mt-3 p-2 bg-red-500/20 rounded-lg">
-                                    <p className="text-red-300 text-xs font-medium">{error}</p>
+                                <div className="mt-4 p-3 bg-rose-500/10 rounded-2xl border border-rose-500/20">
+                                    <p className="text-rose-400 text-xs font-bold">{error}</p>
                                     <button
                                         onClick={() => { setError(null); startScan(); }}
-                                        className="mt-2 text-white bg-red-500/50 hover:bg-red-500 px-3 py-1 rounded text-xs transition"
+                                        className="mt-3 w-full text-white bg-rose-600 hover:bg-rose-500 py-2 rounded-xl text-xs font-bold transition-all active:scale-95"
                                     >
                                         Try Again
                                     </button>
@@ -154,10 +190,6 @@ export const BarcodeScannerComponent: React.FC<ScannerProps> = ({ onScan, onClos
                             )}
                         </div>
                     </div>
-                    {/* Laser scanning line */}
-                    {!error && (
-                        <div className="absolute top-1/2 left-0 w-full h-[2px] bg-red-500 shadow-[0_0_15px_rgba(239,68,68,1)] animate-pulse"></div>
-                    )}
                 </div>
             )}
 
