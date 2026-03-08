@@ -195,6 +195,27 @@ io.on('connection', (socket) => {
         io.emit('inventory:adjusted', data);
     });
 
+    // Handle Attendance Events
+    socket.on('attendance:clock_in', (data) => {
+        if (data.dealerId) io.to(`dealer:${data.dealerId}`).emit('attendance:changed', data);
+        io.emit('attendance:changed', data);
+    });
+
+    socket.on('attendance:clock_out', (data) => {
+        if (data.dealerId) io.to(`dealer:${data.dealerId}`).emit('attendance:changed', data);
+        io.emit('attendance:changed', data);
+    });
+
+    socket.on('attendance:shift_start', (data) => {
+        if (data.dealerId) io.to(`dealer:${data.dealerId}`).emit('attendance:shift_start', data);
+        io.emit('attendance:shift_start', data);
+    });
+
+    socket.on('attendance:shift_end', (data) => {
+        if (data.dealerId) io.to(`dealer:${data.dealerId}`).emit('attendance:shift_end', data);
+        io.emit('attendance:shift_end', data);
+    });
+
     // Disconnect handling
     socket.on('disconnect', (reason) => {
         console.log(`[${new Date().toISOString()}] Client disconnected: ${socket.id} - ${reason}`);

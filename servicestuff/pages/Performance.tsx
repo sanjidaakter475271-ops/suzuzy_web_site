@@ -16,12 +16,15 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { OfflineService } from '../services/offline';
 import { WifiOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { RoutePath } from '../types';
 
 export const Performance: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
     const offlineService = OfflineService.getInstance();
     const [isOnline, setIsOnline] = useState(offlineService.getOnlineStatus());
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -36,8 +39,8 @@ export const Performance: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick
                 }
 
                 const res = await TechnicianAPI.getDashboardStats();
-                setStats(res.data.stats);
-                await offlineService.cacheStats(res.data.stats);
+                setStats(res.data.data.stats);
+                await offlineService.cacheStats(res.data.data.stats);
             } catch (err) {
                 console.error("Error fetching stats:", err);
                 const cached = await offlineService.getCachedStats();
@@ -64,7 +67,11 @@ export const Performance: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 pb-20">
-            <TopBar onMenuClick={onMenuClick} title="Performance" />
+            <TopBar
+                onMenuClick={onMenuClick}
+                onBack={() => navigate(RoutePath.DASHBOARD)}
+                breadcrumbs={[{ label: 'Performance' }]}
+            />
 
             {!isOnline && (
                 <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center gap-2 justify-center">

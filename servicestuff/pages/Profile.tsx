@@ -64,7 +64,11 @@ export const Profile: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) 
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200">
-            <TopBar onMenuClick={onMenuClick} title="Profile" />
+            <TopBar
+                onMenuClick={onMenuClick}
+                onBack={() => navigate(RoutePath.DASHBOARD)}
+                breadcrumbs={[{ label: 'Profile' }]}
+            />
 
             <div className="p-4 space-y-6">
                 {loading ? (

@@ -24,12 +24,18 @@ export async function getCurrentTechnician() {
     if (!payload || !payload.userId) return null;
 
     // Verify user exists and is active
-    const user = await prisma.profiles.findUnique({
-        where: { id: payload.userId },
-        include: {
-            service_staff: true, // Include service staff profile
-        }
-    });
+    let user;
+    try {
+        user = await prisma.profiles.findUnique({
+            where: { id: payload.userId },
+            include: {
+                service_staff: true, // Include service staff profile
+            }
+        });
+    } catch (dbError: any) {
+        console.error("[AUTH] Database error in getCurrentTechnician:", dbError.message);
+        return null;
+    }
 
     if (!user || (user.status !== 'approved' && user.status !== 'active' && user.status !== 'pending')) return null;
 

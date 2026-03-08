@@ -2,7 +2,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'super_admin' | 'service_admin' | 'service_stuff' | 'service_technician';
+  role: 'super_admin' | 'service_admin' | 'service_stuff' | 'service_technician' | 'technician';
   staff_id?: string; // Link to service_staff
   avatar_url?: string;
   designation?: string;
@@ -177,6 +177,32 @@ export interface TechnicianAttendance {
   clockOut?: string;
   status: 'present' | 'absent' | 'leave' | 'sick_leave';
   duration_hours?: number;
+  shifts?: AttendanceShift[];
+}
+
+export interface AttendanceShift {
+  id: string;
+  attendance_id: string;
+  start_time: string;
+  end_time?: string;
+  created_at: string;
+}
+
+export interface AttendanceSession {
+  id: string;
+  clockIn: string;
+  clockOut?: string;
+  shifts: AttendanceShift[];
+}
+
+export interface AttendanceStatus {
+  currentState: 'NOT_CHECKED_IN' | 'CHECKED_IN_IDLE' | 'SHIFT_ACTIVE' | 'SHIFT_PAUSED' | 'CHECKED_OUT';
+  isCheckedIn: boolean;
+  isShiftActive: boolean;
+  currentShiftStartedAt: string | null;
+  activeSessionId: string | null;
+  totalWorkTimeMs: number;
+  sessions: AttendanceSession[];
 }
 
 export interface TimeLog {

@@ -372,39 +372,39 @@ model dealer_users {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model dealers {
-  id                                       String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  business_name                            String                    @db.VarChar(255)
-  slug                                     String                    @unique @db.VarChar(255)
-  email                                    String                    @unique @db.VarChar(255)
-  phone                                    String                    @unique @db.VarChar(20)
-  trade_license_no                         String?                   @db.VarChar(100)
-  tin_number                               String?                   @db.VarChar(100)
-  bin_number                               String?                   @db.VarChar(100)
+  id                                       String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  business_name                            String                        @db.VarChar(255)
+  slug                                     String                        @unique @db.VarChar(255)
+  email                                    String                        @unique @db.VarChar(255)
+  phone                                    String                        @unique @db.VarChar(20)
+  trade_license_no                         String?                       @db.VarChar(100)
+  tin_number                               String?                       @db.VarChar(100)
+  bin_number                               String?                       @db.VarChar(100)
   logo_url                                 String?
   banner_url                               String?
   description                              String?
   address_line1                            String?
-  city                                     String?                   @db.VarChar(100)
-  district                                 String?                   @db.VarChar(100)
-  division                                 String?                   @db.VarChar(100)
-  owner_user_id                            String?                   @db.Uuid
-  status                                   String?                   @default("pending") @db.VarChar(20)
-  current_plan_id                          String?                   @db.Uuid
-  subscription_status                      String?                   @default("active") @db.VarChar(20)
-  trial_ends_at                            DateTime?                 @db.Timestamptz(6)
-  commission_rate                          Decimal?                  @db.Decimal(5, 2)
-  commission_type                          String?                   @default("percentage") @db.VarChar(20)
+  city                                     String?                       @db.VarChar(100)
+  district                                 String?                       @db.VarChar(100)
+  division                                 String?                       @db.VarChar(100)
+  owner_user_id                            String?                       @db.Uuid
+  status                                   String?                       @default("pending") @db.VarChar(20)
+  current_plan_id                          String?                       @db.Uuid
+  subscription_status                      String?                       @default("active") @db.VarChar(20)
+  trial_ends_at                            DateTime?                     @db.Timestamptz(6)
+  commission_rate                          Decimal?                      @db.Decimal(5, 2)
+  commission_type                          String?                       @default("percentage") @db.VarChar(20)
   max_products                             Int?
   max_users                                Int?
-  max_images_per_product                   Int?                      @default(5)
-  total_products                           Int?                      @default(0)
-  total_orders                             Int?                      @default(0)
-  total_revenue                            Decimal?                  @default(0) @db.Decimal(15, 2)
-  average_rating                           Decimal?                  @default(0) @db.Decimal(3, 2)
-  created_at                               DateTime?                 @default(now()) @db.Timestamptz(6)
-  updated_at                               DateTime?                 @default(now()) @db.Timestamptz(6)
-  social_links                             Json?                     @default("{}")
-  pinned_product_ids                       String[]                  @default([]) @db.Uuid
+  max_images_per_product                   Int?                          @default(5)
+  total_products                           Int?                          @default(0)
+  total_orders                             Int?                          @default(0)
+  total_revenue                            Decimal?                      @default(0) @db.Decimal(15, 2)
+  average_rating                           Decimal?                      @default(0) @db.Decimal(3, 2)
+  created_at                               DateTime?                     @default(now()) @db.Timestamptz(6)
+  updated_at                               DateTime?                     @default(now()) @db.Timestamptz(6)
+  social_links                             Json?                         @default("{}")
+  pinned_product_ids                       String[]                      @default([]) @db.Uuid
   cover_photo_url                          String?
   brands                                   brands[]
   capacity_slots                           capacity_slots[]
@@ -422,8 +422,8 @@ model dealers {
   dealer_reviews                           dealer_reviews[]
   dealer_settings                          dealer_settings[]
   dealer_users                             dealer_users[]
-  plans                                    plans?                    @relation(fields: [current_plan_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  profiles_dealers_owner_user_idToprofiles profiles?                 @relation("dealers_owner_user_idToprofiles", fields: [owner_user_id], references: [id], onUpdate: NoAction)
+  plans                                    plans?                        @relation(fields: [current_plan_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  profiles_dealers_owner_user_idToprofiles profiles?                     @relation("dealers_owner_user_idToprofiles", fields: [owner_user_id], references: [id], onUpdate: NoAction)
   escalation_history                       escalation_history[]
   escalation_rules                         escalation_rules[]
   expenses                                 expenses[]
@@ -437,7 +437,7 @@ model dealers {
   orders                                   orders[]
   payment_transactions                     payment_transactions[]
   products                                 products[]
-  profiles_profiles_dealer_idTodealers     profiles[]                @relation("profiles_dealer_idTodealers")
+  profiles_profiles_dealer_idTodealers     profiles[]                    @relation("profiles_dealer_idTodealers")
   purchase_orders                          purchase_orders[]
   sales                                    sales[]
   service_appointments                     service_appointments[]
@@ -466,6 +466,7 @@ model dealers {
   special_tools                            special_tools[]
   service_packages                         service_packages[]
   service_checklist_templates              service_checklist_templates[]
+  workshop_qr_codes                        workshop_qr_codes[]
 
   @@schema("public")
 }
@@ -2663,20 +2664,54 @@ model wallet_transactions {
 }
 
 model technician_attendance {
-  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  staff_id      String        @db.Uuid
-  clock_in      DateTime      @default(now()) @db.Timestamptz(6)
-  clock_out     DateTime?     @db.Timestamptz(6)
-  gps_lat       Decimal?      @db.Decimal(10, 8)
-  gps_lng       Decimal?      @db.Decimal(11, 8)
-  device_id     String?       @db.VarChar(100)
-  status        String?       @default("present") @db.VarChar(20)
-  created_at    DateTime?     @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime?     @default(now()) @db.Timestamptz(6)
-  service_staff service_staff @relation(fields: [staff_id], references: [id], onDelete: Cascade)
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  staff_id          String              @db.Uuid
+  clock_in          DateTime            @default(now()) @db.Timestamptz(6)
+  clock_out         DateTime?           @db.Timestamptz(6)
+  gps_lat           Decimal?            @db.Decimal(10, 8)
+  gps_lng           Decimal?            @db.Decimal(11, 8)
+  device_id         String?             @db.VarChar(100)
+  status            String?             @default("present") @db.VarChar(20)
+  clock_in_qr_code  String?             @db.VarChar(200)
+  clock_out_qr_code String?             @db.VarChar(200)
+  clock_out_gps_lat Decimal?            @db.Decimal(10, 8)
+  clock_out_gps_lng Decimal?            @db.Decimal(11, 8)
+  created_at        DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime?           @default(now()) @db.Timestamptz(6)
+  service_staff     service_staff       @relation(fields: [staff_id], references: [id], onDelete: Cascade)
+  attendance_shifts attendance_shifts[]
 
   @@index([staff_id])
   @@index([clock_in])
+  @@schema("public")
+}
+
+model attendance_shifts {
+  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  attendance_id         String                @db.Uuid
+  start_time            DateTime              @default(now()) @db.Timestamptz(6)
+  end_time              DateTime?             @db.Timestamptz(6)
+  created_at            DateTime?             @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime?             @default(now()) @db.Timestamptz(6)
+  technician_attendance technician_attendance @relation(fields: [attendance_id], references: [id], onDelete: Cascade)
+
+  @@index([attendance_id])
+  @@index([start_time])
+  @@schema("public")
+}
+
+model workshop_qr_codes {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dealer_id  String    @db.Uuid
+  qr_secret  String    @db.VarChar(100)
+  label      String?   @default("Main Workshop") @db.VarChar(100)
+  is_active  Boolean?  @default(true)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
+  dealers    dealers   @relation(fields: [dealer_id], references: [id], onDelete: Cascade)
+
+  @@unique([dealer_id, qr_secret])
+  @@index([dealer_id])
   @@schema("public")
 }
 

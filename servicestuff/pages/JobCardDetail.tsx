@@ -434,10 +434,38 @@ export const JobCardDetail: React.FC = () => {
                                         {job.vehicle?.license_plate || 'WP-8899'}
                                     </p>
                                 </div>
-                                <div className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-tighter ${job.status === 'in_progress' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                    }`}>
-                                    {job.status?.replace('_', ' ') || 'pending'}
-                                </div>
+                                {(() => {
+                                    const status = job.status || 'pending';
+                                    const prettyStatus = status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                                    let style = 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
+                                    let label = prettyStatus;
+
+                                    if (status === 'completed' || status === 'verified' || status === 'qc_passed') {
+                                        style = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.1)]';
+                                        label = status === 'completed' ? 'Done' : prettyStatus;
+                                    } else if (status === 'in_progress') {
+                                        style = 'bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-[0_0_12px_rgba(59,130,246,0.1)]';
+                                        label = 'Active';
+                                    } else if (status === 'paused') {
+                                        style = 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+                                        label = 'Paused';
+                                    } else if (status === 'pending') {
+                                        style = 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.1)]';
+                                        label = 'Pending';
+                                    } else if (status === 'qc_requested') {
+                                        style = 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.1)]';
+                                        label = 'QC Requested';
+                                    } else if (status === 'qc_failed') {
+                                        style = 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+                                        label = 'QC Failed';
+                                    }
+
+                                    return (
+                                        <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all duration-500 ${style}`}>
+                                            {label}
+                                        </div>
+                                    );
+                                })()}
                             </div>
 
                             <div className="grid grid-cols-2 gap-4 mt-6">

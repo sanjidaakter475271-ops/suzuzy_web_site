@@ -8,8 +8,17 @@ import { requiresDealerId } from "./roles";
  * Returns JWT payload enriched with dealerId from profiles table
  */
 export async function getCurrentUser() {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("access_token")?.value;
+    // 1. Check Authorization Header (Bearer token)
+    const { headers: nextHeaders } = await import("next/headers");
+    const headersList = await nextHeaders();
+    const authHeader = headersList.get("authorization");
+    let token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : null;
+
+    // 2. Fallback to Cookie
+    if (!token) {
+        const cookieStore = await cookies();
+        token = cookieStore.get("access_token")?.value ?? null;
+    }
 
     if (!token) return null;
 

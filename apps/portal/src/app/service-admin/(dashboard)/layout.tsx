@@ -11,7 +11,10 @@ const WORKSHOP_EVENTS = [
     'requisition:created',
     'requisition:approved',
     'requisition:rejected',
-    'requisition:status_changed'
+    'requisition:status_changed',
+    'attendance:changed',
+    'attendance:shift_start',
+    'attendance:shift_end'
 ];
 
 export default function DashboardGroupLayout({ children }: { children: React.ReactNode }) {

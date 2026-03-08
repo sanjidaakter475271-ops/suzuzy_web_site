@@ -94,15 +94,53 @@ export const MyJobs: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) =
     });
 
     const getStatusInfo = (status: string) => {
+        const prettyStatus = status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+
         switch (status) {
             case JobStatus.COMPLETED:
-                return { color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20', icon: <CheckCircle size={14} /> };
+            case JobStatus.VERIFIED:
+            case JobStatus.QC_PASSED:
+                return {
+                    color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.05)]',
+                    icon: <CheckCircle size={14} />,
+                    label: status === JobStatus.COMPLETED ? 'Done' : prettyStatus
+                };
             case JobStatus.IN_PROGRESS:
-                return { color: 'text-blue-500 bg-blue-500/10 border-blue-500/20', icon: <Clock size={14} /> };
+                return {
+                    color: 'text-blue-400 bg-blue-500/10 border-blue-500/20 shadow-[0_0_12px_rgba(59,130,246,0.1)]',
+                    icon: <Clock size={14} />,
+                    label: 'Active'
+                };
             case JobStatus.PAUSED:
-                return { color: 'text-amber-500 bg-amber-500/10 border-amber-500/20', icon: <PauseCircle size={14} /> };
+                return {
+                    color: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+                    icon: <PauseCircle size={14} />,
+                    label: 'Paused'
+                };
+            case JobStatus.PENDING:
+                return {
+                    color: 'text-amber-400 bg-amber-500/10 border-amber-500/20 shadow-[0_0_12px_rgba(245,158,11,0.1)]',
+                    icon: <AlertCircle size={14} className="animate-pulse text-amber-500" />,
+                    label: 'Pending'
+                };
+            case JobStatus.QC_REQUESTED:
+                return {
+                    color: 'text-amber-400 bg-amber-500/10 border-amber-500/20 shadow-[0_0_12px_rgba(245,158,11,0.1)]',
+                    icon: <AlertCircle size={14} className="animate-pulse text-amber-500" />,
+                    label: 'QC Requested'
+                };
+            case JobStatus.QC_FAILED:
+                return {
+                    color: 'text-rose-400 bg-rose-500/10 border-rose-500/20 shadow-[0_0_12px_rgba(244,63,94,0.1)]',
+                    icon: <AlertCircle size={14} />,
+                    label: 'QC Failed'
+                };
             default:
-                return { color: 'text-slate-500 bg-slate-500/10 border-slate-500/20', icon: <AlertCircle size={14} /> };
+                return {
+                    color: 'text-slate-400 bg-slate-500/10 border-slate-500/20',
+                    icon: <AlertCircle size={14} />,
+                    label: prettyStatus
+                };
         }
     };
 
@@ -115,7 +153,11 @@ export const MyJobs: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) =
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 pb-20">
-            <TopBar onMenuClick={onMenuClick} title="My Jobs" />
+            <TopBar
+                onMenuClick={onMenuClick}
+                onBack={() => navigate(RoutePath.DASHBOARD)}
+                breadcrumbs={[{ label: 'My Jobs' }]}
+            />
 
             {!isOnline && (
                 <motion.div
@@ -167,7 +209,7 @@ export const MyJobs: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) =
                         <AnimatePresence mode="popLayout">
                             {filteredJobs.length > 0 ? (
                                 filteredJobs.map((job, idx) => {
-                                    const { color, icon } = getStatusInfo(job.status);
+                                    const { color, icon, label } = getStatusInfo(job.status);
                                     return (
                                         <motion.div
                                             key={job.id}
@@ -189,7 +231,7 @@ export const MyJobs: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) =
                                                 </div>
                                                 <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase border ${color}`}>
                                                     {icon}
-                                                    {job.status === 'in_progress' ? 'Active' : job.status}
+                                                    {label}
                                                 </div>
                                             </div>
 

@@ -51,6 +51,8 @@ export const SIDEBAR_MENU: MenuGroup[] = [
                     { title: "Job Cards", path: "/service-admin/workshop/job-cards" },
                     { title: "Status Board", path: "/service-admin/workshop/status-board" },
                     { title: "Technicians", path: "/service-admin/workshop/technicians" },
+                    { title: "Attendance", path: "/service-admin/workshop/attendance" },
+                    { title: "QR Codes", path: "/service-admin/workshop/qr-codes" },
                     { title: "Requisition Batch", path: "/service-admin/workshop/requisitions" },
                     { title: "QC Checklist", path: "/service-admin/workshop/qc" },
                 ]

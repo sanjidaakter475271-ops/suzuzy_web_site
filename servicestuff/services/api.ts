@@ -93,8 +93,13 @@ export const TechnicianAPI = {
     requestQC: (jobId: string, notes?: string) => api.post(`/jobs/${jobId}/qc`, { notes }),
 
     // Attendance
-    clockIn: (location: { lat: number; lng: number }) => api.post('/attendance/clock-in', { location }),
-    clockOut: (location: { lat: number; lng: number }) => api.post('/attendance/clock-out', { location }),
+    clockIn: (location?: { lat: number; lng: number }, qr_code?: string, deviceId?: string) =>
+        api.post('/attendance/clock-in', { location, qr_code, deviceId }),
+    clockOut: (location?: { lat: number; lng: number }, qr_code?: string) =>
+        api.post('/attendance/clock-out', { location, qr_code }),
+    getAttendanceStatus: () => api.get('/attendance/status'),
+    startShift: () => api.post('/attendance/start-shift'),
+    endShift: () => api.post('/attendance/end-shift'),
     getAttendanceHistory: () => api.get('/attendance'),
     getDateStats: (date: string) => api.get(`/attendance/stats-by-date?date=${date}`),
 

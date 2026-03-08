@@ -1,0 +1,359 @@
+# Multi-Dealer Architecture Restructuring
+
+Royal Suzuky কে একটি সত্যিকারের multi-dealer platform এ রূপান্তর করা, যেখানে প্রতিটি Dealer এর service, sales, products, staff সব আলাদা থাকবে এবং Service Admin ও Sales Admin ডিলারের অধীনে থাকবে।
+
+---
+
+## Current State Analysis
+
+### 🔴 Current Role Hierarchy (PROBLEM)
+
+```
+super_admin (1)          ← Platform owner
+sell_showroom_admin (1)  ← ❌ Same level as super_admin!
+sell_service_admin (1)   ← ❌ Same level as super_admin!
+showroom_admin (2)       ← ❌ ABOVE dealer
+service_admin (3)        ← ❌ ABOVE dealer
+sales_admin (4)          ← ❌ ABOVE dealer
+support (6)
+accountant (7)
+admin (7)
+service_stuff (8)
+sells_stuff (8)
+dealer_owner (10)        ← Dealer is BELOW service_admin!
+dealer (10)
+dealer_manager (11)
+dealer_staff (12)
+sub_dealer (15)
+technician (50)
+customer (99)
+```
+
+> [!CAUTION]
+> `service_admin` (level 3) and `sales_admin` (level 4) currently sit **ABOVE** `dealer_owner` (level 10). This means they are treated as "platform staff" — not as staff under a specific dealer. This is the fundamental problem we need to fix.
+
+### Current Database Stats
+
+| Item | Value |
+|------|-------|
+| Total models | 100+ |
+| Dealers | 1 (Royal Suzuky Service Center) |
+| Profiles | 4 (super_admin, service_admin, customer, null-role) |
+| Tables with `dealer_id` | 50+ (most are already dealer-scoped ✅) |
+| Tables **missing** `dealer_id` | 5 (needs fix 🔴) |
+
+### Tables Missing `dealer_id`
+
+| Table | Current State | Impact |
+|-------|--------------|--------|
+| `parts` | Global, no dealer scoping | Service parts should be per-dealer |
+| `part_variants` | Global, no dealer scoping | Parts pricing per dealer |
+| `special_tools` | Global, no dealer scoping | Tools per workshop |
+| `service_packages` | Global, no dealer scoping | Service packages per dealer |
+| `service_checklist_templates` | Global | Checklists per dealer |
+
+### Tables Correctly Dealer-Scoped ✅
+
+Products, brands, vendors, sales, service_staff, job_cards, service_appointments, service_invoices, service_estimates, warranty_claims, purchase_orders, inventory_batches, expenses, and 40+ more are already properly scoped with `dealer_id`.
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Role Hierarchy Change** — `service_admin` and `sales_admin` will be moved **under** `dealer_owner`. This means they will NO LONGER have platform-wide access. They will only see data for their assigned dealer.
+
+> [!WARNING]
+> **Breaking Change** — If any existing code treats `service_admin` as a "platform admin" (level ≤ 8), that behavior will change. Service admins will now be dealer-scoped staff.
+
+**Questions for you:**
+1. `bike_models` — Should this remain **global** (all Suzuki models shared across dealers) or per-dealer?
+2. `categories` — Should product categories be **global** or per-dealer?
+3. Do you want a `sell_service_admin` and `sell_showroom_admin` role (combining sales+service/showroom)? Or just `service_admin` + `sales_admin`?
+
+---
+
+## Proposed Changes
+
+### Proposed New Role Hierarchy
+
+```
+super_admin (1)          ← Platform owner (sees ALL dealers)
+admin (5)                ← Platform admin  
+─── DEALER BOUNDARY ─────────────────────────
+dealer_owner (10)        ← Dealer owner (sees THEIR dealer only)
+  ├── service_admin (11) ← Service wing head (under dealer)
+  ├── sales_admin (11)   ← Sales wing head (under dealer)
+  ├── showroom_admin (11)← Showroom head (under dealer)
+  ├── accountant (12)    ← Finance staff (under dealer)
+  ├── service_manager (13)
+  ├── floor_supervisor (13)
+  ├── service_stuff (14) ← Service floor staff
+  ├── sells_stuff (14)   ← Sales floor staff
+  ├── technician (15)    ← Technician
+  └── dealer_staff (16)  ← General dealer staff
+sub_dealer (20)
+customer (99)
+```
+
+---
+
+### Phase 1: Role Hierarchy — Database Migration
+
+#### [MODIFY] Supabase `roles` table (SQL migration)
+
+Update role levels in the database to reflect the new hierarchy:
+
+```sql
+-- Restructure role levels: move service/sales admins UNDER dealer
+UPDATE roles SET level = 1 WHERE name = 'super_admin';
+UPDATE roles SET level = 5 WHERE name = 'admin';
+UPDATE roles SET level = 10 WHERE name = 'dealer_owner';
+UPDATE roles SET level = 10 WHERE name = 'dealer';
+UPDATE roles SET level = 11 WHERE name IN ('service_admin', 'sales_admin', 'showroom_admin');
+UPDATE roles SET level = 11 WHERE name IN ('sell_service_admin', 'sell_showroom_admin');
+UPDATE roles SET level = 12 WHERE name = 'accountant';
+UPDATE roles SET level = 6 WHERE name = 'support';
+UPDATE roles SET level = 11 WHERE name = 'dealer_manager';
+UPDATE roles SET level = 13 WHERE name IN ('service_manager', 'floor_supervisor');
+UPDATE roles SET level = 14 WHERE name IN ('service_stuff', 'sells_stuff');
+UPDATE roles SET level = 15 WHERE name = 'technician';
+UPDATE roles SET level = 16 WHERE name = 'dealer_staff';
+UPDATE roles SET level = 20 WHERE name = 'sub_dealer';
+UPDATE roles SET level = 99 WHERE name = 'customer';
+
+-- Set role_type for dealer-scoped roles
+UPDATE roles SET role_type = 'dealer' WHERE name IN (
+    'dealer_owner', 'dealer', 'service_admin', 'sales_admin', 
+    'showroom_admin', 'sell_service_admin', 'sell_showroom_admin',
+    'accountant', 'service_manager', 'floor_supervisor',
+    'service_stuff', 'sells_stuff', 'technician', 'dealer_staff',
+    'dealer_manager', 'sub_dealer'
+);
+UPDATE roles SET role_type = 'platform' WHERE name IN ('super_admin', 'admin', 'support');
+```
+
+---
+
+### Phase 2: Role Constants — Code Update
+
+#### [MODIFY] [roles.ts](file:///d:/suzuky/apps/portal/src/lib/auth/roles.ts)
+
+**Changes:**
+- Update `ROLE_LEVELS` to match new DB hierarchy
+- Update `ROLE_GROUPS`: add `DEALER_INTERNAL` group for all dealer-scoped staff
+- Update helper functions: [isAnyAdmin()](file:///d:/suzuky/apps/portal/src/lib/auth/roles.ts#140-143) → platform admins only (level ≤ 6), add `isDealerAdmin()` for dealer-scoped admins
+- Add new helper: `requiresDealerId(role)` — returns true if the user MUST have a dealer_id
+
+```diff
+ export const ROLE_LEVELS: Record<string, number> = {
+-    [ROLES.SUPER_ADMIN]: 1,
+-    [ROLES.SHOWROOM_ADMIN]: 2,
+-    [ROLES.SERVICE_ADMIN]: 3,
+-    [ROLES.SHOWROOM_SALES_ADMIN]: 4,
+-    [ROLES.SERVICE_SALES_ADMIN]: 5,
+-    [ROLES.SALES_ADMIN]: 4,
+-    [ROLES.SUPPORT]: 6,
+-    [ROLES.ACCOUNTANT]: 7,
+-    [ROLES.ADMIN]: 7,
+-    [ROLES.SELLS_STUFF]: 8,
+-    [ROLES.SERVICE_STUFF]: 8,
+-    [ROLES.SERVICE_TECHNICIAN]: 8,
+-    [ROLES.DEALER_OWNER]: 10,
++    // Platform Staff (1-6)
++    [ROLES.SUPER_ADMIN]: 1,
++    [ROLES.ADMIN]: 5,
++    [ROLES.SUPPORT]: 6,
++
++    // Dealer Hierarchy (10-20)
++    [ROLES.DEALER_OWNER]: 10,
++    [ROLES.DEALER]: 10,
++    [ROLES.SERVICE_ADMIN]: 11,
++    [ROLES.SALES_ADMIN]: 11,
++    [ROLES.SHOWROOM_ADMIN]: 11,
++    [ROLES.DEALER_MANAGER]: 11,
++    [ROLES.ACCOUNTANT]: 12,
++    [ROLES.SERVICE_MANAGER]: 13,
++    [ROLES.FLOOR_SUPERVISOR]: 13,
++    [ROLES.SERVICE_STUFF]: 14,
++    [ROLES.SELLS_STUFF]: 14,
++    [ROLES.SERVICE_TECHNICIAN]: 15,
++    [ROLES.DEALER_STAFF]: 16,
++    [ROLES.SUB_DEALER]: 20,
++
++    // Customer
++    [ROLES.CUSTOMER]: 99,
+ };
+```
+
+Add new helpers:
+
+```typescript
+/** True if role is a dealer-scoped role (needs dealer_id) */
+export const isDealerRole = (role: string): boolean => {
+    const lvl = getRoleLevel(role);
+    return lvl >= 10 && lvl <= 20;
+};
+
+/** True if role requires a dealer_id to function */
+export const requiresDealerId = (role: string): boolean =>
+    isDealerRole(role);
+
+/** True if role is platform admin (super_admin, admin, support) */
+export const isPlatformAdmin = (role: string): boolean =>
+    getRoleLevel(role) <= 6;
+
+/** True if role is a dealer admin (service_admin, sales_admin, etc.) */
+export const isDealerAdmin = (role: string): boolean => {
+    const lvl = getRoleLevel(role);
+    return lvl >= 10 && lvl <= 12;
+};
+```
+
+---
+
+### Phase 3: Database Schema — Add Missing `dealer_id`
+
+#### Supabase migration: Add `dealer_id` to 5 tables
+
+```sql
+-- 1. parts
+ALTER TABLE parts ADD COLUMN dealer_id UUID REFERENCES dealers(id) ON DELETE CASCADE;
+CREATE INDEX idx_parts_dealer ON parts(dealer_id);
+
+-- 2. part_variants
+ALTER TABLE part_variants ADD COLUMN dealer_id UUID REFERENCES dealers(id) ON DELETE CASCADE;
+CREATE INDEX idx_part_variants_dealer ON part_variants(dealer_id);
+
+-- 3. special_tools
+ALTER TABLE special_tools ADD COLUMN dealer_id UUID REFERENCES dealers(id) ON DELETE CASCADE;
+CREATE INDEX idx_special_tools_dealer ON special_tools(dealer_id);
+
+-- 4. service_packages
+ALTER TABLE service_packages ADD COLUMN dealer_id UUID REFERENCES dealers(id) ON DELETE CASCADE;
+CREATE INDEX idx_service_packages_dealer ON service_packages(dealer_id);
+
+-- 5. service_checklist_templates
+ALTER TABLE service_checklist_templates ADD COLUMN dealer_id UUID REFERENCES dealers(id) ON DELETE CASCADE;
+CREATE INDEX idx_checklist_templates_dealer ON service_checklist_templates(dealer_id);
+
+-- Backfill existing data with the current dealer
+UPDATE parts SET dealer_id = '9a292fdb-e6df-40d6-9aa4-c8824a8c4fba' WHERE dealer_id IS NULL;
+UPDATE part_variants SET dealer_id = '9a292fdb-e6df-40d6-9aa4-c8824a8c4fba' WHERE dealer_id IS NULL;
+UPDATE special_tools SET dealer_id = '9a292fdb-e6df-40d6-9aa4-c8824a8c4fba' WHERE dealer_id IS NULL;
+UPDATE service_packages SET dealer_id = '9a292fdb-e6df-40d6-9aa4-c8824a8c4fba' WHERE dealer_id IS NULL;
+UPDATE service_checklist_templates SET dealer_id = '9a292fdb-e6df-40d6-9aa4-c8824a8c4fba' WHERE dealer_id IS NULL;
+```
+
+#### [MODIFY] [schema.prisma](file:///d:/suzuky/apps/portal/prisma/schema.prisma)
+
+Run `npx prisma db pull` to sync schema, then `npx prisma generate` to update the client.
+
+---
+
+### Phase 4: Auth System Updates
+
+#### [MODIFY] [get-user.ts](file:///d:/suzuky/apps/portal/src/lib/auth/get-user.ts)
+
+Add validation: If the user's role is a dealer-scoped role but they have no `dealer_id`, block access.
+
+```typescript
+export async function getCurrentUser() {
+    // ... existing code ...
+    
+    const dealerId = profile?.dealer_id || payload.dealerId || null;
+    
+    // Enforce dealer_id for dealer-scoped roles
+    if (requiresDealerId(payload.role) && !dealerId) {
+        console.error(`[AUTH] User ${payload.userId} has role ${payload.role} but no dealer_id`);
+        return null; // Block access
+    }
+    
+    return {
+        ...payload,
+        dealerId,
+        fullName: profile?.full_name || null,
+        isDealerScoped: requiresDealerId(payload.role),
+    };
+}
+```
+
+#### [MODIFY] [middleware.ts](file:///d:/suzuky/apps/portal/src/middleware.ts)
+
+Update route guards to prevent dealer-scoped roles from accessing super-admin routes.
+
+#### [MODIFY] [permissions.ts](file:///d:/suzuky/apps/portal/src/lib/auth/permissions.ts)
+
+Add dealer_id scoping to permission checks.
+
+---
+
+### Phase 5: API Route Audit
+
+Every API route under `/api/v1/` must:
+1. Call [getCurrentUser()](file:///d:/suzuky/apps/portal/src/lib/auth/get-user.ts#5-30) to get the authenticated user
+2. Check `user.role` for authorization
+3. Scope ALL Prisma queries with `where: { dealer_id: user.dealerId }`
+
+#### Key routes to update:
+
+| Route | File | Status |
+|-------|------|--------|
+| `/api/v1/workshop/*` | `src/app/api/v1/workshop/` | Likely already scoped ✅ |
+| `/api/v1/technician/*` | `src/app/api/v1/technician/` | Needs audit |
+| `/api/v1/dealer/*` | `src/app/api/v1/dealer/` | Needs audit |
+| `/api/v1/dashboard/*` | `src/app/api/v1/dashboard/` | Needs audit |
+| `/api/super-admin/*` | `src/app/api/super-admin/` | Should show ALL dealers |
+
+---
+
+### Phase 6: Frontend Isolation (Future)
+
+- **Per-dealer dashboard**: Each dealer sees only their own stats
+- **Super admin dashboard**: See all dealers, switch between them
+- **Sidebar navigation**: Role-based menu items
+- **Dealer selector**: Super admin can switch dealer context
+
+---
+
+## Verification Plan
+
+### Automated Tests
+
+No existing test suite found in the project. Verification will be through SQL queries and manual testing.
+
+**1. Role hierarchy verification (SQL):**
+```sql
+SELECT name, level, role_type FROM roles ORDER BY level;
+-- Expected: service_admin at 11, sales_admin at 11, dealer_owner at 10
+```
+
+**2. Dealer_id backfill verification (SQL):**
+```sql
+SELECT table_name, COUNT(*) as null_dealer_count 
+FROM (
+    SELECT 'parts' as table_name FROM parts WHERE dealer_id IS NULL
+    UNION ALL SELECT 'part_variants' FROM part_variants WHERE dealer_id IS NULL
+    UNION ALL SELECT 'special_tools' FROM special_tools WHERE dealer_id IS NULL
+    UNION ALL SELECT 'service_packages' FROM service_packages WHERE dealer_id IS NULL
+) sub
+GROUP BY table_name;
+-- Expected: 0 rows (all backfilled)
+```
+
+**3. Build verification:**
+```powershell
+cd d:\suzuky\apps\portal
+npm run build
+# Expected: No TypeScript errors
+```
+
+### Manual Verification
+
+1. **Login as `service_admin`** → Should only see data for their assigned dealer
+2. **Login as `super_admin`** → Should see all dealers' data
+3. **Create a new dealer** via super-admin panel → Verify new dealer gets isolated data space
+4. **Try accessing another dealer's data** as service_admin → Should get 403 Forbidden
+
+> [!TIP]
+> The user should manually test the login flow for different roles after the changes are applied. Since there is no automated test suite, manual testing is critical.

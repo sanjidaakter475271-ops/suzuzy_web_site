@@ -4,6 +4,8 @@ import {
   Bell, Moon, Lock, HelpCircle, ChevronRight, User,
   Fingerprint, Smartphone, Save, Shield, HardDrive, Edit2, X, Check, Loader2, Trash2, Redo2
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { RoutePath } from '../types';
 
 import { TechnicianAPI } from '../services/api';
 
@@ -26,6 +28,7 @@ export const Settings: React.FC<SettingsProps> = ({ onMenuClick, userName, onTog
   const [biometrics, setBiometrics] = useState(false);
   const [storageGranted, setStorageGranted] = useState(false);
   const [bioLoading, setBioLoading] = useState(false);
+  const navigate = useNavigate();
 
   // State for Password Modal
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -180,7 +183,11 @@ export const Settings: React.FC<SettingsProps> = ({ onMenuClick, userName, onTog
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 transition-colors duration-300 pb-10">
-      <TopBar onMenuClick={onMenuClick} title="Settings" />
+      <TopBar
+        onMenuClick={onMenuClick}
+        onBack={() => navigate(RoutePath.DASHBOARD)}
+        breadcrumbs={[{ label: 'Settings' }]}
+      />
 
       <div className="p-4 space-y-6 animate-slide-up">
         {profileLoading && (

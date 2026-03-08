@@ -1,0 +1,749 @@
+# 🕐 Technician Attendance System — Full Implementation Plan
+
+> **QR-Based Clock In/Out + Shift Tracking + Service Admin Visibility**
+
+---
+
+## 📋 Requirements Summary
+
+The attendance page has **3 core actions** plus an important aggregation rule:
+
+| # | Action | Description |
+|---|--------|-------------|
+| 1 | **Clock In** | Technician taps → QR scanner opens → scans workshop QR → marked as PRESENT. Service Admin can see. |
+| 2 | **Start / End Shift** | Start Shift = actively working (🟢). End Shift = on break/resting (🟡). Can toggle multiple times. |
+| 3 | **Clock Out** | Technician taps → QR scanner opens → scans workshop QR → checked out for the day. Admin sees checkout. |
+| 4 | **Same-Day Re-entry** | If someone accidentally clocks out and clocks back in on the same day, total hours **accumulate** across all sessions. (1h + 2h = 3h) |
+
+---
+
+## 🔄 State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> NOT_CHECKED_IN
+    NOT_CHECKED_IN --> CHECKED_IN_IDLE : Scan QR → Clock In
+    CHECKED_IN_IDLE --> SHIFT_ACTIVE : Tap Start Shift
+    CHECKED_IN_IDLE --> CHECKED_OUT : Scan QR → Clock Out
+    SHIFT_ACTIVE --> SHIFT_PAUSED : Tap End Shift (resting)
+    SHIFT_ACTIVE --> CHECKED_OUT : Scan QR → Clock Out (auto-ends shift)
+    SHIFT_PAUSED --> SHIFT_ACTIVE : Tap Start Shift (resume)
+    SHIFT_PAUSED --> CHECKED_OUT : Scan QR → Clock Out
+    CHECKED_OUT --> CHECKED_IN_IDLE : Scan QR → Clock In (same day re-entry)
+```
+
+**States explained:**
+
+| State | Mobile UI | Admin Sees |
+|-------|-----------|------------|
+| `NOT_CHECKED_IN` | Big "Clock In" button + QR icon | ⚫ Offline |
+| `CHECKED_IN_IDLE` | "Start Shift" button prominent | 🔵 Checked In (idle) |
+| `SHIFT_ACTIVE` | Live timer + "End Shift" button | 🟢 Active (working) |
+| `SHIFT_PAUSED` | Break timer + "Start Shift" button | 🟡 On Break |
+| `CHECKED_OUT` | Summary card + re-entry option | 🔴 Checked Out |
+
+---
+
+## 🗄️ Phase 1: Database Schema Changes
+
+### 1.1 New Table: `attendance_shifts`
+
+Tracks individual work segments within a single attendance (clock-in) session. Each "Start Shift → End Shift" cycle creates one record.
+
+```sql
+-- Migration: create_attendance_shifts_table
+CREATE TABLE public.attendance_shifts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    attendance_id UUID NOT NULL REFERENCES public.technician_attendance(id) ON DELETE CASCADE,
+    start_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    end_time TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_attendance_shifts_attendance_id ON public.attendance_shifts(attendance_id);
+CREATE INDEX idx_attendance_shifts_start_time ON public.attendance_shifts(start_time);
+```
+
+**Relationships:**
+- `technician_attendance` 1 → ∞ `attendance_shifts`
+- Each clock-in session can have multiple shift segments
+
+### 1.2 New Table: `workshop_qr_codes`
+
+Stores the QR code secret for each dealer's workshop. The QR code printed/displayed in the workshop contains this secret.
+
+```sql
+-- Migration: create_workshop_qr_codes_table
+CREATE TABLE public.workshop_qr_codes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    dealer_id UUID NOT NULL REFERENCES public.dealers(id) ON DELETE CASCADE,
+    qr_secret VARCHAR(100) NOT NULL,
+    label VARCHAR(100) DEFAULT 'Main Workshop',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(dealer_id, qr_secret)
+);
+
+CREATE INDEX idx_workshop_qr_dealer ON public.workshop_qr_codes(dealer_id);
+```
+
+**QR Code Content Format:** `SUZUKY-WS-{dealer_id}-{qr_secret}`
+
+### 1.3 Modify `technician_attendance` Table
+
+Add a column to record what QR code was scanned (for audit trail):
+
+```sql
+-- Migration: add_qr_columns_to_attendance
+ALTER TABLE public.technician_attendance 
+    ADD COLUMN IF NOT EXISTS clock_in_qr_code VARCHAR(200),
+    ADD COLUMN IF NOT EXISTS clock_out_qr_code VARCHAR(200),
+    ADD COLUMN IF NOT EXISTS clock_out_gps_lat DECIMAL(10,8),
+    ADD COLUMN IF NOT EXISTS clock_out_gps_lng DECIMAL(11,8);
+```
+
+### 1.4 Prisma Schema Updates
+
+```prisma
+// Add to schema.prisma
+
+model attendance_shifts {
+  id            String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  attendance_id String                @db.Uuid
+  start_time    DateTime              @default(now()) @db.Timestamptz(6)
+  end_time      DateTime?             @db.Timestamptz(6)
+  created_at    DateTime?             @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime?             @default(now()) @db.Timestamptz(6)
+  technician_attendance technician_attendance @relation(fields: [attendance_id], references: [id], onDelete: Cascade)
+
+  @@index([attendance_id])
+  @@index([start_time])
+  @@schema("public")
+}
+
+model workshop_qr_codes {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dealer_id  String    @db.Uuid
+  qr_secret  String    @db.VarChar(100)
+  label      String?   @default("Main Workshop") @db.VarChar(100)
+  is_active  Boolean?  @default(true)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
+  dealers    dealers   @relation(fields: [dealer_id], references: [id], onDelete: Cascade)
+
+  @@unique([dealer_id, qr_secret])
+  @@index([dealer_id])
+  @@schema("public")
+}
+
+// Modify technician_attendance model — add:
+//   clock_in_qr_code  String?  @db.VarChar(200)
+//   clock_out_qr_code String?  @db.VarChar(200)
+//   clock_out_gps_lat Decimal? @db.Decimal(10, 8)
+//   clock_out_gps_lng Decimal? @db.Decimal(11, 8)
+//   attendance_shifts attendance_shifts[]
+```
+
+> [!IMPORTANT]
+> Follow the `/prisma-schema-change` workflow for Supabase migrations. Run SQL directly on Supabase, then `npx prisma db pull` to sync.
+
+---
+
+## 🔌 Phase 2: Backend API Changes
+
+### 2.1 QR Code Management (Service Admin)
+
+#### `POST /api/v1/workshop/qr-code/route.ts` — Generate QR Code
+
+```
+Auth: getCurrentUser() — role: service_admin
+Body: { label?: string }
+Logic:
+  1. Generate random qr_secret (e.g., crypto.randomUUID())
+  2. Build QR content: "SUZUKY-WS-{dealer_id}-{qr_secret}"
+  3. Save to workshop_qr_codes table
+  4. Return { qr_content, qr_secret, label }
+```
+
+#### `GET /api/v1/workshop/qr-code/route.ts` — Get Workshop QR Codes
+
+```
+Auth: getCurrentUser() — role: service_admin
+Logic:
+  1. Fetch all active QR codes for the dealer
+  2. Return array of { id, qr_content, label, is_active, created_at }
+```
+
+### 2.2 Modify Clock-In API
+
+**File:** [apps/portal/src/app/api/v1/technician/attendance/clock-in/route.ts](file:///d:/suzuky/apps/portal/src/app/api/v1/technician/attendance/clock-in/route.ts)
+
+```
+Changes:
+  1. Accept new field: qr_code (string) — the scanned QR content
+  2. VALIDATE QR code:
+     - Parse format: "SUZUKY-WS-{dealer_id}-{qr_secret}"
+     - Verify dealer_id matches technician's dealer
+     - Verify qr_secret exists in workshop_qr_codes and is_active
+  3. REMOVE the "already clocked in" error for same-day re-entry:
+     - If an active session exists (clock_out = null), return error
+     - If previous session today is CLOSED (has clock_out), allow new session
+  4. Save clock_in_qr_code to the record
+  5. Broadcast realtime event: 'attendance:clock_in'
+```
+
+**Pseudo-code:**
+```typescript
+// Parse QR
+const parts = qr_code.split('-'); // ["SUZUKY", "WS", dealer_id, qr_secret]
+if (parts.length !== 4 || parts[0] !== 'SUZUKY' || parts[1] !== 'WS') {
+    return error("Invalid QR code format");
+}
+
+// Verify QR belongs to technician's dealer
+const qrRecord = await prisma.workshop_qr_codes.findFirst({
+    where: { dealer_id: technician.dealerId, qr_secret: parts[3], is_active: true }
+});
+if (!qrRecord) return error("Invalid workshop QR code");
+
+// Check for existing OPEN session
+const existingOpen = await prisma.technician_attendance.findFirst({
+    where: { staff_id, clock_out: null }
+});
+if (existingOpen) return error("Already clocked in. Please clock out first.");
+
+// Create attendance record
+const attendance = await prisma.technician_attendance.create({
+    data: { staff_id, clock_in: new Date(), clock_in_qr_code: qr_code, ... }
+});
+```
+
+### 2.3 Modify Clock-Out API
+
+**File:** [apps/portal/src/app/api/v1/technician/attendance/clock-out/route.ts](file:///d:/suzuky/apps/portal/src/app/api/v1/technician/attendance/clock-out/route.ts)
+
+```
+Changes:
+  1. Accept new field: qr_code (string)
+  2. VALIDATE QR code (same validation as clock-in)
+  3. Accept location for clock_out_gps_lat/lng
+  4. Auto-close any active shift (end_time = now)
+  5. Save clock_out_qr_code and clock_out_gps fields
+  6. Broadcast realtime event: 'attendance:clock_out'
+```
+
+**Pseudo-code:**
+```typescript
+// Validate QR (same as clock-in)
+// Find active session
+const activeSession = await prisma.technician_attendance.findFirst({
+    where: { staff_id, clock_out: null }
+});
+if (!activeSession) return error("No active session");
+
+// Auto-close any open shift
+await prisma.attendance_shifts.updateMany({
+    where: { attendance_id: activeSession.id, end_time: null },
+    data: { end_time: new Date() }
+});
+
+// Update attendance
+await prisma.technician_attendance.update({
+    where: { id: activeSession.id },
+    data: { clock_out: new Date(), clock_out_qr_code: qr_code, clock_out_gps_lat, clock_out_gps_lng }
+});
+```
+
+### 2.4 New API: Start Shift
+
+**File:** `apps/portal/src/app/api/v1/technician/attendance/start-shift/route.ts`
+
+```
+Method: POST
+Auth: getCurrentTechnician()
+Body: {} (no extra data needed)
+Logic:
+  1. Verify technician is clocked in (has active attendance session)
+  2. Verify no shift is already active (no open attendance_shifts record)
+  3. Create new attendance_shifts record with start_time = now()
+  4. Broadcast realtime event: 'attendance:shift_start'
+  5. Return { shiftId, startTime, status: 'active' }
+```
+
+### 2.5 New API: End Shift
+
+**File:** `apps/portal/src/app/api/v1/technician/attendance/end-shift/route.ts`
+
+```
+Method: POST
+Auth: getCurrentTechnician()
+Body: {} 
+Logic:
+  1. Verify technician is clocked in
+  2. Find the active shift (end_time is null)
+  3. If no active shift → error "No active shift"
+  4. Update shift: end_time = now()
+  5. Broadcast realtime event: 'attendance:shift_end'
+  6. Return { shiftId, startTime, endTime, durationMs, status: 'resting' }
+```
+
+### 2.6 New API: Current Attendance Status
+
+**File:** `apps/portal/src/app/api/v1/technician/attendance/status/route.ts`
+
+```
+Method: GET
+Auth: getCurrentTechnician()
+Logic:
+  1. Get today's date range (start of day → end of day in local timezone)
+  2. Find ALL attendance records for today (sorted by clock_in)
+  3. For each attendance record, get its shifts
+  4. Calculate:
+     - isCheckedIn: boolean (has open attendance session)
+     - isShiftActive: boolean (has open shift in current session)
+     - currentSessionId: UUID | null
+     - currentShiftId: UUID | null
+     - totalWorkMinutesToday: number (sum all shift durations across all today's sessions)
+     - totalBreakMinutesToday: number
+     - sessions: Array<{
+         id, clockIn, clockOut, 
+         shifts: Array<{ id, startTime, endTime, durationMs }>
+       }>
+  5. Return comprehensive status object
+```
+
+### 2.7 Service Admin Attendance View
+
+**File:** `apps/portal/src/app/api/v1/workshop/attendance/route.ts`
+
+```
+Method: GET
+Auth: getCurrentUser() — role: service_admin
+Query: ?date=YYYY-MM-DD (defaults to today)
+Logic:
+  1. Get all service_staff for the dealer
+  2. For each staff, get today's attendance records + shifts
+  3. Determine current status per technician:
+     - No attendance today → 'offline'
+     - Has open session, has active shift → 'active'
+     - Has open session, no active shift → 'idle' or 'resting'
+     - All sessions closed → 'checked_out'
+  4. Calculate total work hours per technician
+  5. Return array of technician status objects
+```
+
+**Response shape:**
+```typescript
+{
+  success: true,
+  data: {
+    date: "2026-03-08",
+    technicians: [
+      {
+        staffId: "uuid",
+        name: "John Doe",
+        avatar_url: "...",
+        designation: "Senior Technician",
+        status: "active" | "idle" | "resting" | "checked_out" | "offline",
+        clockInTime: "2026-03-08T09:00:00Z",
+        clockOutTime: null,
+        totalWorkMinutes: 180,
+        totalBreakMinutes: 30,
+        currentShiftStartedAt: "2026-03-08T10:30:00Z",
+        sessionsCount: 1,
+      },
+      // ...
+    ]
+  }
+}
+```
+
+### 2.8 Modify Dashboard API
+
+**File:** [apps/portal/src/app/api/v1/technician/dashboard/route.ts](file:///d:/suzuky/apps/portal/src/app/api/v1/technician/dashboard/route.ts)
+
+```
+Changes:
+  - Include shift status in attendance response
+  - Calculate hours from SHIFTS (not raw clock_in to now)
+  - Add isShiftActive field
+  - Add currentShiftStartedAt field
+```
+
+### 2.9 Modify Stats-by-Date API
+
+**File:** [apps/portal/src/app/api/v1/technician/attendance/stats-by-date/route.ts](file:///d:/suzuky/apps/portal/src/app/api/v1/technician/attendance/stats-by-date/route.ts)
+
+```
+Changes:
+  - Calculate work hours from attendance_shifts (not raw clock-in/out)
+  - Include shift breakdown in response
+  - Total work = sum(shift durations)
+  - Total break = total clock-in duration - total work
+```
+
+---
+
+## 📱 Phase 3: Mobile App (servicestuff)
+
+### 3.1 TypeScript Types Update
+
+**File:** [servicestuff/types.ts](file:///d:/suzuky/servicestuff/types.ts)
+
+Add these new interfaces:
+
+```typescript
+export interface AttendanceShift {
+  id: string;
+  attendanceId: string;
+  startTime: string;
+  endTime?: string;
+  durationMs?: number;
+}
+
+export interface AttendanceSession {
+  id: string;
+  clockIn: string;
+  clockOut?: string;
+  status: string;
+  shifts: AttendanceShift[];
+}
+
+export interface AttendanceStatus {
+  isCheckedIn: boolean;
+  isShiftActive: boolean;
+  currentSessionId: string | null;
+  currentShiftId: string | null;
+  totalWorkMinutesToday: number;
+  totalBreakMinutesToday: number;
+  sessions: AttendanceSession[];
+}
+
+// Update TechnicianAttendance to include shift awareness:
+export interface TechnicianAttendance {
+  id: string;
+  clockIn: string;
+  clockOut?: string;
+  status: 'present' | 'absent' | 'leave' | 'sick_leave';
+  duration_hours?: number;
+  durationMs?: number;
+  shifts?: AttendanceShift[];
+}
+```
+
+### 3.2 API Service Update
+
+**File:** [servicestuff/services/api.ts](file:///d:/suzuky/servicestuff/services/api.ts)
+
+Add new methods:
+
+```typescript
+// Attendance — updated
+clockIn: (location: { lat: number; lng: number }, qrCode: string) => 
+    api.post('/attendance/clock-in', { location, qr_code: qrCode }),
+
+clockOut: (location: { lat: number; lng: number }, qrCode: string) => 
+    api.post('/attendance/clock-out', { location, qr_code: qrCode }),
+
+startShift: () => api.post('/attendance/start-shift'),
+endShift: () => api.post('/attendance/end-shift'),
+getAttendanceStatus: () => api.get('/attendance/status'),
+
+getAttendanceHistory: () => api.get('/attendance'),
+getDateStats: (date: string) => api.get(`/attendance/stats-by-date?date=${date}`),
+```
+
+### 3.3 Attendance Page Redesign
+
+**File:** [servicestuff/pages/Attendance.tsx](file:///d:/suzuky/servicestuff/pages/Attendance.tsx)
+
+The page should be a **state-machine driven** UI with 5 visual states:
+
+#### UI Layout:
+
+```
+┌──────────────────────────────┐
+│  TopBar: "Attendance"        │
+├──────────────────────────────┤
+│                              │
+│  ┌────────────────────────┐  │
+│  │   STATUS HERO CARD     │  │
+│  │                        │  │
+│  │  Current State Icon    │  │
+│  │  State Label           │  │
+│  │  Live Timer            │  │
+│  │                        │  │
+│  │  [Primary Action Btn]  │  │
+│  │  [Secondary Action]    │  │
+│  └────────────────────────┘  │
+│                              │
+│  ┌────────────────────────┐  │
+│  │  TODAY'S SUMMARY       │  │
+│  │  ┌──────┐ ┌──────────┐ │  │
+│  │  │Work  │ │ Break    │ │  │
+│  │  │3h 20m│ │ 45m      │ │  │
+│  │  └──────┘ └──────────┘ │  │
+│  │  Sessions: 2           │  │
+│  │  Shifts: 4             │  │
+│  └────────────────────────┘  │
+│                              │
+│  ┌────────────────────────┐  │
+│  │  TIMELINE / HISTORY    │  │
+│  │  09:00 → Clocked In   │  │
+│  │  09:02 → Shift Start   │  │
+│  │  12:00 → Shift End     │  │
+│  │  12:30 → Shift Start   │  │
+│  │  ...                   │  │
+│  └────────────────────────┘  │
+│                              │
+│  ┌────────────────────────┐  │
+│  │  CALENDAR (existing)   │  │
+│  └────────────────────────┘  │
+│                              │
+└──────────────────────────────┘
+```
+
+#### State-based Button Logic:
+
+| State | Primary Button | Secondary Button |
+|-------|---------------|-----------------|
+| `NOT_CHECKED_IN` | 🟢 **Clock In** (opens QR scanner) | — |
+| `CHECKED_IN_IDLE` | 🟢 **Start Shift** | 🔴 Clock Out (opens QR scanner) |
+| `SHIFT_ACTIVE` | 🟡 **End Shift** (take break) | 🔴 Clock Out (opens QR scanner) |
+| `SHIFT_PAUSED` | 🟢 **Start Shift** (resume) | 🔴 Clock Out (opens QR scanner) |
+| `CHECKED_OUT` | 🔄 **Clock In Again** (re-entry, QR) | — |
+
+#### QR Scanner Integration:
+
+```
+When user taps "Clock In" or "Clock Out":
+  1. Set scanPurpose = 'clock_in' or 'clock_out'
+  2. Open BarcodeScannerComponent
+  3. On scan result:
+     - If clock_in: Call TechnicianAPI.clockIn(location, qrCode)
+     - If clock_out: Call TechnicianAPI.clockOut(location, qrCode)
+  4. Refresh attendance status
+  5. Show success/error toast
+```
+
+#### Live Timer Component:
+
+```typescript
+// Separate component for live updating timer
+const LiveTimer: React.FC<{ startTime: string }> = ({ startTime }) => {
+  const [elapsed, setElapsed] = useState(0);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed(Date.now() - new Date(startTime).getTime());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [startTime]);
+  
+  const hours = Math.floor(elapsed / 3600000);
+  const mins = Math.floor((elapsed % 3600000) / 60000);
+  const secs = Math.floor((elapsed % 60000) / 1000);
+  
+  return <span>{hours}:{mins.toString().padStart(2,'0')}:{secs.toString().padStart(2,'0')}</span>;
+};
+```
+
+### 3.4 Dashboard Widget Update
+
+**File:** [servicestuff/pages/Dashboard.tsx](file:///d:/suzuky/servicestuff/pages/Dashboard.tsx)
+
+Update the attendance widget to show shift status:
+- Show "🟢 Active" / "🟡 On Break" / "🔵 Idle" instead of just "Working"
+- Show current shift timer instead of total clock-in time
+
+---
+
+## 🖥️ Phase 4: Service Admin Portal
+
+### 4.1 New Page: Technician Attendance Dashboard
+
+**File:** `apps/portal/src/app/(dashboard)/service-admin/attendance/page.tsx`
+
+**UI Design:**
+
+```
+┌────────────────────────────────────────────────────────┐
+│  Technician Attendance          📅 March 8, 2026       │
+│  Real-time attendance monitoring                       │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐              │
+│  │  5   │  │  3   │  │  1   │  │  2   │              │
+│  │Total │  │Active│  │Break │  │Offl. │              │
+│  └──────┘  └──────┘  └──────┘  └──────┘              │
+│                                                        │
+│  ┌────────────────────────────────────────────────────┐│
+│  │ 🟢 Ahmed Khan    Sr. Tech   09:00   3h 20m  Active││
+│  │ 🟢 Rahim Mia     Jr. Tech   08:45   4h 05m  Active││
+│  │ 🟡 Karim Hasan   Mechanic   09:30   2h 10m  Break ││
+│  │ 🟢 Shafiq Uddin  Helper     10:00   1h 45m  Active││
+│  │ ⚫ Nasir Ahmed   Sr. Tech     —       —    Offline││
+│  └────────────────────────────────────────────────────┘│
+│                                                        │
+│  ┌────────────────────────────────────────────────────┐│
+│  │ 🔒 Workshop QR Code                    [Generate] ││
+│  │                                                    ││
+│  │    ┌──────────┐                                    ││
+│  │    │ QR CODE  │   Label: Main Workshop             ││
+│  │    │  IMAGE   │   Created: 2026-03-01              ││
+│  │    └──────────┘   [Print] [Regenerate]             ││
+│  └────────────────────────────────────────────────────┘│
+└────────────────────────────────────────────────────────┘
+```
+
+**Features:**
+- Auto-refresh every 30 seconds (or use WebSocket for real-time)
+- Filter by status (All / Active / On Break / Offline)
+- Click technician → detailed timeline modal
+- Date picker to view past attendance
+- Export to CSV option
+
+### 4.2 QR Code Management Component
+
+- Generate unique QR code for the workshop
+- Display QR as image (use `qrcode` npm package)
+- Print button → opens print dialog with large QR
+- Regenerate button → deactivates old, creates new
+- Multiple QR codes support (for multi-bay workshops)
+
+### 4.3 Navigation Update
+
+Add to service admin sidebar:
+```
+Workshop
+  ├── Job Cards
+  ├── Scheduling
+  ├── Attendance ← NEW
+  └── QR Codes ← NEW
+```
+
+---
+
+## 🔔 Phase 5: Realtime Events
+
+### Socket Events to Broadcast:
+
+| Event | Payload | Triggered When |
+|-------|---------|---------------|
+| `attendance:clock_in` | `{ staffId, staffName, time, dealerId }` | Technician clocks in |
+| `attendance:clock_out` | `{ staffId, staffName, time, totalWorkMinutes, dealerId }` | Technician clocks out |
+| `attendance:shift_start` | `{ staffId, staffName, time, dealerId }` | Shift started |
+| `attendance:shift_end` | `{ staffId, staffName, time, shiftDurationMs, dealerId }` | Shift ended (break) |
+
+### Portal Listener:
+
+Service Admin attendance page listens to these events and auto-updates the technician list without full page refresh.
+
+---
+
+## 📁 Complete File Change List
+
+### Database & Schema (Phase 1)
+| # | File | Action | Description |
+|---|------|--------|-------------|
+| 1 | Supabase SQL Console | CREATE | `attendance_shifts` table |
+| 2 | Supabase SQL Console | CREATE | `workshop_qr_codes` table |
+| 3 | Supabase SQL Console | ALTER | Add QR/GPS columns to `technician_attendance` |
+| 4 | [apps/portal/prisma/schema.prisma](file:///d:/suzuky/apps/portal/prisma/schema.prisma) | MODIFY | Add new models + update existing |
+
+### Portal APIs (Phase 2)
+| # | File | Action | Description |
+|---|------|--------|-------------|
+| 5 | [apps/portal/src/app/api/v1/technician/attendance/clock-in/route.ts](file:///d:/suzuky/apps/portal/src/app/api/v1/technician/attendance/clock-in/route.ts) | MODIFY | Add QR validation, same-day re-entry |
+| 6 | [apps/portal/src/app/api/v1/technician/attendance/clock-out/route.ts](file:///d:/suzuky/apps/portal/src/app/api/v1/technician/attendance/clock-out/route.ts) | MODIFY | Add QR validation, auto-close shift |
+| 7 | `apps/portal/src/app/api/v1/technician/attendance/start-shift/route.ts` | CREATE | New endpoint |
+| 8 | `apps/portal/src/app/api/v1/technician/attendance/end-shift/route.ts` | CREATE | New endpoint |
+| 9 | `apps/portal/src/app/api/v1/technician/attendance/status/route.ts` | CREATE | Comprehensive status endpoint |
+| 10 | [apps/portal/src/app/api/v1/technician/dashboard/route.ts](file:///d:/suzuky/apps/portal/src/app/api/v1/technician/dashboard/route.ts) | MODIFY | Include shift data |
+| 11 | [apps/portal/src/app/api/v1/technician/attendance/stats-by-date/route.ts](file:///d:/suzuky/apps/portal/src/app/api/v1/technician/attendance/stats-by-date/route.ts) | MODIFY | Use shifts for work hours |
+| 12 | `apps/portal/src/app/api/v1/workshop/attendance/route.ts` | CREATE | Admin view of all technicians |
+| 13 | `apps/portal/src/app/api/v1/workshop/qr-code/route.ts` | CREATE | QR code CRUD |
+
+### Mobile App (Phase 3)
+| # | File | Action | Description |
+|---|------|--------|-------------|
+| 14 | [servicestuff/types.ts](file:///d:/suzuky/servicestuff/types.ts) | MODIFY | Add AttendanceShift, AttendanceStatus types |
+| 15 | [servicestuff/services/api.ts](file:///d:/suzuky/servicestuff/services/api.ts) | MODIFY | Add new API methods |
+| 16 | [servicestuff/pages/Attendance.tsx](file:///d:/suzuky/servicestuff/pages/Attendance.tsx) | REWRITE | Full redesign with state machine |
+| 17 | [servicestuff/pages/Dashboard.tsx](file:///d:/suzuky/servicestuff/pages/Dashboard.tsx) | MODIFY | Update attendance widget |
+
+### Portal Frontend (Phase 4)
+| # | File | Action | Description |
+|---|------|--------|-------------|
+| 18 | `apps/portal/src/app/(dashboard)/service-admin/attendance/page.tsx` | CREATE | Attendance dashboard |
+| 19 | `apps/portal/src/app/(dashboard)/service-admin/attendance/components/` | CREATE | Sub-components |
+| 20 | [apps/portal/src/types/service-admin/index.ts](file:///d:/suzuky/apps/portal/src/types/service-admin/index.ts) | MODIFY | Add attendance types |
+| 21 | Sidebar navigation config | MODIFY | Add attendance link |
+
+### Realtime (Phase 5)
+| # | File | Action | Description |
+|---|------|--------|-------------|
+| 22 | `apps/realtime/src/index.ts` | MODIFY | Add attendance event handlers |
+
+---
+
+## ⏱️ Implementation Order (Recommended)
+
+```
+Step 1: Database migrations (15 min)
+  → Create tables, alter columns, prisma db pull
+
+Step 2: Backend APIs — Core flow (45 min)
+  → Clock-in with QR, Clock-out with QR
+  → Start shift, End shift
+  → Status endpoint
+
+Step 3: Mobile App — UI (60 min)
+  → Types + API methods
+  → Rewrite Attendance.tsx
+  → QR scanning for both in/out
+
+Step 4: Backend APIs — Admin (30 min)
+  → Workshop attendance view
+  → QR code management
+
+Step 5: Portal Frontend — Admin (45 min)
+  → Attendance dashboard page
+  → QR code display/print
+
+Step 6: Realtime events (15 min)
+  → Broadcast events on state changes
+
+Step 7: Testing & Polish (30 min)
+  → Test all flows
+  → Edge cases (same-day re-entry, midnight crossing)
+  → Dashboard widget update
+```
+
+---
+
+## ⚠️ Edge Cases to Handle
+
+| Case | Solution |
+|------|----------|
+| Technician forgets to clock out (stale session) | Admin can force-close. Or auto-close at midnight. |
+| Same-day re-entry (Rule 4) | Allow new clock-in if previous session has clock_out. Sum all sessions for daily total. |
+| QR scan fails on phone | Show manual fallback? Or retry prompt. |
+| Midnight crossing (clock in at 11 PM, out at 2 AM) | The attendance record spans the boundary. Stats-by-date uses clock_in date as the "work day". |
+| No active shift when clocking out | Auto-close is safe. Just update attendance only. |
+| Double-tap Start/End Shift | API-level idempotency: check if shift already active/paused before action. |
+| Multiple workshops (different QR codes) | `workshop_qr_codes` supports multiple per dealer. Label identifies which bay/area. |
+
+---
+
+## 🎨 Design Notes for Mobile UI
+
+- **Color scheme:** Keep the existing orange/amber accent colors from the current Attendance page
+- **Animations:** Use `framer-motion` for state transitions (the hero card should animate when state changes)
+- **Live timer:** Large, mono-spaced font — feels like a stopwatch
+- **Status indicators:** Pulsing dot animation for active states
+- **QR scanner overlay:** Already exists in [BarcodeScanner.tsx](file:///d:/suzuky/servicestuff/components/BarcodeScanner.tsx) — reuse with different message strings
+- **Break indicator:** Show a coffee cup icon + break duration when in RESTING state
+- **Timeline:** Vertical timeline with dots and lines connecting events chronologically

@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { TechnicianAPI } from '../services/api'; // Import API service
-import { JobCard, DashboardStats, TechnicianAttendance } from '../types';
+import { JobCard, DashboardStats, TechnicianAttendance, AttendanceStatus } from '../types';
 import {
   Clock, CheckCircle, AlertCircle, Calendar, RefreshCw,
-  Loader2, PlayCircle, StopCircle, ClipboardList, ChevronRight, X
+  Loader2, PlayCircle, StopCircle, ClipboardList, ChevronRight, X, QrCode, Scan, LogOut
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { TopBar } from '../components/TopBar';
 import { BarcodeScannerComponent } from '../components/BarcodeScanner';
 import { LocationService } from '../services/location';
-import { Scan } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { RoutePath, JobStatus } from '../types';
 import { SocketService } from '../services/socket';
@@ -19,29 +18,56 @@ import { DashboardSkeleton } from '../components/Skeleton';
 export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
   const [tasks, setTasks] = useState<JobCard[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [attendance, setAttendance] = useState<TechnicianAttendance | null>(null);
+  const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [operationLoading, setOperationLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const [scanPurpose, setScanPurpose] = useState<'attendance' | 'job_card' | null>(null);
+  const [scanPurpose, setScanPurpose] = useState<'attendance_in' | 'attendance_out' | 'job_card' | null>(null);
   const [newAlert, setNewAlert] = useState<{ message: string, type: 'info' | 'success' } | null>(null);
+
+  // Timer for active shift
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const timerRef = React.useRef<NodeJS.Timeout | null>(null);
+
   const navigate = useNavigate();
+
+  const formatTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 1. Get Dashboard Stats & Attendance
-      const statsRes = await TechnicianAPI.getDashboardStats();
-      setStats(statsRes.data.data.stats);
-      setAttendance(statsRes.data.data.attendance);
+      const [statsResult, statusResult, jobsResult] = await Promise.allSettled([
+        TechnicianAPI.getDashboardStats(),
+        TechnicianAPI.getAttendanceStatus(),
+        TechnicianAPI.getJobs({ limit: 5 }),
+      ]);
 
-      // 2. Get Recent Jobs
-      const jobsRes = await TechnicianAPI.getJobs({ limit: 5 }); // Default sort is created_at desc
-      setTasks(jobsRes.data.data);
+      if (statsResult.status === 'fulfilled') {
+        setStats(statsResult.value.data?.data?.stats || null);
+      } else {
+        console.error("[DASHBOARD] Stats fetch failed:", statsResult.reason);
+      }
+
+      if (statusResult.status === 'fulfilled') {
+        setAttendanceStatus(statusResult.value.data?.data || null);
+      } else {
+        console.error("[DASHBOARD] Attendance status fetch failed:", statusResult.reason);
+      }
+
+      if (jobsResult.status === 'fulfilled') {
+        setTasks(jobsResult.value.data?.data || []);
+      } else {
+        console.error("[DASHBOARD] Jobs fetch failed:", jobsResult.reason);
+      }
 
     } catch (err) {
       console.error("Fetch error:", err);
-      // toast.error("Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
@@ -72,35 +98,45 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
     socket.on('job_cards:changed', handleUpdate);
     socket.on('order:update', handleUpdate);
     socket.on('inventory:changed', handleUpdate);
+    socket.on('attendance:changed', handleUpdate);
+    socket.on('attendance:shift_start', handleUpdate);
+    socket.on('attendance:shift_end', handleUpdate);
 
     return () => {
       socket.off('job_cards:changed', handleUpdate);
       socket.off('order:update', handleUpdate);
       socket.off('inventory:changed', handleUpdate);
+      socket.off('attendance:changed', handleUpdate);
+      socket.off('attendance:shift_start', handleUpdate);
+      socket.off('attendance:shift_end', handleUpdate);
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
 
-  const handleClockInOut = async () => {
-    if (attendanceLoading) return;
-
-    // Clock Out: Call API directly
-    if (attendance && !attendance.clockOut) {
-      setAttendanceLoading(true);
-      try {
-        const location = await LocationService.getInstance().getCurrentLocation();
-        await TechnicianAPI.clockOut(location);
-        await fetchData();
-      } catch (err: any) {
-        alert("Clock-out failed: " + (err.response?.data?.error || err.message));
-      } finally {
-        setAttendanceLoading(false);
-      }
-      return;
+  // Timer Effect
+  useEffect(() => {
+    if (attendanceStatus?.currentState === 'SHIFT_ACTIVE' && attendanceStatus?.currentShiftStartedAt) {
+      const startTime = new Date(attendanceStatus.currentShiftStartedAt).getTime();
+      const update = () => setElapsedTime(Date.now() - startTime);
+      update();
+      timerRef.current = setInterval(update, 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+      setElapsedTime(0);
     }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [attendanceStatus?.currentState, attendanceStatus?.currentShiftStartedAt]);
 
-    // Clock In: Open Scanner first
-    setScanPurpose('attendance');
-    setIsScanning(true);
+  const handleClockInOut = async () => {
+    if (operationLoading) return;
+
+    if (!attendanceStatus || attendanceStatus?.currentState === 'NOT_CHECKED_IN' || attendanceStatus?.currentState === 'CHECKED_OUT') {
+      setScanPurpose('attendance_in');
+      setIsScanning(true);
+    } else {
+      setScanPurpose('attendance_out');
+      setIsScanning(true);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -121,32 +157,36 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
 
   const handleScan = async (result: string) => {
     setIsScanning(false);
+    const purpose = scanPurpose;
+    setScanPurpose(null);
 
-    if (scanPurpose === 'attendance') {
-      setAttendanceLoading(true);
+    if (purpose === 'attendance_in' || purpose === 'attendance_out') {
+      setOperationLoading(true);
       try {
         const location = await LocationService.getInstance().getCurrentLocation();
-        await TechnicianAPI.clockIn(location);
+        if (purpose === 'attendance_in') {
+          await TechnicianAPI.clockIn(location, result);
+          setNewAlert({ message: "Successfully Clocked In! ✅", type: 'success' });
+        } else {
+          await TechnicianAPI.clockOut(location, result);
+          setNewAlert({ message: "Successfully Clocked Out! 👋", type: 'success' });
+        }
         await fetchData();
-        setNewAlert({ message: "Successfully Clocked In! ✅", type: 'success' });
         setTimeout(() => setNewAlert(null), 3000);
       } catch (err: any) {
-        alert("Clock-in failed: " + (err.response?.data?.error || err.message));
+        alert("Action failed: " + (err.response?.data?.error || err.message));
       } finally {
-        setAttendanceLoading(false);
-        setScanPurpose(null);
+        setOperationLoading(false);
       }
     } else {
       // General scanning (VIN/Job Card)
       console.log("Scanned VIN/Job Card:", result);
-      // Try to find if this task exists in the current list
       const matchedIdx = tasks.findIndex(t => t.vehicle?.license_plate === result || t.id === result);
       if (matchedIdx !== -1) {
         navigate(RoutePath.JOB_CARD.replace(':id', tasks[matchedIdx].id));
       } else {
-        alert(`Scanned: ${result}. feature coming soon.`);
+        alert(`Scanned: ${result}. Feature coming soon.`);
       }
-      setScanPurpose(null);
     }
   };
 
@@ -156,7 +196,7 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
         <BarcodeScannerComponent
           onScan={handleScan}
           onClose={() => { setIsScanning(false); setScanPurpose(null); }}
-          message={scanPurpose === 'attendance' ? "Scan Workshop QR to Clock In" : "Scan VIN or Job Ticket"}
+          message={scanPurpose === 'attendance_in' ? "Scan Workshop QR to Clock In" : scanPurpose === 'attendance_out' ? "Scan Workshop QR to Clock Out" : "Scan VIN or Job Ticket"}
         />
       )}
       <TopBar onMenuClick={onMenuClick} title="Dashboard" />
@@ -181,34 +221,54 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
 
       {/* Attendance Widget */}
       <div className="p-4 pb-0">
-        <div className="bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-600/20 dark:to-indigo-700/20 backdrop-blur-md rounded-3xl p-6 shadow-xl shadow-blue-900/10 dark:shadow-blue-950/20 border border-white/50 dark:border-white/5 flex justify-between items-center relative overflow-hidden group">
+        <div
+          onClick={() => navigate(RoutePath.ATTENDANCE)}
+          className="bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-600/20 dark:to-indigo-700/20 backdrop-blur-md rounded-[2.5rem] p-6 shadow-xl shadow-blue-900/10 dark:shadow-blue-950/20 border border-white/50 dark:border-white/5 flex justify-between items-center relative overflow-hidden group cursor-pointer"
+        >
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -translate-y-12 translate-x-12 group-hover:bg-blue-500/20 transition-all duration-700" />
+
           <div className="relative z-10">
-            <p className="text-blue-600 dark:text-blue-100 text-[10px] font-black uppercase tracking-[0.15em] mb-1">Attendance</p>
-            <h3 className="text-2xl font-black text-gray-900 dark:text-white font-display">
-              {attendance && !attendance.clockOut ? 'CLOCKED IN' : 'CLOCKED OUT'}
+            <p className="text-blue-600 dark:text-blue-200 text-[10px] font-black uppercase tracking-[0.2em] mb-1 italic">
+              Workshop Status
+            </p>
+            <h3 className="text-2xl font-black text-gray-900 dark:text-white font-display uppercase tracking-tight">
+              {attendanceStatus?.currentState === 'SHIFT_ACTIVE' ? 'Working Active' :
+                attendanceStatus?.currentState === 'SHIFT_PAUSED' ? 'On Break' :
+                  attendanceStatus?.currentState === 'CHECKED_IN_IDLE' ? 'Logged In' :
+                    attendanceStatus?.currentState === 'CHECKED_OUT' ? 'Day Finished' : 'Offline'}
             </h3>
-            {attendance && !attendance.clockOut && (
-              <p className="text-sm font-medium text-blue-800 dark:text-blue-100 mt-2 flex items-center">
-                <Clock size={14} className="mr-1.5" />
-                Since {new Date(attendance.clockIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </p>
+            {attendanceStatus?.currentState && attendanceStatus.currentState !== 'NOT_CHECKED_IN' && attendanceStatus.currentState !== 'CHECKED_OUT' && (
+              <div className="mt-2 flex items-center gap-2">
+                <p className="text-[10px] font-bold text-blue-800 dark:text-blue-400 flex items-center bg-white/40 dark:bg-black/20 px-3 py-1 rounded-full w-fit">
+                  <Clock size={12} className="mr-1.5" />
+                  {attendanceStatus?.currentState === 'SHIFT_ACTIVE' ? formatTime(elapsedTime) : 'Session Idle'}
+                </p>
+                {attendanceStatus?.currentState === 'SHIFT_ACTIVE' && (
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                )}
+              </div>
             )}
           </div>
-          <button
-            onClick={handleClockInOut}
-            disabled={attendanceLoading}
-            className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-90 ${attendance && !attendance.clockOut
-              ? 'bg-red-500 text-white hover:bg-red-600'
-              : 'bg-green-500 text-white hover:bg-green-600'
-              } ${attendanceLoading ? 'opacity-50' : 'hover:scale-110'}`}
-          >
-            {attendanceLoading ? (
-              <RefreshCw size={24} className="animate-spin" />
-            ) : (
-              attendance && !attendance.clockOut ? <StopCircle size={24} /> : <PlayCircle size={24} />
-            )}
-          </button>
+
+          <div className="flex items-center gap-3 relative z-10">
+            <button
+              onClick={(e) => { e.stopPropagation(); handleClockInOut(); }}
+              disabled={operationLoading}
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl transition-all active:scale-90 ${attendanceStatus?.currentState === 'NOT_CHECKED_IN'
+                ? 'bg-blue-600 text-white shadow-blue-900/30'
+                : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-black/20'
+                } ${operationLoading ? 'opacity-50' : 'hover:scale-105'}`}
+            >
+              {operationLoading ? (
+                <RefreshCw size={24} className="animate-spin" />
+              ) : (
+                attendanceStatus?.currentState === 'NOT_CHECKED_IN' ? <QrCode size={24} /> : <Scan size={24} />
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
