@@ -23,23 +23,34 @@ const JobCardListPage = () => {
 
     const statuses = [
         { id: 'all', label: 'All Jobs' },
-        { id: 'received', label: 'Received' },
-        { id: 'in-diagnosis', label: 'In Diagnosis' },
-        { id: 'in-service', label: 'In Service' },
-        { id: 'qc-done', label: 'QC Done' },
-        { id: 'ready', label: 'Ready' },
+        { id: 'created', label: 'Created' },
+        { id: 'diagnosed', label: 'Diagnosed' },
+        { id: 'in_progress', label: 'In Progress' },
+        { id: 'qc_pending', label: 'QC Pending' },
+        { id: 'completed', label: 'Completed' },
         { id: 'delivered', label: 'Delivered' },
     ];
 
     const getStatusStyles = (status: string) => {
         switch (status) {
-            case 'received': return 'bg-slate-100 text-slate-600 dark:bg-slate-900/50 dark:text-slate-400';
-            case 'in-diagnosis': return 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400';
-            case 'waiting-parts': return 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400';
-            case 'in-service': return 'bg-brand/10 text-brand';
-            case 'qc-done': return 'bg-purple-100 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400';
-            case 'ready': return 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400';
-            case 'delivered': return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+            case 'created':
+            case 'pending':
+                return 'bg-slate-100 text-slate-600 dark:bg-slate-900/50 dark:text-slate-400';
+            case 'diagnosed':
+            case 'in-diagnosis':
+                return 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400';
+            case 'waiting_parts':
+            case 'waiting-parts':
+                return 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400';
+            case 'in_progress':
+                return 'bg-brand/10 text-brand';
+            case 'qc_pending':
+                return 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400 border border-amber-200';
+            case 'qc_approved':
+            case 'completed':
+                return 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400';
+            case 'delivered':
+                return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
             default: return 'bg-slate-100 text-slate-600';
         }
     };

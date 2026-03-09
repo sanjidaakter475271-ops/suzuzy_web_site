@@ -4,13 +4,21 @@ import { JobCard, Technician, ServiceType, Ramp } from '@/types/service-admin/wo
 // Helper to map API status to Frontend status
 const mapJobStatus = (status: string): JobCard['status'] => {
     const map: Record<string, JobCard['status']> = {
-        'pending': 'received',
-        'in_progress': 'in-service',
-        'completed': 'qc-done',
+        'pending': 'created',
+        'diagnosed': 'diagnosed',
+        'in_progress': 'in_progress',
+        'qc_pending': 'qc_pending',
+        'qc_rejected': 'qc_rejected',
+        'qc_approved': 'qc_approved',
+        'completed': 'completed',
         'delivered': 'delivered',
-        'waiting_parts': 'waiting-parts'
+        'waiting_parts': 'waiting_parts',
+        'customer_approved': 'customer_approved',
+        'invoiced': 'invoiced',
+        'paid': 'paid',
+        'cancelled': 'cancelled'
     };
-    return map[status] || 'received';
+    return map[status] || (status as JobCard['status']) || 'created';
 };
 
 interface WorkshopState {
@@ -120,6 +128,7 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
                         cost: Number(r.total_price || 0)
                     })) || [],
                     status: mapJobStatus(card.status),
+                    qc_requests: card.qc_requests,
                     assignedTechnicianId: card.technician_id,
                     assignedRampId: assignedRamp?.id,
                     laborCost: 0,
@@ -199,14 +208,17 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
     },
 
     updateJobCardStatus: async (id, status) => {
-        // Map frontend status to backend status
+        // Map frontend status to backend status if needed, 
+        // with the new standardization they should be 1:1
         const map: Record<string, string> = {
-            'received': 'pending',
-            'in-diagnosis': 'running', // Example
-            'in-service': 'in_progress',
-            'qc-done': 'completed',
+            'created': 'pending',
+            'in_progress': 'in_progress',
+            'qc_pending': 'qc_pending',
+            'qc_approved': 'qc_approved',
+            'qc_rejected': 'qc_rejected',
+            'completed': 'completed',
             'delivered': 'delivered',
-            'waiting-parts': 'waiting_parts'
+            'waiting_parts': 'waiting_parts'
         };
         const backendStatus = map[status] || status;
 

@@ -13,7 +13,7 @@ export enum JobStatus {
   IN_PROGRESS = 'in_progress',
   PAUSED = 'paused',
   COMPLETED = 'completed',
-  QC_REQUESTED = 'qc_requested',
+  QC_PENDING = 'qc_pending',
   QC_PASSED = 'qc_passed',
   QC_FAILED = 'qc_failed',
   VERIFIED = 'verified'

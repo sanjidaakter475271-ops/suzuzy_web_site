@@ -32,10 +32,10 @@ const CustomerLiveTracking = () => {
     );
 
     const steps = [
-        { label: 'Received', value: 'received', desc: 'Vehicle received at workshop' },
-        { label: 'Diagnosis', value: 'in-diagnosis', desc: 'Technician is inspecting issues' },
-        { label: 'Service', value: 'in-service', desc: 'Work is currently in progress' },
-        { label: 'Ready', value: 'ready', desc: 'Finished and ready for pickup' }
+        { label: 'Received', value: 'created', desc: 'Vehicle received at workshop' },
+        { label: 'Diagnosis', value: 'diagnosed', desc: 'Technician is inspecting issues' },
+        { label: 'Service', value: 'in_progress', desc: 'Work is currently in progress' },
+        { label: 'Ready', value: 'qc_approved', desc: 'Finished and ready for pickup' }
     ];
 
     const currentStepIdx = steps.findIndex(s => s.value === job.status) === -1 ?

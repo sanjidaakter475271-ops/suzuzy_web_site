@@ -14,15 +14,11 @@ export async function POST(req: NextRequest) {
 
         const { location, deviceId, qr_code } = await req.json();
 
-        // 1. Validate QR Code
-        if (!qr_code) {
-            return NextResponse.json({ success: false, error: 'QR Code is required for clock-in' }, { status: 400 });
-        }
+        const cleaned_qr = qr_code.trim();
 
+        // 2. Validate QR Code format
         // Expected format: SUZUKY-WS-DEALER_ID-SECRET
-        // Since DEALER_ID is a UUID (contains dashes), we can't just split by '-' and check index 2.
-        // Format: SUZUKY (6) | -WS- (4) | UUID (36) | - (1) | SECRET (8)
-        const match = qr_code.match(/^SUZUKY-WS-([0-9a-f-]{36})-([A-Z0-9]+)$/i);
+        const match = cleaned_qr.match(/^SUZUKY-WS-([0-9a-f-]{36})-([0-9a-fA-F-]+)$/i);
 
         if (!match) {
             return NextResponse.json({ success: false, error: 'Invalid QR Code format' }, { status: 400 });
@@ -31,8 +27,9 @@ export async function POST(req: NextRequest) {
         const dealerIdFromQr = match[1];
         const qrSecret = match[2];
 
-        if (dealerIdFromQr !== technician.dealerId) {
-            return NextResponse.json({ success: false, error: 'This QR code belongs directly to a different dealer' }, { status: 403 });
+        // Case-insensitive comparison for dealerId
+        if (!technician.dealerId || dealerIdFromQr.toLowerCase() !== technician.dealerId.toLowerCase()) {
+            return NextResponse.json({ success: false, error: 'This QR code belongs to a different dealer' }, { status: 403 });
         }
 
         const validQr = await (prisma as any).workshop_qr_codes.findFirst({

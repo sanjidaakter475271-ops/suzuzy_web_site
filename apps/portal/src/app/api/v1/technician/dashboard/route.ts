@@ -49,8 +49,8 @@ export async function GET(req: NextRequest) {
                 }
             });
             pending = jobs.filter(j => j.status === 'pending').length;
-            active = jobs.filter(j => j.status === 'in_progress').length;
-            completed = jobs.filter(j => j.status && ['completed', 'verified', 'delivered'].includes(j.status)).length;
+            active = jobs.filter(j => j.status && ['in_progress', 'qc_pending'].includes(j.status)).length;
+            completed = jobs.filter(j => j.status && ['completed', 'verified', 'delivered', 'qc_passed'].includes(j.status)).length;
             total = jobs.length;
         } catch (jobErr: any) {
             console.error('[DASHBOARD_API] Job fetch failed:', jobErr.message);

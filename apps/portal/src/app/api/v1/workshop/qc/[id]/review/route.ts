@@ -40,6 +40,12 @@ export async function POST(
         const { id } = await params;
         const user = await getCurrentUser();
         if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+
+        // Role check: Only admins/owners can review QC
+        if (!['service_admin', 'dealer_owner', 'super_admin'].includes(user.role)) {
+            return NextResponse.json({ success: false, error: "Forbidden: Access denied" }, { status: 403 });
+        }
+
         const dealerId = user.dealerId;
         if (!dealerId) return NextResponse.json({ success: false, error: "Dealer context required" }, { status: 400 });
 
@@ -108,6 +114,15 @@ export async function POST(
             });
 
             return updatedQc;
+        });
+
+        // After the transaction, broadcast realtime event
+        const { broadcastEvent } = await import('@/lib/socket-server');
+        await broadcastEvent('job_cards:changed', {
+            id: qcRequest.job_card_id,
+            status: nextJobStatus,
+            type: `qc_${status}`,
+            qcRequestId: id,
         });
 
         return NextResponse.json({

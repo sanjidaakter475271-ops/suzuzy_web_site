@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
             prisma.job_cards.count({
                 where: {
                     dealer_id: dealerId,
-                    status: { in: ['in_progress', 'qc_requested', 'pending', 'qc_failed'] }
+                    status: { in: ['in_progress', 'qc_pending', 'pending', 'qc_failed'] }
                 }
             }),
 

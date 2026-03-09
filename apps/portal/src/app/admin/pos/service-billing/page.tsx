@@ -23,7 +23,7 @@ const ServiceBillingPage = () => {
 
     // Filter jobs that are ready for billing
     const billableJobs = jobCards.filter(j =>
-        (j.status === 'qc-done' || j.status === 'ready' || j.status === 'delivered') &&
+        (j.status === 'qc_approved' || j.status === 'completed' || j.status === 'delivered') &&
         (j.jobNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (j.customerName && j.customerName.toLowerCase().includes(searchQuery.toLowerCase())))
     );

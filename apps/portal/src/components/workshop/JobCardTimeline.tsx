@@ -11,12 +11,12 @@ interface JobCardTimelineProps {
 
 const JobCardTimeline: React.FC<JobCardTimelineProps> = ({ status }) => {
     const steps: { label: string; value: JobCard['status'] }[] = [
-        { label: 'Received', value: 'received' },
-        { label: 'In Diagnosis', value: 'in-diagnosis' },
-        { label: 'Wait Parts', value: 'waiting-parts' },
-        { label: 'In Service', value: 'in-service' },
-        { label: 'QC Done', value: 'qc-done' },
-        { label: 'Ready', value: 'ready' },
+        { label: 'Received', value: 'created' },
+        { label: 'Diagnosis', value: 'diagnosed' },
+        { label: 'Wait Parts', value: 'waiting_parts' },
+        { label: 'In Service', value: 'in_progress' },
+        { label: 'QC Done', value: 'qc_approved' },
+        { label: 'Ready', value: 'completed' },
         { label: 'Delivered', value: 'delivered' },
     ];
 

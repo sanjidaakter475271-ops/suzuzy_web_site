@@ -35,6 +35,11 @@ export async function GET(req: NextRequest) {
                         include: {
                             products: true
                         }
+                    },
+                    qc_requests: {
+                        where: { status: 'pending' },
+                        orderBy: { created_at: 'desc' },
+                        take: 1
                     }
                 },
                 orderBy: { created_at: 'desc' },

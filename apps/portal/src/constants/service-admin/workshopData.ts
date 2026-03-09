@@ -32,7 +32,7 @@ export const MOCK_JOB_CARDS: JobCard[] = [
             { description: 'Leak at Engine Cover', status: 'completed', cost: 200 },
             { description: 'Oil & Filter Change', status: 'pending', cost: 1650 },
         ],
-        status: 'in-service',
+        status: 'in_progress',
         assignedTechnicianId: 'T1',
         laborCost: 650,
         partsCost: 1850,
@@ -56,7 +56,7 @@ export const MOCK_JOB_CARDS: JobCard[] = [
         items: [
             { description: 'Brake Pad Replacement', status: 'completed', cost: 800, qty: 1, unit: 'pair' },
         ],
-        status: 'qc-done',
+        status: 'qc_approved',
         assignedTechnicianId: 'T2',
         laborCost: 300,
         partsCost: 800,

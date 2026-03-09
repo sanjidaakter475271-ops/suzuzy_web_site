@@ -12,7 +12,8 @@ import {
     Bike,
     Clock,
     FileText,
-    ArrowRight
+    ArrowRight,
+    Loader2
 } from 'lucide-react';
 import Breadcrumb from '@/components/service-admin/Breadcrumb';
 import { Card, CardContent } from '@/components/service-admin/ui';
@@ -21,15 +22,54 @@ import { QC_CHECKLIST_TEMPLATE } from '@/constants/service-admin/workshopData';
 import { cn } from '@/lib/utils';
 
 const QCChecklistPage = () => {
-    const { jobCards, technicians } = useWorkshopStore();
+    const { jobCards, technicians, fetchWorkshopData } = useWorkshopStore();
     const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
     const [checklist, setChecklist] = useState(QC_CHECKLIST_TEMPLATE);
+    const [notes, setNotes] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const readyForQC = jobCards.filter(job => job.status === 'in-service' || job.status === 'qc-done');
+    const readyForQC = jobCards.filter(job => job.status === 'qc_pending');
     const selectedJob = jobCards.find(j => j.id === selectedJobId);
 
     const handleToggleItem = (id: string) => {
         setChecklist(prev => prev.map(item => item.id === id ? { ...item, checked: !item.checked } : item));
+    };
+
+    const handleQCSubmit = async (status: 'approved' | 'rejected') => {
+        if (!selectedJob || !selectedJob.qc_requests?.[0]?.id) {
+            alert("No pending QC request found for this job.");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const qcId = selectedJob.qc_requests[0].id;
+            const res = await fetch(`/api/v1/workshop/qc/${qcId}/review`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    status,
+                    notes,
+                    checklist: checklist.map(item => ({
+                        item_name: item.label,
+                        category: 'Inspection',
+                        is_passed: item.checked,
+                    }))
+                })
+            });
+
+            if (!res.ok) throw new Error("Failed to submit QC review");
+
+            alert(`QC ${status} successfully!`);
+            setSelectedJobId(null);
+            setChecklist(QC_CHECKLIST_TEMPLATE);
+            setNotes('');
+            await fetchWorkshopData();
+        } catch (error: any) {
+            alert(error.message);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const allChecked = checklist.every(item => item.checked);
@@ -70,9 +110,9 @@ const QCChecklistPage = () => {
                                     </div>
                                     <div className={cn(
                                         "px-2 py-0.5 rounded-full text-[9px] font-black uppercase",
-                                        job.status === 'qc-done' ? 'bg-success-bg text-success' : 'bg-amber-100 text-amber-600'
+                                        job.status === 'qc_approved' ? 'bg-success-bg text-success' : 'bg-amber-100 text-amber-600'
                                     )}>
-                                        {job.status.replace('-', ' ')}
+                                        {job.status.replace('_', ' ')}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3 text-xs text-ink-muted">
@@ -164,6 +204,8 @@ const QCChecklistPage = () => {
                                         </label>
                                         <textarea
                                             rows={2}
+                                            value={notes}
+                                            onChange={(e) => setNotes(e.target.value)}
                                             placeholder="Add any specific observations or pending work..."
                                             className="w-full bg-surface-page dark:bg-dark-page border-2 border-surface-border dark:border-dark-border rounded-xl px-4 py-3 outline-none focus:border-brand transition-colors text-sm"
                                         />
@@ -171,21 +213,32 @@ const QCChecklistPage = () => {
                                 </div>
 
                                 <div className="p-6 bg-surface-page dark:bg-dark-page/50 border-t border-surface-border dark:border-dark-border/50 flex items-center justify-between gap-4">
-                                    <button className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs flex items-center gap-2 text-danger hover:bg-danger-bg transition-all">
+                                    <button
+                                        disabled={isSubmitting}
+                                        onClick={() => handleQCSubmit('rejected')}
+                                        className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs flex items-center gap-2 text-danger hover:bg-danger-bg transition-all disabled:opacity-50"
+                                    >
                                         <XCircle size={18} />
                                         Reject & Send Back
                                     </button>
                                     <button
-                                        disabled={!allChecked}
+                                        disabled={!allChecked || isSubmitting}
+                                        onClick={() => handleQCSubmit('approved')}
                                         className={cn(
                                             "flex-1 md:flex-none px-12 py-3 rounded-xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all shadow-lg",
-                                            allChecked
+                                            allChecked && !isSubmitting
                                                 ? "bg-success text-white hover:bg-emerald-600 shadow-success/20 active:scale-95"
                                                 : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
                                         )}
                                     >
-                                        <CheckCircle2 size={18} />
-                                        Pass Inspection
+                                        {isSubmitting ? (
+                                            <Loader2 size={18} className="animate-spin" />
+                                        ) : (
+                                            <>
+                                                <CheckCircle2 size={18} />
+                                                Pass Inspection
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             </CardContent>

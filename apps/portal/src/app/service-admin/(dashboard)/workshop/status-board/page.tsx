@@ -9,14 +9,14 @@ import { Card, CardContent } from '@/components/service-admin/ui';
 
 const StatusBadge = ({ status }: { status: string }) => {
     const config: Record<string, { label: string; color: string; bg: string; icon: any }> = {
-        'received': { label: 'Pending', color: 'text-brand', bg: 'bg-brand/10', icon: Clock },
-        'in-service': { label: 'Active', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: Wrench },
-        'qc-done': { label: 'Ready', color: 'text-success', bg: 'bg-success/10', icon: CheckCircle2 },
+        'created': { label: 'Pending', color: 'text-brand', bg: 'bg-brand/10', icon: Clock },
+        'in_progress': { label: 'Active', color: 'text-blue-500', bg: 'bg-blue-500/10', icon: Wrench },
+        'qc_approved': { label: 'Ready', color: 'text-success', bg: 'bg-success/10', icon: CheckCircle2 },
         'delivered': { label: 'Delivered', color: 'text-slate-500', bg: 'bg-slate-500/10', icon: CheckCircle2 },
-        'waiting-parts': { label: 'Waiting Parts', color: 'text-danger', bg: 'bg-danger/10', icon: AlertCircle },
+        'waiting_parts': { label: 'Waiting Parts', color: 'text-danger', bg: 'bg-danger/10', icon: AlertCircle },
     };
 
-    const s = config[status] || config['received'];
+    const s = config[status] || config['created'];
     const Icon = s.icon;
 
     return (
@@ -86,9 +86,9 @@ const StatusBoardPage = () => {
     const [searchQuery, setSearchQuery] = useState('');
 
     const columns = [
-        { id: 'received', title: 'Pending', icon: Clock, color: 'text-brand' },
-        { id: 'in-service', title: 'Working', icon: Wrench, color: 'text-blue-500' },
-        { id: 'qc-done', title: 'Ready', icon: CheckCircle2, color: 'text-success' },
+        { id: 'created', title: 'Pending', icon: Clock, color: 'text-brand' },
+        { id: 'in_progress', title: 'Working', icon: Wrench, color: 'text-blue-500' },
+        { id: 'qc_approved', title: 'Ready', icon: CheckCircle2, color: 'text-success' },
     ];
 
     const filteredJobs = useMemo(() => jobCards.filter(j =>

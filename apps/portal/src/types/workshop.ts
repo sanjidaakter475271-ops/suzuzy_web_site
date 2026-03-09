@@ -13,7 +13,7 @@ export interface JobCard {
     assignedRampId?: string;
     photos?: string[];
     items: JobCardItem[];
-    status: 'received' | 'in-diagnosis' | 'waiting-parts' | 'in-service' | 'qc-done' | 'ready' | 'delivered';
+    status: 'created' | 'diagnosed' | 'estimate_sent' | 'customer_approved' | 'in_progress' | 'waiting_parts' | 'additional_work' | 'qc_pending' | 'qc_approved' | 'qc_rejected' | 'completed' | 'invoiced' | 'paid' | 'delivered' | 'cancelled';
     assignedTechnicianId?: string;
     laborCost: number;
     partsCost: number;

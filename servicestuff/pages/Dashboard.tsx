@@ -147,16 +147,32 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800';
+      case 'completed':
+      case 'qc_passed':
+      case 'verified':
+        return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800';
+      case 'in_progress':
+        return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800';
+      case 'qc_pending':
+        return 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800';
+      case 'qc_failed':
+        return 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800';
       default: return 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed': return <CheckCircle size={16} className="mr-1" />;
-      case 'in_progress': return <Clock size={16} className="mr-1" />;
+      case 'completed':
+      case 'qc_passed':
+      case 'verified':
+        return <CheckCircle size={16} className="mr-1" />;
+      case 'in_progress':
+        return <Clock size={16} className="mr-1" />;
+      case 'qc_pending':
+        return <AlertCircle size={16} className="mr-1 animate-pulse" />;
+      case 'qc_failed':
+        return <X size={16} className="mr-1" />;
       default: return <AlertCircle size={16} className="mr-1" />;
     }
   };

@@ -392,7 +392,7 @@ const JobCardDetailPage = () => {
                                 <RefreshCcw size={14} /> Update Status
                             </h3>
                             <div className="grid grid-cols-1 gap-2">
-                                {['in-diagnosis', 'in-service', 'qc-done', 'ready', 'delivered'].map((s) => (
+                                {['diagnosed', 'in_progress', 'qc_pending', 'completed', 'delivered'].map((s) => (
                                     <button
                                         key={s}
                                         onClick={() => handleStatusUpdate(s)}

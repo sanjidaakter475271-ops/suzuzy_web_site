@@ -452,7 +452,7 @@ export const JobCardDetail: React.FC = () => {
                                     } else if (status === 'pending') {
                                         style = 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.1)]';
                                         label = 'Pending';
-                                    } else if (status === 'qc_requested') {
+                                    } else if (status === 'qc_pending') {
                                         style = 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.1)]';
                                         label = 'QC Requested';
                                     } else if (status === 'qc_failed') {
@@ -871,7 +871,7 @@ export const JobCardDetail: React.FC = () => {
                             Request QC
                         </button>
                     </>
-                ) : job.status === 'qc_requested' ? (
+                ) : job.status === 'qc_pending' ? (
                     <div className="flex-1 bg-amber-500/10 text-amber-400 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 border border-amber-500/30">
                         <Clock size={20} />
                         Awaiting QC Review...

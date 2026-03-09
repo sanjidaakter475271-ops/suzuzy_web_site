@@ -132,11 +132,11 @@ export const MyJobs: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) =
                     icon: <AlertCircle size={14} className="animate-pulse text-amber-500" />,
                     label: 'Pending'
                 };
-            case JobStatus.QC_REQUESTED:
+            case JobStatus.QC_PENDING:
                 return {
                     color: 'text-amber-400 bg-amber-500/10 border-amber-500/20 shadow-[0_0_12px_rgba(245,158,11,0.1)]',
                     icon: <AlertCircle size={14} className="animate-pulse text-amber-500" />,
-                    label: 'QC Requested'
+                    label: 'QC Pending'
                 };
             case JobStatus.QC_FAILED:
                 return {

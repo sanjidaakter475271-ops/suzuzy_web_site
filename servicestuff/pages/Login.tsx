@@ -4,6 +4,7 @@ import { RoutePath } from '../types';
 import { KeyRound, Mail, Loader2, ArrowRight, ShieldCheck, Zap, Fingerprint, AlertCircle } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BiometricService } from '../services/biometric';
 
 interface LoginProps {
   onLogin: (name: string) => void;
@@ -20,11 +21,17 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [hasBiometrics, setHasBiometrics] = useState(false);
 
   useEffect(() => {
-    // Check if biometrics was enabled in settings
-    const bioEnabled = localStorage.getItem('service_biometrics_enabled') === 'true';
-    if (bioEnabled && window.PublicKeyCredential) {
-      setHasBiometrics(true);
-    }
+    // Check if biometrics was enabled in settings using our service
+    BiometricService.isEnabled().then(enabled => {
+      setHasBiometrics(enabled);
+      if (enabled) {
+        // Auto-trigger biometric after a short delay for better UX
+        const timer = setTimeout(() => {
+          handleBiometricLogin();
+        }, 1200);
+        return () => clearTimeout(timer);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -54,33 +61,50 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       setLoading(false);
       return;
     }
+
+    // If login is successful and biometric is enabled, store credentials
+    const enabled = await BiometricService.isEnabled();
+    if (enabled) {
+      await BiometricService.setEnabled(true, { email, pass: password });
+    }
   };
 
   const handleBiometricLogin = async () => {
     setLoading(true);
+    setError(null);
+
     try {
-      const challenge = new Uint8Array(32);
-      window.crypto.getRandomValues(challenge);
+      // 1. Check if we have 3 failures already
+      const failCount = await BiometricService.getFailCount();
 
-      const assertion = await navigator.credentials.get({
-        publicKey: {
-          challenge: challenge,
-          rpId: window.location.hostname,
-          userVerification: "required",
-        }
-      });
+      // 2. Perform native authentication
+      // If failCount >= 3, allowDeviceCredential should still be true to fallback to phone lock
+      const success = await BiometricService.authenticate(true);
 
-      if (assertion) {
-        setTimeout(() => {
-          onLogin("Service Staff (Bio)");
-          navigate(RoutePath.DASHBOARD);
+      if (success) {
+        // Retrieve stored credentials
+        const creds = await BiometricService.getStoredCredentials();
+        if (creds) {
+          const { error: authError } = await signIn(creds.email, creds.pass);
+          if (authError) {
+            setError("Session expired or credentials changed. Please login manually.");
+            setLoading(false);
+          }
+        } else {
+          setError("No biometric credentials found. Please login with password first.");
           setLoading(false);
-        }, 500);
+        }
       } else {
+        // If it failed or was cancelled
+        const currentFails = await BiometricService.getFailCount();
+        if (currentFails >= 3) {
+          setError("Too many biometric failures. Please use your phone password/PIN or enter credentials below.");
+        }
         setLoading(false);
       }
     } catch (err) {
       console.error("Biometric login error:", err);
+      setError("Biometric authentication failed.");
       setLoading(false);
     }
   };

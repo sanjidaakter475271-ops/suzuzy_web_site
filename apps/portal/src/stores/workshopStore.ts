@@ -73,7 +73,7 @@ export const useWorkshopStore = create<WorkshopState>((set) => ({
                     ...jc,
                     assignedRampId: availableRamp.id,
                     assignedTechnicianId: technicianId,
-                    status: 'received'
+                    status: 'created'
                 } : jc)
             };
         }

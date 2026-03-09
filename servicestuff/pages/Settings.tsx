@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import { RoutePath } from '../types';
 
 import { TechnicianAPI } from '../services/api';
+import { BiometricService } from '../services/biometric';
+import { useAuth } from '../lib/auth';
 
 interface SettingsProps {
   onMenuClick: () => void;
@@ -35,6 +37,8 @@ export const Settings: React.FC<SettingsProps> = ({ onMenuClick, userName, onTog
   const [oldPass, setOldPass] = useState("");
   const [newPass, setNewPass] = useState("");
 
+  const { user } = useAuth();
+
   // Initialize settings from local storage and browser APIs
   useEffect(() => {
     const loadProfile = async () => {
@@ -54,8 +58,7 @@ export const Settings: React.FC<SettingsProps> = ({ onMenuClick, userName, onTog
     loadProfile();
 
     // Check Biometrics
-    const storedBio = localStorage.getItem('service_biometrics_enabled');
-    setBiometrics(storedBio === 'true');
+    BiometricService.isEnabled().then(setBiometrics);
 
     // Check Storage Persistence
     if (navigator.storage && navigator.storage.persisted) {
@@ -100,48 +103,39 @@ export const Settings: React.FC<SettingsProps> = ({ onMenuClick, userName, onTog
   const toggleBiometrics = async () => {
     if (bioLoading) return;
 
-    if (!biometrics) {
-      setBioLoading(true);
+    if (biometrics) {
+      await BiometricService.setEnabled(false);
+      setBiometrics(false);
+      return;
+    }
 
-      const { Capacitor } = await import('@capacitor/core');
-      if (!Capacitor.isNativePlatform()) {
-        alert("Biometric authentication is only available on native mobile devices.");
+    const pass = window.prompt("Enter your account password to enable biometric login:");
+    if (!pass) return;
+
+    setBioLoading(true);
+    try {
+      const isAvailable = await BiometricService.isAvailable();
+      if (!isAvailable) {
+        alert("Biometric authentication is not set up or available on this device.");
         setBioLoading(false);
         return;
       }
 
-      try {
-        const { BiometricAuth } = await import('@aparajita/capacitor-biometric-auth');
-        const info = await BiometricAuth.checkBiometry();
-
-        if (!info.isAvailable) {
-          alert(`Biometric authentication is not set up on this device. Reason: ${info.reason}`);
-          setBioLoading(false);
-          return;
-        }
-
-        await BiometricAuth.authenticate({
-          reason: "Authenticate to enable biometric login",
-          cancelTitle: "Cancel",
-          allowDeviceCredential: true,
+      const success = await BiometricService.authenticate(true);
+      if (success) {
+        // Save immediately with current user's email
+        await BiometricService.setEnabled(true, {
+          email: user?.email || '',
+          pass
         });
-
         setBiometrics(true);
-        localStorage.setItem('service_biometrics_enabled', 'true');
-        alert("Fingerprint authentication enabled successfully.");
-      } catch (err: any) {
-        console.error("Biometric setup failed:", err);
-        // User cancellation has code '-128' or specific error type depending on OS
-        if (err?.code !== 'userCancel' && !err?.message?.includes('cancel')) {
-          alert("Biometric verification failed. Please try again.");
-        }
-      } finally {
-        setBioLoading(false);
+        alert("Biometric login enabled successfully!");
       }
-    } else {
-      // Disable Biometrics - Just turn it off
-      setBiometrics(false);
-      localStorage.removeItem('service_biometrics_enabled');
+    } catch (err) {
+      console.error("Failed to enable biometrics:", err);
+      alert("Failed to enable biometrics. Please try again.");
+    } finally {
+      setBioLoading(false);
     }
   };
 

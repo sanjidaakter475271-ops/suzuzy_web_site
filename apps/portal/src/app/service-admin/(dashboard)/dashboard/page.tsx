@@ -50,13 +50,20 @@ export default function DashboardPage() {
         socket.on('inventory:changed', handleUpdate);
         socket.on('order:update', handleUpdate);
         socket.on('sale:new', handleUpdate);
-        // Also listen for general signal events if they are broadcasted
+        socket.on('job_cards:changed', handleUpdate);
+        socket.on('attendance:changed', handleUpdate);
+        socket.on('requisition:approved', handleUpdate);
+        socket.on('requisition:rejected', handleUpdate);
         socket.on('signal:refresh', handleUpdate);
 
         return () => {
             socket.off('inventory:changed', handleUpdate);
             socket.off('order:update', handleUpdate);
             socket.off('sale:new', handleUpdate);
+            socket.off('job_cards:changed', handleUpdate);
+            socket.off('attendance:changed', handleUpdate);
+            socket.off('requisition:approved', handleUpdate);
+            socket.off('requisition:rejected', handleUpdate);
             socket.off('signal:refresh', handleUpdate);
         };
     }, [socket, refetch]);

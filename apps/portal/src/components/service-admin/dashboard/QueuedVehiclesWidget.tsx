@@ -23,7 +23,7 @@ const QueuedVehiclesWidget: React.FC<QueuedVehiclesWidgetProps> = ({ apiData }) 
             status: v.status
         }))
         : storeJobCards
-            .filter(job => job.status === 'received' || job.status === 'waiting-parts')
+            .filter(job => job.status === 'created' || job.status === 'waiting_parts')
             .slice(0, 5)
             .map(job => ({
                 id: job.id,

@@ -53,7 +53,7 @@ export async function POST(req: NextRequest, { params }: { params: Params }) {
             return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
 
-        if (job.status === 'qc_requested') {
+        if (job.status === 'qc_pending') {
             return NextResponse.json({ error: 'QC already requested' }, { status: 400 });
         }
 
@@ -72,14 +72,14 @@ export async function POST(req: NextRequest, { params }: { params: Params }) {
         await prisma.job_cards.update({
             where: { id: id },
             data: {
-                status: 'qc_requested',
+                status: 'qc_pending',
                 updated_at: new Date(),
             },
         });
 
         await broadcast('job_cards:changed', {
             id: id,
-            status: 'qc_requested',
+            status: 'qc_pending',
             type: 'qc_request'
         });
 

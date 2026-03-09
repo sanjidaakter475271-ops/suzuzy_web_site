@@ -14,12 +14,10 @@ export async function POST(req: NextRequest) {
 
         const { location, qr_code } = await req.json();
 
-        // 1. Validate QR Code
-        if (!qr_code) {
-            return NextResponse.json({ success: false, error: 'QR Code is required for clock-out' }, { status: 400 });
-        }
+        const cleaned_qr = qr_code.trim();
 
-        const match = qr_code.match(/^SUZUKY-WS-([0-9a-f-]{36})-([A-Z0-9]+)$/i);
+        // 2. Validate QR Code format
+        const match = cleaned_qr.match(/^SUZUKY-WS-([0-9a-f-]{36})-([0-9a-fA-F-]+)$/i);
         if (!match) {
             return NextResponse.json({ success: false, error: 'Invalid QR Code format' }, { status: 400 });
         }
@@ -27,7 +25,7 @@ export async function POST(req: NextRequest) {
         const dealerIdFromQr = match[1];
         const qrSecret = match[2];
 
-        if (dealerIdFromQr !== technician.dealerId) {
+        if (!technician.dealerId || dealerIdFromQr.toLowerCase() !== technician.dealerId.toLowerCase()) {
             return NextResponse.json({ success: false, error: 'This QR code belongs to a different dealer' }, { status: 403 });
         }
 
