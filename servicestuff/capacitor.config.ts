@@ -23,6 +23,12 @@ const config: CapacitorConfig = {
     BarcodeScannerPlugin: {
       lensFacing: 'back',
     },
+    SplashScreen: {
+      launchAutoHide: false,
+      backgroundColor: '#020617',
+      showSpinner: false,
+      androidScaleType: 'CENTER_CROP',
+    },
   },
   server: {
     androidScheme: 'https',

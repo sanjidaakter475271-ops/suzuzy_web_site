@@ -1,3 +1,8 @@
+import React, { useState, useEffect } from 'react';
+import { TechnicianAPI } from '../services/api';
+import { JobCard, JobStatus, RoutePath } from '../types';
+import { TopBar } from '../components/TopBar';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { WifiOff, Search, Clock, CheckCircle, AlertCircle, PauseCircle, ChevronRight, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OfflineService } from '../services/offline';

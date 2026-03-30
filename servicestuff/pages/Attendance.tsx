@@ -357,8 +357,8 @@ export const Attendance: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick 
 
                     <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 backdrop-blur-sm shadow-xl shadow-blue-900/5">
                         <div className="grid grid-cols-7 mb-4">
-                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
-                                <div key={d} className="text-center text-[10px] font-black text-slate-400">{d}</div>
+                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                                <div key={`${d}-${i}`} className="text-center text-[10px] font-black text-slate-400">{d}</div>
                             ))}
                         </div>
                         <div className="grid grid-cols-7 gap-3">

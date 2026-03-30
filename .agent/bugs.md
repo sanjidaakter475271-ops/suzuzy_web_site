@@ -60,19 +60,55 @@ File bugs here with exact file paths so they're easy to find and fix.
 ### [PERF-07] App-wide Code Splitting
 - **File:** `App.tsx`
 - **Problem:** Large main bundle including all heavy pages.
-- **Status:** fixed
-- **Notes:** Implemented `React.lazy` and `Suspense` for all main routes.
+- **Status:** partial-revert
+- **Notes:** Initial implementation of `React.lazy` caused loading issues on Android. Reverted to eager imports for stability while keeping other logic.
 
 ### [PERF-08] Vite Build Optimization
 - **File:** `vite.config.ts`
 - **Problem:** Single vendor bundle.
-- **Status:** fixed
-- **Notes:** Configured `manualChunks` to split React, UI, and Capacitor vendors.
+- **Status:** modified
+- **Notes:** `manualChunks` caused circular dependencies and build instability. Removed `manualChunks` but added `base: './'` for proper asset resolution in Capacitor.
 
 ### [PERF-09] Stagger Animation Refresh Fix
 - **File:** `pages/MyJobs.tsx`, `pages/WorkHistory.tsx`
 - **Problem:** Staggered entry animations re-running on every data refresh.
 - **Status:** fixed
 - **Notes:** Used `isInitialMount` ref to ensure stagger only runs once.
+
+### [PERF-10] Vite Build Minification (Drop Console Logs)
+- **File:** `vite.config.ts`
+- **Problem:** Unnecessary console logs increasing production bundle size.
+- **Status:** fixed
+- **Notes:** Configured `esbuild` to drop `console` and `debugger` in production.
+
+### [PERF-11] Critical Asset Preconnections
+- **File:** `index.html`
+- **Problem:** DNS/SSL handshake delays on startup for APIs and fonts.
+- **Status:** fixed
+- **Notes:** Added `preconnect` and `preload` tags for production endpoints and Google Fonts.
+
+### [PERF-12] Capacitor Splash Screen Integration
+- **File:** `App.tsx`, `capacitor.config.ts`, `package.json`
+- **Problem:** "White flash" on app startup before React mounts.
+- **Status:** fixed
+- **Notes:** Installed `@capacitor/splash-screen`, configured dark background, and manually hide after initial auth check.
+
+### [BUG-001] Missing React Imports
+- **File:** `pages/MyJobs.tsx`
+- **Problem:** `ReferenceError: React is not defined` after refactoring.
+- **Status:** fixed
+- **Notes:** Added missing `import React` and restored type/hook imports.
+
+### [BUG-002] Duplicate Keys in Attendance Calendar
+- **File:** `pages/Attendance.tsx`
+- **Problem:** Duplicate keys ('S', 'T') in day header map.
+- **Status:** fixed
+- **Notes:** Used index-based unique keys for the static day list.
+
+### [BUG-003] Rules of Hooks Violation
+- **File:** `App.tsx`
+- **Problem:** Hook called after early return in `AppContent`.
+- **Status:** fixed
+- **Notes:** Moved `useEffect` for splash screen before the `isPending` return.
 
 <!-- Move here when resolved -->

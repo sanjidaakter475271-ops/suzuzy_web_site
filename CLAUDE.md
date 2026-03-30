@@ -255,6 +255,13 @@ if (error instanceof Prisma.PrismaClientKnownRequestError) {
 3. **All types** in `servicestuff/types.ts` — no inline type definitions
 4. **New pages**: create in `pages/`, add route to `App.tsx`, add path to `RoutePath` enum, add nav link to `components/Sidebar.tsx`
 5. **Socket.io** via `SocketService.getInstance()` singleton — always cleanup listeners on unmount
+6. **Performance**: Use `React.memo` for list items, 300ms debounce for socket events/search, and avoid `React.lazy` on Android.
+7. **Rules of Hooks**: Always call hooks at the top level, BEFORE any conditional early returns (e.g., `if (loading) return`).
+8. **Native Shell**: Use `@capacitor/splash-screen` with `launchAutoHide: false` and hide manually in `App.tsx` after mount.
+
+### Build & Optimization Rules
+1. **Vite**: Always set `base: './'` for Capacitor. Use `esbuild.drop: ['console', 'debugger']` in production.
+2. **Assets**: Preconnect to APIs (`portal`, `realtime`, `supabase`) and preload fonts in `index.html` for faster startup.
 
 ### Environment Variables (`VITE_` prefix)
 - `VITE_PORTAL_API_URL`, `VITE_REALTIME_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_GEMINI_API_KEY`

@@ -38,6 +38,9 @@ export default defineConfig(({ mode }) => {
         outDir: 'dist',
         sourcemap: true,
     },
+    esbuild: {
+        drop: ['console', 'debugger'],
+    },
     server: {
       port: 3003,
       host: '0.0.0.0',

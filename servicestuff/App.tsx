@@ -26,6 +26,7 @@ import { AuthProvider, useAuth } from './lib/auth';
 
 import { OfflineBanner } from './components/OfflineBanner';
 import { PermissionManager } from './components/PermissionManager';
+import { SplashScreen } from '@capacitor/splash-screen';
 
 interface ProtectedRouteProps {
   isAuthenticated: boolean;
@@ -96,6 +97,19 @@ const AppContent: React.FC = () => {
     }
   }, [session, user]);
 
+  // Hide Splash Screen when initial loading is done
+  useEffect(() => {
+    if (!isPending) {
+      // Small delay to ensure the UI is actually painted
+      const timer = setTimeout(() => {
+        SplashScreen.hide().catch(err => {
+          console.warn('[SPLASH] Hide failed (probably running on web):', err);
+        });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isPending]);
+
   if (isPending) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -106,7 +120,6 @@ const AppContent: React.FC = () => {
 
   const isAuthenticated = !!user;
   const userName = user?.name || "Guest";
-
 
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
