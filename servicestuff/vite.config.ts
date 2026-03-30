@@ -38,11 +38,12 @@ export default defineConfig(({ mode }) => {
                 manualChunks: {
                     'react-vendor': ['react', 'react-dom', 'react-router-dom', 'react-router'],
                     'ui-vendor': ['lucide-react', 'framer-motion', 'clsx', 'tailwind-merge'],
-                    'network-vendor': ['axios', 'socket.io-client', '@capacitor/network'],
+                    'network-vendor': ['axios', 'socket.io-client'],
                     'capacitor-vendor': [
                         '@capacitor/core',
                         '@capacitor/status-bar',
-                        '@capacitor/geolocation'
+                        '@capacitor/geolocation',
+                        '@capacitor/network'
                     ]
                 }
             }
