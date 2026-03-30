@@ -41,12 +41,7 @@ export default defineConfig(({ mode }) => {
                     'network-vendor': ['axios', 'socket.io-client', '@capacitor/network'],
                     'capacitor-vendor': [
                         '@capacitor/core',
-                        '@capacitor/app',
-                        '@capacitor/haptics',
-                        '@capacitor/keyboard',
                         '@capacitor/status-bar',
-                        '@capacitor/camera',
-                        '@capacitor/barcode-scanner',
                         '@capacitor/geolocation'
                     ]
                 }

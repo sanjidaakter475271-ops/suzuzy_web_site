@@ -25,13 +25,16 @@
     "@google/genai": "^1.38.0",
     "@supabase/supabase-js": "^2.93.1",
     "axios": "^1.13.5",
+    "clsx": "^2.1.1",
     "expo": "^54.0.33",
     "framer-motion": "^12.34.0",
     "lucide-react": "^0.563.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-router": "^7.13.0",
     "react-router-dom": "^7.13.0",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
