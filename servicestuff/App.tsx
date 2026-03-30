@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Router } from './lib/router';
@@ -7,18 +7,16 @@ import { Splash } from './pages/Splash';
 import { Welcome } from './pages/Welcome';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
-
-// Lazy load heavy pages
-const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
-const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })));
-const JobCardDetail = lazy(() => import('./pages/JobCardDetail').then(m => ({ default: m.JobCardDetail })));
-const MyJobs = lazy(() => import('./pages/MyJobs').then(m => ({ default: m.MyJobs })));
-const Profile = lazy(() => import('./pages/Profile').then(m => ({ default: m.Profile })));
-const Attendance = lazy(() => import('./pages/Attendance').then(m => ({ default: m.Attendance })));
-const Performance = lazy(() => import('./pages/Performance').then(m => ({ default: m.Performance })));
-const WorkHistory = lazy(() => import('./pages/WorkHistory').then(m => ({ default: m.WorkHistory })));
-const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })));
-const Requisitions = lazy(() => import('./pages/Requisitions').then(m => ({ default: m.Requisitions })));
+import { Dashboard } from './pages/Dashboard';
+import { Settings } from './pages/Settings';
+import { JobCardDetail } from './pages/JobCardDetail';
+import { MyJobs } from './pages/MyJobs';
+import { Profile } from './pages/Profile';
+import { Attendance } from './pages/Attendance';
+import { Performance } from './pages/Performance';
+import { WorkHistory } from './pages/WorkHistory';
+import { Notifications } from './pages/Notifications';
+import { Requisitions } from './pages/Requisitions';
 
 import { BottomBar } from './components/BottomBar';
 import { LocationTracker } from './components/LocationTracker';
@@ -132,141 +130,134 @@ const AppContent: React.FC = () => {
       )}
       {isAuthenticated && permissionsDone && <LocationTracker />}
       {isAuthenticated && permissionsDone && <PushNotificationManager />}
-      <Suspense fallback={
-        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-4">
-          <Loader2 className="animate-spin text-blue-500 w-10 h-10" />
-          <p className="text-slate-500 font-bold animate-pulse uppercase tracking-[0.2em] text-[10px]">Loading Interface...</p>
-        </div>
-      }>
-        <Routes location={location} key={location.pathname}>
-          <Route path={RoutePath.SPLASH} element={
-            isAuthenticated ? <Navigate to={RoutePath.DASHBOARD} /> : <Splash />
-          } />
+      <Routes location={location} key={location.pathname}>
+        <Route path={RoutePath.SPLASH} element={
+          isAuthenticated ? <Navigate to={RoutePath.DASHBOARD} /> : <Splash />
+        } />
 
-          <Route path={RoutePath.WELCOME} element={
-            isAuthenticated ? <Navigate to={RoutePath.DASHBOARD} /> : <Welcome />
-          } />
+        <Route path={RoutePath.WELCOME} element={
+          isAuthenticated ? <Navigate to={RoutePath.DASHBOARD} /> : <Welcome />
+        } />
 
-          <Route path={RoutePath.LOGIN} element={
-            isAuthenticated ? <Navigate to={RoutePath.DASHBOARD} /> : <Login onLogin={handleLogin} />
-          } />
+        <Route path={RoutePath.LOGIN} element={
+          isAuthenticated ? <Navigate to={RoutePath.DASHBOARD} /> : <Login onLogin={handleLogin} />
+        } />
 
-          <Route path={RoutePath.REGISTER} element={
-            isAuthenticated ? <Navigate to={RoutePath.DASHBOARD} /> : <Register onLogin={handleLogin} />
-          } />
+        <Route path={RoutePath.REGISTER} element={
+          isAuthenticated ? <Navigate to={RoutePath.DASHBOARD} /> : <Register onLogin={handleLogin} />
+        } />
 
-          <Route path={RoutePath.DASHBOARD} element={
-            <ProtectedRoute
-              isAuthenticated={isAuthenticated}
-              onLogout={handleLogout}
-              userName={userName}
-            >
-              <Dashboard onMenuClick={() => navigate(RoutePath.PROFILE)} />
-            </ProtectedRoute>
-          } />
+        <Route path={RoutePath.DASHBOARD} element={
+          <ProtectedRoute
+            isAuthenticated={isAuthenticated}
+            onLogout={handleLogout}
+            userName={userName}
+          >
+            <Dashboard onMenuClick={() => navigate(RoutePath.PROFILE)} />
+          </ProtectedRoute>
+        } />
 
-          <Route path={RoutePath.SETTINGS} element={
-            <ProtectedRoute
-              isAuthenticated={isAuthenticated}
-              onLogout={handleLogout}
-              userName={userName}
-            >
-              <Settings onMenuClick={() => navigate(RoutePath.PROFILE)} userName={userName} onToggleTheme={toggleTheme} isDark={theme === 'dark'} />
-            </ProtectedRoute>
-          } />
+        <Route path={RoutePath.SETTINGS} element={
+          <ProtectedRoute
+            isAuthenticated={isAuthenticated}
+            onLogout={handleLogout}
+            userName={userName}
+          >
+            <Settings onMenuClick={() => navigate(RoutePath.PROFILE)} userName={userName} onToggleTheme={toggleTheme} isDark={theme === 'dark'} />
+          </ProtectedRoute>
+        } />
 
 
-          <Route path={RoutePath.JOB_CARD} element={
-            <ProtectedRoute
-              isAuthenticated={isAuthenticated}
-              onLogout={handleLogout}
-              userName={userName}
-            >
-              <JobCardDetail />
-            </ProtectedRoute>
-          } />
+        <Route path={RoutePath.JOB_CARD} element={
+          <ProtectedRoute
+            isAuthenticated={isAuthenticated}
+            onLogout={handleLogout}
+            userName={userName}
+          >
+            <JobCardDetail />
+          </ProtectedRoute>
+        } />
 
-          <Route path={RoutePath.MY_JOBS} element={
-            <ProtectedRoute
-              isAuthenticated={isAuthenticated}
-              onLogout={handleLogout}
-              userName={userName}
-            >
-              <MyJobs onMenuClick={() => navigate(RoutePath.PROFILE)} />
-            </ProtectedRoute>
-          } />
+        <Route path={RoutePath.MY_JOBS} element={
+          <ProtectedRoute
+            isAuthenticated={isAuthenticated}
+            onLogout={handleLogout}
+            userName={userName}
+          >
+            <MyJobs onMenuClick={() => navigate(RoutePath.PROFILE)} />
+          </ProtectedRoute>
+        } />
 
-          <Route path={RoutePath.PROFILE} element={
-            <ProtectedRoute
-              isAuthenticated={isAuthenticated}
-              onLogout={handleLogout}
-              userName={userName}
-            >
-              <Profile onMenuClick={() => navigate(RoutePath.PROFILE)} />
-            </ProtectedRoute>
-          } />
+        <Route path={RoutePath.PROFILE} element={
+          <ProtectedRoute
+            isAuthenticated={isAuthenticated}
+            onLogout={handleLogout}
+            userName={userName}
+          >
+            <Profile onMenuClick={() => navigate(RoutePath.PROFILE)} />
+          </ProtectedRoute>
+        } />
 
-          <Route path={RoutePath.ATTENDANCE} element={
-            <ProtectedRoute
-              isAuthenticated={isAuthenticated}
-              onLogout={handleLogout}
-              userName={userName}
-            >
-              <Attendance onMenuClick={() => navigate(RoutePath.PROFILE)} />
-            </ProtectedRoute>
-          } />
+        <Route path={RoutePath.ATTENDANCE} element={
+          <ProtectedRoute
+            isAuthenticated={isAuthenticated}
+            onLogout={handleLogout}
+            userName={userName}
+          >
+            <Attendance onMenuClick={() => navigate(RoutePath.PROFILE)} />
+          </ProtectedRoute>
+        } />
 
-          <Route path={RoutePath.PERFORMANCE} element={
-            <ProtectedRoute
-              isAuthenticated={isAuthenticated}
-              onLogout={handleLogout}
-              userName={userName}
-            >
-              <Performance onMenuClick={() => navigate(RoutePath.PROFILE)} />
-            </ProtectedRoute>
-          } />
+        <Route path={RoutePath.PERFORMANCE} element={
+          <ProtectedRoute
+            isAuthenticated={isAuthenticated}
+            onLogout={handleLogout}
+            userName={userName}
+          >
+            <Performance onMenuClick={() => navigate(RoutePath.PROFILE)} />
+          </ProtectedRoute>
+        } />
 
-          <Route path={RoutePath.WORK_HISTORY} element={
-            <ProtectedRoute
-              isAuthenticated={isAuthenticated}
-              onLogout={handleLogout}
-              userName={userName}
-            >
-              <WorkHistory onMenuClick={() => navigate(RoutePath.PROFILE)} />
-            </ProtectedRoute>
-          } />
+        <Route path={RoutePath.WORK_HISTORY} element={
+          <ProtectedRoute
+            isAuthenticated={isAuthenticated}
+            onLogout={handleLogout}
+            userName={userName}
+          >
+            <WorkHistory onMenuClick={() => navigate(RoutePath.PROFILE)} />
+          </ProtectedRoute>
+        } />
 
 
 
-          <Route path={RoutePath.NOTIFICATIONS} element={
-            <ProtectedRoute
-              isAuthenticated={isAuthenticated}
-              onLogout={handleLogout}
-              userName={userName}
-            >
-              <Notifications onMenuClick={() => navigate(RoutePath.PROFILE)} />
-            </ProtectedRoute>
-          } />
+        <Route path={RoutePath.NOTIFICATIONS} element={
+          <ProtectedRoute
+            isAuthenticated={isAuthenticated}
+            onLogout={handleLogout}
+            userName={userName}
+          >
+            <Notifications onMenuClick={() => navigate(RoutePath.PROFILE)} />
+          </ProtectedRoute>
+        } />
 
-          <Route path={RoutePath.PARTS_REQUEST} element={
-            <ProtectedRoute
-              isAuthenticated={isAuthenticated}
-              onLogout={handleLogout}
-              userName={userName}
-            >
-              <Requisitions onMenuClick={() => navigate(RoutePath.PROFILE)} />
-            </ProtectedRoute>
-          } />
+        <Route path={RoutePath.PARTS_REQUEST} element={
+          <ProtectedRoute
+            isAuthenticated={isAuthenticated}
+            onLogout={handleLogout}
+            userName={userName}
+          >
+            <Requisitions onMenuClick={() => navigate(RoutePath.PROFILE)} />
+          </ProtectedRoute>
+        } />
 
-          <Route path="*" element={
-            isAuthenticated
-              ? <Navigate to={RoutePath.DASHBOARD} />
-              : (localStorage.getItem('servicemate_onboarded') === 'true'
-                ? <Navigate to={RoutePath.LOGIN} />
-                : <Navigate to={RoutePath.SPLASH} />)
-          } />
-        </Routes>
-      </Suspense>
+        <Route path="*" element={
+          isAuthenticated
+            ? <Navigate to={RoutePath.DASHBOARD} />
+            : (localStorage.getItem('servicemate_onboarded') === 'true'
+              ? <Navigate to={RoutePath.LOGIN} />
+              : <Navigate to={RoutePath.SPLASH} />)
+        } />
+      </Routes>
     </>
   );
 };

@@ -29,34 +29,36 @@ export default defineConfig(({ mode }) => {
     realtimeUrl = `http://${localIp}:3001`;
   }
 
+  // Use a proxy in development to avoid CORS issues
+  const isDev = mode === 'development';
+
   return {
+    base: './',
     build: {
         outDir: 'dist',
         sourcemap: true,
-        rollupOptions: {
-            output: {
-                manualChunks: {
-                    'react-vendor': ['react', 'react-dom', 'react-router-dom', 'react-router'],
-                    'ui-vendor': ['lucide-react', 'framer-motion', 'clsx', 'tailwind-merge'],
-                    'network-vendor': ['axios', 'socket.io-client'],
-                    'capacitor-vendor': [
-                        '@capacitor/core',
-                        '@capacitor/status-bar',
-                        '@capacitor/geolocation',
-                        '@capacitor/network'
-                    ]
-                }
-            }
-        }
     },
     server: {
       port: 3003,
       host: '0.0.0.0',
+      proxy: isDev ? {
+        '/api': {
+          target: portalApiUrl,
+          changeOrigin: true,
+          secure: false,
+        },
+        '/socket.io': {
+          target: realtimeUrl,
+          ws: true,
+          changeOrigin: true,
+        }
+      } : undefined,
     },
     define: {
-      // Magically override the environment variables for the app
-      'import.meta.env.VITE_PORTAL_API_URL': JSON.stringify(portalApiUrl),
-      'import.meta.env.VITE_REALTIME_URL': JSON.stringify(realtimeUrl),
+      // Magically override the environment variables for the app.
+      // In development, we use relative roots to use the Vite proxy.
+      'import.meta.env.VITE_PORTAL_API_URL': JSON.stringify(isDev ? '' : portalApiUrl),
+      'import.meta.env.VITE_REALTIME_URL': JSON.stringify(isDev ? '' : realtimeUrl),
     },
     plugins: [
       react(),
