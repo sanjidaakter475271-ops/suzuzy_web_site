@@ -29,13 +29,14 @@ jobs:
         run: |
           cd servicestuff-rn
           npm install --legacy-peer-deps
+          # Ensure eas-cli is available even if the action fails to set it up globally
+          npm install -g eas-cli
 
       - name: Build APK (Local)
         run: |
           cd servicestuff-rn
-          # Note: We use eas build --local or eas build -p android --profile preview
-          # This requires secrets for EXPO_TOKEN to be set in GitHub
-          npx eas build -p android --profile preview --non-interactive --local --output=app-release.apk
+          # Use eas directly as it's installed by the Setup Expo action
+          eas build -p android --profile preview --non-interactive --local --output=app-release.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
