@@ -1,0 +1,44 @@
+name: Build Android APK (React Native)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'servicestuff-rn/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'servicestuff-rn/package-lock.json'
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          cd servicestuff-rn
+          npm install --legacy-peer-deps
+
+      - name: Build APK (Local)
+        run: |
+          cd servicestuff-rn
+          # Note: We use eas build --local or eas build -p android --profile preview
+          # This requires secrets for EXPO_TOKEN to be set in GitHub
+          npx eas build -p android --profile preview --non-interactive --local --output=app-release.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Servicestuff-RN
+          path: servicestuff-rn/app-release.apk

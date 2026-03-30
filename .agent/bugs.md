@@ -111,4 +111,12 @@ File bugs here with exact file paths so they're easy to find and fix.
 - **Status:** fixed
 - **Notes:** Moved `useEffect` for splash screen before the `isPending` return.
 
+## Migrated (Capacitor → React Native)
+
+### [MIGRATE-01] React Native / Expo Port
+- **Directory:** `servicestuff-rn`
+- **Goal:** Full port of existing technician app to native for performance.
+- **Status:** completed
+- **Notes:** All 14 pages and core components ported to native components.
+
 <!-- Move here when resolved -->

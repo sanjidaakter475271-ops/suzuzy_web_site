@@ -16,7 +16,8 @@ This is a **multi-app monorepo** for a motorcycle dealership management system w
 d:\suzuzy_web_site\
 ├── apps/portal/          → Admin/Dealer web dashboard (Next.js 16)
 ├── apps/realtime/        → Socket.io realtime server (Node.js)
-├── servicestuff/         → Technician mobile app (Vite + Capacitor)
+├── servicestuff-rn/      → Technician mobile app (React Native + Expo)
+├── servicestuff/         → Legacy Technician mobile app (Capacitor - DEPRECATED)
 └── render.yaml           → Deployment blueprint (Render.com)
 ```
 
@@ -26,7 +27,8 @@ d:\suzuzy_web_site\
 |-----|----------|
 | `apps/portal` | Next.js 16 (App Router), Prisma 7 + pg adapter, Supabase PostgreSQL, JWT auth (jose), Zustand, TanStack Query, shadcn/ui, Tailwind CSS v4, Zod v4 |
 | `apps/realtime` | Node.js 18+, Socket.io 4, CommonJS |
-| `servicestuff` | Vite 6, React 19, Capacitor 7 (Android), react-router-dom v7, Axios, socket.io-client |
+| `servicestuff-rn` | React Native, Expo 54, Expo Router, NativeWind (Tailwind), FlashList, Moti, Reanimated, Socket.io-client |
+| `servicestuff` | (DEPRECATED) Vite 6, React 19, Capacitor 7 (Android) |
 
 ### CRITICAL WARNINGS
 
@@ -246,91 +248,32 @@ if (error instanceof Prisma.PrismaClientKnownRequestError) {
 
 ---
 
-## MOBILE DEVELOPMENT RULES (servicestuff)
+## MOBILE DEVELOPMENT RULES (servicestuff-rn)
 
 ### Mandatory Rules
 
-1. **All API calls via `TechnicianAPI`** from `services/api.ts` — never call `fetch`/`axios` directly
-2. **Auth token** stored in `Capacitor Preferences` (NOT localStorage), key: `auth_token`
-3. **All types** in `servicestuff/types.ts` — no inline type definitions
-4. **New pages**: create in `pages/`, add route to `App.tsx`, add path to `RoutePath` enum, add nav link to `components/Sidebar.tsx`
-5. **Socket.io** via `SocketService.getInstance()` singleton — always cleanup listeners on unmount
-6. **Performance**: Use `React.memo` for list items, 300ms debounce for socket events/search, and avoid `React.lazy` on Android.
-7. **Rules of Hooks**: Always call hooks at the top level, BEFORE any conditional early returns (e.g., `if (loading) return`).
-8. **Native Shell**: Use `@capacitor/splash-screen` with `launchAutoHide: false` and hide manually in `App.tsx` after mount.
+1. **Architecture**: Use **Expo Router** for file-based routing inside `app/`.
+2. **UI Components**: Always prefer native components (`View`, `Text`, `TouchableOpacity`, `TextInput`) over web elements.
+3. **Performance**: Use **FlashList** for all lists (MyJobs, Requisitions, Notifications) with appropriate `estimatedItemSize`.
+4. **Styling**: Use **NativeWind** (Tailwind classes) for styling. Ensure `global.css` is imported in `app/_layout.tsx`.
+5. **Animations**: Use **Moti** or **React Native Reanimated** for smooth 60fps animations.
+6. **API calls**: Use `TechnicianAPI` from `services/api.ts`.
+7. **Auth**: Use `useAuth()` hook. Session is stored in `AsyncStorage` via `auth-client.ts`.
+8. **Native APIs**: Use Expo modules (e.g., `expo-camera`, `expo-location`, `expo-local-authentication`).
+9. **Environment**: Config lives in `lib/env.ts` (proxied via `expo-constants`).
 
-### Build & Optimization Rules
-1. **Vite**: Always set `base: './'` for Capacitor. Use `esbuild.drop: ['console', 'debugger']` in production.
-2. **Assets**: Preconnect to APIs (`portal`, `realtime`, `supabase`) and preload fonts in `index.html` for faster startup.
-
-### Environment Variables (`VITE_` prefix)
-- `VITE_PORTAL_API_URL`, `VITE_REALTIME_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_GEMINI_API_KEY`
-
----
-
-## REALTIME EVENTS RULES
-
-Architecture: `Portal API → POST /broadcast → Realtime Server → WebSocket → Mobile/Portal UI`
-
-### Event Naming: `{domain}:{action}`
-
-| Event | Direction | Description |
-|-------|-----------|-------------|
-| `requisition:created` | Portal → Mobile | New requisition |
-| `requisition:status_changed` | Portal → Mobile | Approved/rejected |
-| `inventory:changed` | Portal → UI | Inventory updated |
-| `technician:location:update` | Mobile → UI | GPS update |
-
-### Room Routing Keys (must be in event data)
-- `dealer_id` / `dealerId` → `dealer:{value}` room
-- `technicianId` / `technician_id` → `technician:{value}` room
-- `service_number` / `job_no` → `job:{value}` room
-
----
-
-## TYPE SAFETY RULES
-
-- **Types drive the contract**: `servicestuff/types.ts` defines what portal API must return. If mismatch, fix the API not the type.
-- Avoid `any` — define proper interfaces
-- Convert Prisma types before sending: `Decimal` → `Number()`, `BigInt` → `String()`, `Date` → automatic via JSON
-- Error shape: always `{ error: string }`, never `{ message: string }`
-- Role names: mobile uses `service_technician`, portal uses `service_stuff` — API routes must handle BOTH
-
----
-
-## SUPABASE MCP SCHEMA VERIFICATION
-
-When debugging DB issues or before complex migrations, use the Supabase MCP server instead of reading the large schema file:
-
-```sql
--- Get column definitions
-SELECT column_name, data_type, is_nullable, column_default
-FROM information_schema.columns
-WHERE table_schema = 'public' AND table_name = 'your_table'
-ORDER BY ordinal_position;
-
--- Get foreign keys
-SELECT tc.constraint_name, kcu.column_name, ccu.table_name AS foreign_table
-FROM information_schema.table_constraints tc
-JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
-JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name
-WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = 'public' AND tc.table_name = 'your_table';
-```
-
-**Workflow for DB errors:**
-1. Stop modifying TypeScript code
-2. Query live schema via `mcp_supabase-mcp-server_execute_sql`
-3. Compare live schema vs data payload
-4. Fix `schema.prisma` → `npx prisma db push` → `npx prisma generate`
+### Build & Deploy
+- Use **EAS Build** for generating APKs.
+- Local dev: `npx expo start`.
 
 ---
 
 ## WORKFLOWS
 
 ### Local Development
-1. Terminal 1: `cd apps/realtime && npm start` → `http://localhost:3001`
-2. Terminal 2: `cd apps/portal && npm run dev` → `http://localhost:3000`
-3. Terminal 3: `cd servicestuff && npm run dev` → `http://localhost:5173`
+1. Terminal 1: `cd apps/realtime && npm start`
+2. Terminal 2: `cd apps/portal && npm run dev`
+3. Terminal 3: `cd servicestuff-rn && npx expo start`
 
 ### New API Route
 1. Determine module (workshop/technician/customer/dashboard)

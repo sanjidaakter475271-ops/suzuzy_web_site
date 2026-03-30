@@ -7,7 +7,16 @@
       "Bash(npm run:*)",
       "Bash(npx prisma:*)",
       "Bash(npx tsx:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(ls d:/suzuzy_web_site/servicestuff/pages/*.tsx d:/suzuzy_web_site/servicestuff/components/*.tsx)",
+      "Bash(wc -l d:/suzuzy_web_site/servicestuff/pages/*.tsx d:/suzuzy_web_site/servicestuff/components/*.tsx)",
+      "Bash(npx create-expo-app@latest servicestuff-rn --template blank-typescript --no-install)",
+      "Bash(npx expo:*)",
+      "Bash(ls -d */)",
+      "Bash(npx tsc:*)",
+      "Bash(ls d:/suzuzy_web_site/servicestuff-rn/*.js d:/suzuzy_web_site/servicestuff-rn/*.cjs)",
+      "Bash(cmd /c mklink /J C:suzuzy_web_site D:suzuzy_web_site)",
+      "Bash(powershell -Command \"Start-Process cmd -ArgumentList ''/c mklink /J C:\\\\suzuzy_web_site D:\\\\suzuzy_web_site'' -Verb RunAs\")"
     ]
   }
 }

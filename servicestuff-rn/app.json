@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "Suzuki Service Pro",
+    "slug": "servicemate-pro",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#020617"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.suzuki.servicepro"
+    },
+    "android": {
+      "package": "com.suzuki.servicepro",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#020617"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "extra": {
+      "PORTAL_API_URL": "https://royal-suzuky-portal.onrender.com",
+      "REALTIME_URL": "https://suzuky-realtime.onrender.com",
+      "SUPABASE_URL": "https://idqikowpudzjickwpfzr.supabase.co",
+      "SUPABASE_ANON_KEY": "sb_publishable_M4D9EG-nrI4j-9Y1J1nWHQ_uVxUqWbH",
+      "eas": {
+        "projectId": "7c8b9d0e-1f2a-4b3c-9d8e-7f6a5b4c3d2e"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ]
+  }
+}

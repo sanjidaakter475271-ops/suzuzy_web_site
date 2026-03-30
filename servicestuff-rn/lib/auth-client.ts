@@ -1,0 +1,87 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ENV } from './env';
+
+const PORTAL_API_URL = ENV.PORTAL_API_URL;
+
+export const authClient = {
+    signIn: {
+        email: async ({ email, password }: { email: string; password: any }) => {
+            try {
+                const res = await fetch(`${PORTAL_API_URL}/api/auth/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password, rememberMe: true }),
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    return { data: null, error: { message: data.error || "Login failed" } };
+                }
+
+                // Store token in AsyncStorage
+                if (data.session?.accessToken) {
+                    await AsyncStorage.setItem('auth_token', data.session.accessToken);
+                }
+
+                return { data, error: null };
+            } catch (err: any) {
+                return { data: null, error: { message: err.message || "Network error" } };
+            }
+        },
+    },
+
+    signUp: {
+        email: async ({ email, password, name }: { email: string; password: any; name: string }) => {
+            try {
+                const res = await fetch(`${PORTAL_API_URL}/api/auth/register`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        email,
+                        password,
+                        name,
+                        businessName: "Service Staff",
+                        phone: ""
+                    }),
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    return { data: null, error: { message: data.error || "Registration failed" } };
+                }
+
+                return { data, error: null };
+            } catch (err: any) {
+                return { data: null, error: { message: err.message || "Network error" } };
+            }
+        },
+    },
+
+    signOut: async () => {
+        try {
+            await fetch(`${PORTAL_API_URL}/api/auth/logout`, { method: "POST" });
+        } catch (e) {
+            console.error("Logout request failed", e);
+        }
+        await AsyncStorage.removeItem('auth_token');
+    },
+
+    getMe: async () => {
+        const token = await AsyncStorage.getItem('auth_token');
+        if (!token) return { data: null, error: "No token" };
+
+        try {
+            const res = await fetch(`${PORTAL_API_URL}/api/auth/me`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+            });
+            const data = await res.json();
+            if (!res.ok) return { data: null, error: data.error };
+
+            return { data: { user: data.user, session: { token } }, error: null };
+        } catch (err: any) {
+            return { data: null, error: err.message };
+        }
+    }
+};
