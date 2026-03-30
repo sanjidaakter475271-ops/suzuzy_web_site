@@ -30,6 +30,29 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
+    build: {
+        outDir: 'dist',
+        sourcemap: true,
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'react-vendor': ['react', 'react-dom', 'react-router-dom', 'react-router'],
+                    'ui-vendor': ['lucide-react', 'framer-motion', 'clsx', 'tailwind-merge'],
+                    'network-vendor': ['axios', 'socket.io-client', '@capacitor/network'],
+                    'capacitor-vendor': [
+                        '@capacitor/core',
+                        '@capacitor/app',
+                        '@capacitor/haptics',
+                        '@capacitor/keyboard',
+                        '@capacitor/status-bar',
+                        '@capacitor/camera',
+                        '@capacitor/barcode-scanner',
+                        '@capacitor/geolocation'
+                    ]
+                }
+            }
+        }
+    },
     server: {
       port: 3003,
       host: '0.0.0.0',

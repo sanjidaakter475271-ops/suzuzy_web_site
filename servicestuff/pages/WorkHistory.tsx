@@ -18,11 +18,68 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+const formatDate = (dateStr?: string) => {
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
+};
+
+const HistoryCard = React.memo(({ job, onClick, isInitialMount }: {
+    job: JobCard;
+    onClick: (id: string) => void;
+    isInitialMount: boolean;
+}) => (
+    <motion.div
+        layout
+        initial={isInitialMount ? { opacity: 0, y: 15 } : false}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        onClick={() => onClick(job.id)}
+        className="bg-slate-900/40 backdrop-blur-md border border-white/5 p-5 rounded-[1.8rem] hover:border-blue-500/30 transition-all duration-500 flex items-center justify-between group shadow-xl active:scale-[0.98] active:bg-blue-500/5 overflow-hidden relative"
+    >
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/0 to-blue-500/0 group-hover:to-blue-500/5 transition-all duration-700" />
+
+        <div className="flex items-center gap-5 relative z-10">
+            <div className="w-14 h-14 bg-slate-950 rounded-[1.2rem] border border-white/5 flex items-center justify-center text-slate-700 group-hover:text-blue-400 group-hover:border-blue-500/20 transition-all duration-500 shadow-inner overflow-hidden relative">
+                <div className="absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/5 transition-colors" />
+                <Briefcase size={22} strokeWidth={2} />
+            </div>
+            <div>
+                <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-mono font-bold text-blue-500/70 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/10">{job.ticket?.ticket_number}</span>
+                    <span className="w-1 h-1 bg-slate-700 rounded-full" />
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{formatDate(job.service_end_time || job.created_at)}</span>
+                </div>
+                <h4 className="text-base font-black text-white tracking-tight group-hover:text-blue-200 transition-colors">{job.vehicle?.model_name || 'General Service'}</h4>
+                <div className="flex items-center gap-3 mt-2">
+                    <span className="flex items-center gap-1.5 text-[9px] text-emerald-500 font-black uppercase tracking-widest bg-emerald-500/5 px-2.5 py-1 rounded-full border border-emerald-500/10">
+                        <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" /> Verified
+                    </span>
+                    <span className="flex items-center gap-1.5 text-[9px] text-slate-500 font-black uppercase tracking-widest">
+                        <Timer size={12} className="text-slate-700" /> {job.tasks?.length || 0} Tasks
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div className="relative z-10 flex flex-col items-end gap-2">
+            <div className="p-2 bg-slate-950 rounded-full border border-white/5 text-slate-700 group-hover:text-blue-400 group-hover:translate-x-1 transition-all">
+                <ChevronRight size={18} />
+            </div>
+        </div>
+    </motion.div>
+), (prev, next) => prev.job.id === next.job.id && prev.job.status === next.job.status && prev.job.tasks?.length === next.job.tasks?.length);
+HistoryCard.displayName = 'HistoryCard';
+
 export const WorkHistory: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
     const [jobs, setJobs] = useState<JobCard[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const navigate = useNavigate();
+    const isInitialMount = React.useRef(true);
 
     useEffect(() => {
         const fetchHistory = async () => {
@@ -40,24 +97,25 @@ export const WorkHistory: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick
                 console.error("Error fetching history:", err);
             } finally {
                 setLoading(false);
+                isInitialMount.current = false;
             }
         };
         fetchHistory();
     }, []);
 
-    const filteredJobs = jobs.filter(job =>
-        job.vehicle?.model_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        job.ticket?.ticket_number?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
-    const formatDate = (dateStr?: string) => {
-        if (!dateStr) return 'N/A';
-        return new Date(dateStr).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
-    };
+    const filteredJobs = React.useMemo(() => {
+        return jobs.filter(job =>
+            job.vehicle?.model_name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+            job.ticket?.ticket_number?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+        );
+    }, [jobs, debouncedSearchTerm]);
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 pb-20">
@@ -120,44 +178,12 @@ export const WorkHistory: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick
                         </div>
                     ) : filteredJobs.length > 0 ? (
                         filteredJobs.map((job, i) => (
-                            <motion.div
+                            <HistoryCard
                                 key={job.id}
-                                initial={{ opacity: 0, y: 15 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: i * 0.05 }}
-                                onClick={() => navigate(RoutePath.JOB_CARD.replace(':id', job.id))}
-                                className="bg-slate-900/40 backdrop-blur-md border border-white/5 p-5 rounded-[1.8rem] hover:border-blue-500/30 transition-all duration-500 flex items-center justify-between group shadow-xl active:scale-[0.98] active:bg-blue-500/5 overflow-hidden relative"
-                            >
-                                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/0 to-blue-500/0 group-hover:to-blue-500/5 transition-all duration-700" />
-
-                                <div className="flex items-center gap-5 relative z-10">
-                                    <div className="w-14 h-14 bg-slate-950 rounded-[1.2rem] border border-white/5 flex items-center justify-center text-slate-700 group-hover:text-blue-400 group-hover:border-blue-500/20 transition-all duration-500 shadow-inner overflow-hidden relative">
-                                        <div className="absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/5 transition-colors" />
-                                        <Briefcase size={22} strokeWidth={2} />
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-[10px] font-mono font-bold text-blue-500/70 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/10">{job.ticket?.ticket_number}</span>
-                                            <span className="w-1 h-1 bg-slate-700 rounded-full" />
-                                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{formatDate(job.service_end_time || job.created_at)}</span>
-                                        </div>
-                                        <h4 className="text-base font-black text-white tracking-tight group-hover:text-blue-200 transition-colors">{job.vehicle?.model_name || 'General Service'}</h4>
-                                        <div className="flex items-center gap-3 mt-2">
-                                            <span className="flex items-center gap-1.5 text-[9px] text-emerald-500 font-black uppercase tracking-widest bg-emerald-500/5 px-2.5 py-1 rounded-full border border-emerald-500/10">
-                                                <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" /> Verified
-                                            </span>
-                                            <span className="flex items-center gap-1.5 text-[9px] text-slate-500 font-black uppercase tracking-widest">
-                                                <Timer size={12} className="text-slate-700" /> {job.tasks?.length || 0} Tasks
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="relative z-10 flex flex-col items-end gap-2">
-                                    <div className="p-2 bg-slate-950 rounded-full border border-white/5 text-slate-700 group-hover:text-blue-400 group-hover:translate-x-1 transition-all">
-                                        <ChevronRight size={18} />
-                                    </div>
-                                </div>
-                            </motion.div>
+                                job={job}
+                                isInitialMount={isInitialMount.current}
+                                onClick={(id) => navigate(RoutePath.JOB_CARD.replace(':id', id))}
+                            />
                         ))
                     ) : (
                         <div className="text-center py-32 opacity-30 flex flex-col items-center gap-6">

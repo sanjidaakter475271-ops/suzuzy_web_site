@@ -16,6 +16,45 @@ import { DashboardSkeleton } from '../components/Skeleton';
 const DashboardJobCards = lazy(() => import('../components/DashboardJobCards'));
 // import { toast } from 'sonner';
 
+const ShiftTimer = React.memo(({ startTime }: { startTime: string | null }) => {
+    const [elapsed, setElapsed] = useState('00:00:00');
+
+    useEffect(() => {
+        if (!startTime) {
+            setElapsed('00:00:00');
+            return;
+        }
+
+        const updateTimer = () => {
+            const start = new Date(startTime).getTime();
+            const now = new Date().getTime();
+            const diff = now - start;
+
+            const totalSeconds = Math.floor(diff / 1000);
+            const h = Math.floor(totalSeconds / 3600);
+            const m = Math.floor((totalSeconds % 3600) / 60);
+            const s = totalSeconds % 60;
+
+            setElapsed(
+                `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+            );
+        };
+
+        const timer = setInterval(updateTimer, 1000);
+        updateTimer();
+
+        return () => clearInterval(timer);
+    }, [startTime]);
+
+    return (
+        <p className="text-[10px] font-bold text-blue-800 dark:text-blue-400 flex items-center bg-white/40 dark:bg-black/20 px-3 py-1 rounded-full w-fit">
+            <Clock size={12} className="mr-1.5" />
+            {elapsed}
+        </p>
+    );
+});
+ShiftTimer.displayName = 'ShiftTimer';
+
 export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
   const [tasks, setTasks] = useState<JobCard[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -26,20 +65,10 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
   const [scanPurpose, setScanPurpose] = useState<'attendance_in' | 'attendance_out' | 'job_card' | null>(null);
   const [newAlert, setNewAlert] = useState<{ message: string, type: 'info' | 'success' } | null>(null);
 
-  // Timer for active shift
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const timerRef = React.useRef<NodeJS.Timeout | null>(null);
   const fetchTimeoutReq = React.useRef<NodeJS.Timeout | null>(null);
 
   const navigate = useNavigate();
 
-  const formatTime = (ms: number) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const h = Math.floor(totalSeconds / 3600);
-    const m = Math.floor((totalSeconds % 3600) / 60);
-    const s = totalSeconds % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -114,24 +143,10 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
 
     return () => {
       events.forEach(e => socket.off(e, handleUpdate));
-      if (timerRef.current) clearInterval(timerRef.current);
       if (fetchTimeoutReq.current) clearTimeout(fetchTimeoutReq.current);
     };
   }, []);
 
-  // Timer Effect
-  useEffect(() => {
-    if (attendanceStatus?.currentState === 'SHIFT_ACTIVE' && attendanceStatus?.currentShiftStartedAt) {
-      const startTime = new Date(attendanceStatus.currentShiftStartedAt).getTime();
-      const update = () => setElapsedTime(Date.now() - startTime);
-      update();
-      timerRef.current = setInterval(update, 1000);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
-      setElapsedTime(0);
-    }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [attendanceStatus?.currentState, attendanceStatus?.currentShiftStartedAt]);
 
   const handleClockInOut = async () => {
     if (operationLoading) return;
@@ -261,10 +276,14 @@ export const Dashboard: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }
             </h3>
             {attendanceStatus?.currentState && attendanceStatus.currentState !== 'NOT_CHECKED_IN' && attendanceStatus.currentState !== 'CHECKED_OUT' && (
               <div className="mt-2 flex items-center gap-2">
-                <p className="text-[10px] font-bold text-blue-800 dark:text-blue-400 flex items-center bg-white/40 dark:bg-black/20 px-3 py-1 rounded-full w-fit">
-                  <Clock size={12} className="mr-1.5" />
-                  {attendanceStatus?.currentState === 'SHIFT_ACTIVE' ? formatTime(elapsedTime) : 'Session Idle'}
-                </p>
+                {attendanceStatus?.currentState === 'SHIFT_ACTIVE' ? (
+                  <ShiftTimer startTime={attendanceStatus.currentShiftStartedAt} />
+                ) : (
+                  <p className="text-[10px] font-bold text-blue-800 dark:text-blue-400 flex items-center bg-white/40 dark:bg-black/20 px-3 py-1 rounded-full w-fit">
+                    <Clock size={12} className="mr-1.5" />
+                    Session Idle
+                  </p>
+                )}
                 {attendanceStatus?.currentState === 'SHIFT_ACTIVE' && (
                   <span className="flex h-2 w-2 relative">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>

@@ -15,15 +15,8 @@ export const Skeleton: React.FC<SkeletonProps> = ({
     borderRadius = '0.75rem'
 }) => {
     return (
-        <motion.div
-            initial={{ opacity: 0.4 }}
-            animate={{ opacity: [0.4, 0.7, 0.4] }}
-            transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                ease: "easeInOut"
-            }}
-            className={`bg-slate-800/50 ${className}`}
+        <div
+            className={`shimmer bg-slate-800/40 ${className}`}
             style={{
                 width: width || '100%',
                 height: height || '1rem',

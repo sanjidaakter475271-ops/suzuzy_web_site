@@ -9,11 +9,21 @@ interface DashboardJobCardsProps {
     getStatusIcon: (status: string) => React.ReactNode;
 }
 
-const TaskCard = React.memo(({ task, onClick, getStatusColor, getStatusIcon }: { task: JobCard, onClick: () => void, getStatusColor: (status: string) => string, getStatusIcon: (status: string) => React.ReactNode }) => (
-    <div
-        onClick={onClick}
-        className="glass p-5 rounded-3xl shadow-xl shadow-black/10 active:scale-[0.98] cursor-pointer hover:border-blue-500/40 relative overflow-hidden group"
-    >
+const TaskCard = React.memo(({ task, onCardClick, getStatusColor, getStatusIcon }: { 
+    task: JobCard, 
+    onCardClick: (id: string) => void, 
+    getStatusColor: (status: string) => string, 
+    getStatusIcon: (status: string) => React.ReactNode 
+}) => {
+    const handleClick = React.useCallback(() => {
+        onCardClick(task.id);
+    }, [onCardClick, task.id]);
+
+    return (
+        <div
+            onClick={handleClick}
+            className="glass p-5 rounded-3xl shadow-xl shadow-black/10 active:scale-[0.98] cursor-pointer hover:border-blue-500/40 relative overflow-hidden group"
+        >
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
         <div className="flex justify-between items-start mb-2">
             <h3 className="font-bold text-gray-900 dark:text-slate-100">{task.vehicle?.model_name || 'Unknown Model'}</h3>
@@ -33,7 +43,8 @@ const TaskCard = React.memo(({ task, onClick, getStatusColor, getStatusIcon }: {
             <p className="text-xs font-medium text-gray-600 dark:text-slate-400">Owner: {task.vehicle?.customer_name || 'Unknown'}</p>
         </div>
     </div>
-));
+    );
+});
 TaskCard.displayName = 'TaskCard';
 
 export default function DashboardJobCards({ tasks, onCardClick, getStatusColor, getStatusIcon }: DashboardJobCardsProps) {
@@ -43,7 +54,7 @@ export default function DashboardJobCards({ tasks, onCardClick, getStatusColor, 
                 <TaskCard
                     key={task.id}
                     task={task}
-                    onClick={() => onCardClick(task.id)}
+                    onCardClick={onCardClick}
                     getStatusColor={getStatusColor}
                     getStatusIcon={getStatusIcon}
                 />

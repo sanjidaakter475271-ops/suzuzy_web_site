@@ -1,35 +1,80 @@
-import React, { useState, useEffect } from 'react';
-import { TechnicianAPI } from '../services/api';
-import { JobCard, JobStatus } from '../types';
-import { TopBar } from '../components/TopBar';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { RoutePath } from '../types';
-import {
-    Search,
-    Filter,
-    Clock,
-    CheckCircle,
-    AlertCircle,
-    PauseCircle,
-    ChevronRight,
-    Loader2,
-    Briefcase
-} from 'lucide-react';
+import { WifiOff, Search, Clock, CheckCircle, AlertCircle, PauseCircle, ChevronRight, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OfflineService } from '../services/offline';
 import { SocketService } from '../services/socket';
-import { WifiOff } from 'lucide-react';
 import { JobCardSkeleton } from '../components/Skeleton';
+import { Network } from '@capacitor/network';
+
+const MyJobCard = React.memo(({ job, onClick, color, icon, label, isInitialMount }: {
+    job: JobCard;
+    onClick: (id: string) => void;
+    color: string;
+    icon: React.ReactNode;
+    label: string;
+    isInitialMount: boolean;
+}) => (
+    <motion.div
+        layout
+        initial={isInitialMount ? { opacity: 0, y: 20 } : false}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.2 }}
+        onClick={() => onClick(job.id)}
+        className="bg-slate-900/40 border border-slate-800 p-4 rounded-2xl hover:border-slate-700 transition-all active:scale-[0.98] group"
+    >
+        <div className="flex justify-between items-start mb-3">
+            <div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">
+                    {job.ticket?.ticket_number || 'ST-0000'}
+                </span>
+                <h3 className="font-bold text-slate-100 group-hover:text-blue-400 transition-colors">
+                    {job.vehicle?.model_name || 'Vehicle'}
+                </h3>
+            </div>
+            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase border ${color}`}>
+                {icon}
+                {label}
+            </div>
+        </div>
+
+        <div className="flex items-center gap-2 mb-4">
+            <span className="bg-slate-800 text-slate-300 text-[10px] font-mono px-2 py-0.5 rounded border border-slate-700">
+                {job.vehicle?.license_plate || 'N/A'}
+            </span>
+            <span className="text-[10px] text-slate-500">
+                {job.vehicle?.color || 'N/A'}
+            </span>
+        </div>
+
+        <div className="flex items-center justify-between pt-3 border-t border-slate-800/50">
+            <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
+                    <span className="text-[10px] font-bold text-slate-400">
+                        {job.vehicle?.customer_name?.charAt(0) || '?'}
+                    </span>
+                </div>
+                <span className="text-xs text-slate-400">
+                    {job.vehicle?.customer_name || 'Anonymous'}
+                </span>
+            </div>
+            <ChevronRight size={16} className="text-slate-700 group-hover:text-slate-400 transition-colors" />
+        </div>
+    </motion.div>
+), (prev, next) => prev.job.id === next.job.id && prev.job.status === next.job.status && prev.job.vehicle?.model_name === next.job.vehicle?.model_name);
+MyJobCard.displayName = 'MyJobCard';
 
 export const MyJobs: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
     const [jobs, setJobs] = useState<JobCard[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const location = useLocation();
     const navigate = useNavigate();
     const offlineService = OfflineService.getInstance();
     const [isOnline, setIsOnline] = useState(offlineService.getOnlineStatus());
+    const fetchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+    const isInitialMount = React.useRef(true);
 
     useEffect(() => {
         if (location.state?.status) {
@@ -39,34 +84,7 @@ export const MyJobs: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) =
         }
     }, [location]);
 
-    useEffect(() => {
-        fetchJobs();
-
-        // Setup network listener
-        const interval = setInterval(() => {
-            setIsOnline(offlineService.getOnlineStatus());
-        }, 3000);
-
-        // Listen for realtime updates
-        const socket = SocketService.getInstance();
-        const handleUpdate = () => {
-            console.log("[REALTIME] Update received, refreshing job list...");
-            fetchJobs();
-        };
-
-        socket.on('order:update', handleUpdate);
-        socket.on('job_cards:changed', handleUpdate);
-        socket.on('inventory:changed', handleUpdate);
-
-        return () => {
-            clearInterval(interval);
-            socket.off('order:update', handleUpdate);
-            socket.off('job_cards:changed', handleUpdate);
-            socket.off('inventory:changed', handleUpdate);
-        };
-    }, []);
-
-    const fetchJobs = async () => {
+    const fetchJobs = React.useCallback(async () => {
         setLoading(true);
         try {
             if (!offlineService.getOnlineStatus()) {
@@ -89,20 +107,66 @@ export const MyJobs: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) =
             if (cached.length > 0) setJobs(cached);
         } finally {
             setLoading(false);
+            isInitialMount.current = false;
         }
-    };
+    }, []);
 
-    const filteredJobs = jobs.filter(job => {
-        const matchesSearch =
-            job.vehicle?.model_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            job.vehicle?.license_plate?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            job.ticket?.ticket_number?.toLowerCase().includes(searchQuery.toLowerCase());
+    useEffect(() => {
+        fetchJobs();
 
-        if (activeTab === 'all') return matchesSearch;
-        return matchesSearch && job.status === activeTab;
-    });
+        // Setup network listener (event-based)
+        const setupNetwork = async () => {
+            const listener = await Network.addListener('networkStatusChange', (status) => {
+                setIsOnline(status.connected);
+            });
+            return listener;
+        };
+        const networkListener = setupNetwork();
 
-    const getStatusInfo = (status: string) => {
+        // Listen for realtime updates
+        const socket = SocketService.getInstance();
+        const handleUpdate = () => {
+            console.log("[REALTIME] Update received, refreshing job list...");
+            if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+            fetchTimeoutRef.current = setTimeout(() => {
+                fetchJobs();
+            }, 300);
+        };
+
+        socket.on('order:update', handleUpdate);
+        socket.on('job_cards:changed', handleUpdate);
+        socket.on('inventory:changed', handleUpdate);
+
+        return () => {
+            networkListener.then(l => l.remove());
+            if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+            socket.off('order:update', handleUpdate);
+            socket.off('job_cards:changed', handleUpdate);
+            socket.off('inventory:changed', handleUpdate);
+        };
+    }, [fetchJobs]);
+
+    // Search Debouncing
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    const filteredJobs = React.useMemo(() => {
+        return jobs.filter(job => {
+            const matchesSearch =
+                job.vehicle?.model_name?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+                job.vehicle?.license_plate?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+                job.ticket?.ticket_number?.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+
+            if (activeTab === 'all') return matchesSearch;
+            return matchesSearch && job.status === activeTab;
+        });
+    }, [jobs, debouncedSearchQuery, activeTab]);
+
+    const getStatusInfo = React.useCallback((status: string) => {
         const prettyStatus = status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 
         switch (status) {
@@ -151,7 +215,7 @@ export const MyJobs: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) =
                     label: prettyStatus
                 };
         }
-    };
+    }, []);
 
     const tabs = [
         { id: 'all', label: 'All' },
@@ -220,53 +284,15 @@ export const MyJobs: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) =
                                 filteredJobs.map((job, idx) => {
                                     const { color, icon, label } = getStatusInfo(job.status);
                                     return (
-                                        <motion.div
+                                        <MyJobCard
                                             key={job.id}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, scale: 0.95 }}
-                                            transition={{ delay: idx * 0.05 }}
-                                            onClick={() => navigate(RoutePath.JOB_CARD.replace(':id', job.id))}
-                                            className="bg-slate-900/40 border border-slate-800 p-4 rounded-2xl hover:border-slate-700 transition-all active:scale-[0.98] group"
-                                        >
-                                            <div className="flex justify-between items-start mb-3">
-                                                <div>
-                                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">
-                                                        {job.ticket?.ticket_number || 'ST-0000'}
-                                                    </span>
-                                                    <h3 className="font-bold text-slate-100 group-hover:text-blue-400 transition-colors">
-                                                        {job.vehicle?.model_name || 'Vehicle'}
-                                                    </h3>
-                                                </div>
-                                                <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase border ${color}`}>
-                                                    {icon}
-                                                    {label}
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-2 mb-4">
-                                                <span className="bg-slate-800 text-slate-300 text-[10px] font-mono px-2 py-0.5 rounded border border-slate-700">
-                                                    {job.vehicle?.license_plate || 'N/A'}
-                                                </span>
-                                                <span className="text-[10px] text-slate-500">
-                                                    {job.vehicle?.color || 'N/A'}
-                                                </span>
-                                            </div>
-
-                                            <div className="flex items-center justify-between pt-3 border-t border-slate-800/50">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
-                                                        <span className="text-[10px] font-bold text-slate-400">
-                                                            {job.vehicle?.customer_name?.charAt(0) || '?'}
-                                                        </span>
-                                                    </div>
-                                                    <span className="text-xs text-slate-400">
-                                                        {job.vehicle?.customer_name || 'Anonymous'}
-                                                    </span>
-                                                </div>
-                                                <ChevronRight size={16} className="text-slate-700 group-hover:text-slate-400 transition-colors" />
-                                            </div>
-                                        </motion.div>
+                                            job={job}
+                                            color={color}
+                                            icon={icon}
+                                            label={label}
+                                            isInitialMount={isInitialMount.current}
+                                            onClick={(id) => navigate(RoutePath.JOB_CARD.replace(':id', id))}
+                                        />
                                     );
                                 })
                             ) : (

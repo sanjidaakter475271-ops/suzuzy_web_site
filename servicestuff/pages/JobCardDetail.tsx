@@ -53,6 +53,21 @@ export const JobCardDetail: React.FC = () => {
     // Note State
     const [newNote, setNewNote] = useState('');
     const syncTimeout = useRef<any>(null);
+    const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const debouncedFetchJobs = React.useCallback(() => {
+        if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+        fetchTimeoutRef.current = setTimeout(() => {
+            fetchJobDetails();
+        }, 300);
+    }, [id]);
+
+    const debouncedFetchRequisitions = React.useCallback(() => {
+        if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+        fetchTimeoutRef.current = setTimeout(() => {
+            fetchRequisitions();
+        }, 300);
+    }, [id]);
 
     useEffect(() => {
         if (id) {
@@ -70,18 +85,27 @@ export const JobCardDetail: React.FC = () => {
             }
         };
 
-        socket.on('order:update', handleUpdate);
-        socket.on('job_cards:changed', handleUpdate);
-        socket.on('requisition:created', () => fetchRequisitions());
-        socket.on('requisition:approved', () => fetchRequisitions());
-        socket.on('requisition:rejected', () => fetchRequisitions());
+        socket.on('order:update', (data) => {
+            if (data?.jobId === id || data?.id === id || !data?.id) {
+                debouncedFetchJobs();
+            }
+        });
+        socket.on('job_cards:changed', (data) => {
+            if (data?.jobId === id || data?.id === id || !data?.id) {
+                debouncedFetchJobs();
+            }
+        });
+        socket.on('requisition:created', () => debouncedFetchRequisitions());
+        socket.on('requisition:approved', () => debouncedFetchRequisitions());
+        socket.on('requisition:rejected', () => debouncedFetchRequisitions());
 
         return () => {
-            socket.off('order:update', handleUpdate);
-            socket.off('job_cards:changed', handleUpdate);
+            socket.off('order:update');
+            socket.off('job_cards:changed');
             socket.off('requisition:created');
             socket.off('requisition:approved');
             socket.off('requisition:rejected');
+            if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
         };
     }, [id]);
 
