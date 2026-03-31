@@ -3,6 +3,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { authClient } from './auth-client';
 import { User } from '../types';
 import { OfflineService } from '../services/offline';
+import { SocketService } from '../services/socket';
 
 interface AuthContextType {
     user: User | null;
@@ -73,6 +74,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => unsubscribe();
     }, [session?.token, user?.id]);
 
+    // Connect socket when authenticated
+    useEffect(() => {
+        if (user?.id && session?.token && session?.token !== 'cached') {
+            const connectionId = user.staff_id || user.id;
+            console.log(`[AUTH] Connecting socket for: ${connectionId}`);
+            SocketService.getInstance().connect(connectionId);
+        }
+    }, [user?.id, session?.token]);
+
     const signIn = async (email: string, password: any) => {
         const { data, error } = await authClient.signIn.email({ email, password });
         if (error) return { error: error.message };
@@ -101,6 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const signOut = async () => {
         await authClient.signOut();
         await OfflineService.getInstance().clearUserProfile();
+        SocketService.getInstance().disconnect();
         setUser(null);
         setSession(null);
     };

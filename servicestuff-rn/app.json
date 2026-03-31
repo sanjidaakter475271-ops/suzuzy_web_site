@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Suzuki Service Pro",
-    "slug": "servicemate-pro",
+    "slug": "service-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -35,7 +35,7 @@
       "SUPABASE_URL": "https://idqikowpudzjickwpfzr.supabase.co",
       "SUPABASE_ANON_KEY": "sb_publishable_M4D9EG-nrI4j-9Y1J1nWHQ_uVxUqWbH",
       "eas": {
-        "projectId": "7c8b9d0e-1f2a-4b3c-9d8e-7f6a5b4c3d2e"
+        "projectId": "a16b7525-0881-4111-92a3-a133b99bdffa"
       }
     },
     "plugins": [

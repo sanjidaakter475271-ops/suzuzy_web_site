@@ -47,6 +47,7 @@ import { LocationService } from '../../services/location';
 import { MediaService } from '../../services/media';
 import { SocketService } from '../../services/socket';
 import { DetailSkeleton } from '../../components/Skeleton';
+import { diagnoseIssue } from '../../services/geminiService';
 
 type Tab = 'summary' | 'checklist' | 'parts' | 'photos' | 'notes';
 
@@ -69,6 +70,11 @@ export default function JobCardDetail() {
     const [newNote, setNewNote] = useState('');
     const syncTimeout = useRef<NodeJS.Timeout | null>(null);
     const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // AI Diagnosis State
+    const [diagnosis, setDiagnosis] = useState<string | null>(null);
+    const [diagnosisLoading, setDiagnosisLoading] = useState(false);
+    const [showDiagnosisModal, setShowDiagnosisModal] = useState(false);
 
     const debouncedFetchJobs = React.useCallback(() => {
         if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
@@ -275,6 +281,24 @@ export default function JobCardDetail() {
         }
     };
 
+    const handleDiagnose = async () => {
+        if (!job?.vehicle?.issue_description) {
+            Alert.alert("No Description", "Please provide an issue description first.");
+            return;
+        }
+
+        setDiagnosisLoading(true);
+        setShowDiagnosisModal(true);
+        try {
+            const result = await diagnoseIssue(job.vehicle.issue_description);
+            setDiagnosis(result);
+        } catch (err) {
+            setDiagnosis("Failed to get diagnosis.");
+        } finally {
+            setDiagnosisLoading(false);
+        }
+    };
+
     const handlePhotoUpload = async () => {
         const result = await ImagePicker.launchCameraAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -408,7 +432,16 @@ export default function JobCardDetail() {
                 </View>
 
                 <View style={styles.issueSection}>
-                    <Text style={styles.sectionHeader}><AlertTriangle size={12} color="#f59e0b" /> CUSTOMER ISSUE</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                        <Text style={styles.sectionHeader}><AlertTriangle size={12} color="#f59e0b" /> CUSTOMER ISSUE</Text>
+                        <TouchableOpacity
+                            onPress={handleDiagnose}
+                            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(59, 130, 246, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}
+                        >
+                            <Sparkles size={14} color="#3b82f6" />
+                            <Text style={{ color: '#3b82f6', fontSize: 10, fontWeight: 'bold' }}>AI DIAGNOSIS</Text>
+                        </TouchableOpacity>
+                    </View>
                     <Text style={styles.issueBody}>{job.vehicle?.issue_description || 'General maintenance and checkup.'}</Text>
                 </View>
             </View>
@@ -675,6 +708,58 @@ export default function JobCardDetail() {
                     onSuccess={() => { fetchJobDetails(); fetchRequisitions(); }}
                 />
             )}
+
+            {/* AI Diagnosis Modal */}
+            <Modal transparent visible={showDiagnosisModal} animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <TouchableOpacity style={{ flex: 1 }} onPress={() => setShowDiagnosisModal(false)} />
+                    <MotiView
+                        from={{ translateY: 100, opacity: 0 }}
+                        animate={{ translateY: 0, opacity: 1 }}
+                        style={[styles.quickAdjustModal, { minHeight: 400, alignItems: 'stretch' }]}
+                    >
+                        <View style={styles.modalBar} />
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                <View style={{ padding: 10, backgroundColor: 'rgba(59, 130, 246, 0.1)', borderRadius: 12 }}>
+                                    <Sparkles size={24} color="#3b82f6" />
+                                </View>
+                                <View>
+                                    <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>AI Smart Diagnosis</Text>
+                                    <Text style={{ color: '#64748b', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Powered by Gemini</Text>
+                                </View>
+                            </View>
+                            <TouchableOpacity onPress={() => setShowDiagnosisModal(false)} style={styles.modalClose}>
+                                <X size={20} color="white" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={{ maxHeight: 400 }}>
+                            {diagnosisLoading ? (
+                                <View style={{ paddingVertical: 40, alignItems: 'center', gap: 16 }}>
+                                    <ActivityIndicator size="large" color="#3b82f6" />
+                                    <Text style={{ color: '#64748b', fontSize: 12, fontWeight: '500' }}>Analyzing issue symptoms...</Text>
+                                </View>
+                            ) : (
+                                <View style={{ backgroundColor: 'rgba(0,0,0,0.2)', padding: 20, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
+                                    <Text style={{ color: '#cbd5e1', fontSize: 14, lineHeight: 22 }}>
+                                        {diagnosis}
+                                    </Text>
+                                </View>
+                            )}
+                        </ScrollView>
+
+                        {!diagnosisLoading && (
+                            <TouchableOpacity
+                                onPress={() => setShowDiagnosisModal(false)}
+                                style={[styles.modalDoneBtn, { marginTop: 24 }]}
+                            >
+                                <Text style={styles.modalDoneText}>CLOSE</Text>
+                            </TouchableOpacity>
+                        )}
+                    </MotiView>
+                </View>
+            </Modal>
         </View>
     );
 }

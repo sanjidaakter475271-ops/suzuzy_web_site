@@ -3,12 +3,17 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import { AuthProvider, useAuth } from '../lib/auth';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+
+import { OfflineBanner } from '../components/OfflineBanner';
+import { PermissionManager } from '../components/PermissionManager';
+import { LocationTracker } from '../components/LocationTracker';
 
 function InitialLayout() {
   const { user, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const [permissionsDone, setPermissionsDone] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -24,7 +29,18 @@ function InitialLayout() {
     }
   }, [user, loading, segments]);
 
-  return <Slot />;
+  if (loading) return null;
+
+  return (
+    <>
+      <OfflineBanner />
+      {user && !permissionsDone && (
+        <PermissionManager onComplete={() => setPermissionsDone(true)} />
+      )}
+      {user && permissionsDone && <LocationTracker />}
+      <Slot />
+    </>
+  );
 }
 
 export default function RootLayout() {

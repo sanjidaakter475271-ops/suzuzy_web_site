@@ -16,7 +16,15 @@
       "Bash(npx tsc:*)",
       "Bash(ls d:/suzuzy_web_site/servicestuff-rn/*.js d:/suzuzy_web_site/servicestuff-rn/*.cjs)",
       "Bash(cmd /c mklink /J C:suzuzy_web_site D:suzuzy_web_site)",
-      "Bash(powershell -Command \"Start-Process cmd -ArgumentList ''/c mklink /J C:\\\\suzuzy_web_site D:\\\\suzuzy_web_site'' -Verb RunAs\")"
+      "Bash(powershell -Command \"Start-Process cmd -ArgumentList ''/c mklink /J C:\\\\suzuzy_web_site D:\\\\suzuzy_web_site'' -Verb RunAs\")",
+      "Bash(npx eas-cli@latest init --id a16b7525-0881-4111-92a3-a133b99bdffa --non-interactive)",
+      "Bash(npm view:*)",
+      "Bash(npm search:*)",
+      "Bash(npm list:*)",
+      "Bash(npx expo-doctor:*)",
+      "Bash(node test-lightningcss.js)",
+      "Bash(node test-nativewind-metro.js)",
+      "Bash(node test-nativewind-metro-stack.js)"
     ]
   }
 }

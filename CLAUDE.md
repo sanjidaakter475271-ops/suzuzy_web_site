@@ -266,6 +266,19 @@ if (error instanceof Prisma.PrismaClientKnownRequestError) {
 - Use **EAS Build** for generating APKs.
 - Local dev: `npx expo start`.
 
+### 🛡️ WINDOWS BUILD & TAILWIND v4 FIXES
+- **Native Modules**: If `eas build` fails with `Cannot find module '...lightningcss.node'`, manually copy the binary from `node_modules/lightningcss-win32-x64-msvc/` to `node_modules/lightningcss/`. 
+- **ESM Loader Bug**: If Metro fails with `ERR_UNSUPPORTED_ESM_URL_SCHEME` on Windows, ensure the patch in `metro-config/src/loadConfig.js` (using `pathToFileURL`) is applied via `patch-package`.
+- **Tailwind Version**: Tailwind v4 MUST use **NativeWind v5 (preview)**. Pin `nativewind` and `react-native-css-interop` to `5.0.0-preview.x` in `package.json`.
+- **Global CSS**: Use `@import "tailwindcss";` and `@import "nativewind/theme";` instead of legacy `@tailwind` directives.
+- **Dependencies**: NativeWind v5 requires `react-native-css` for the Metro config engine.
+
+### ⚙️ EXPO MOBILE BUILD PROCESS (EAS)
+1. **Interactive Build**: `npx eas-cli build --platform android --profile preview` (Follow terminal prompts for Keystore & Credentials).
+2. **Local Build (Offline APK)**: `npx eas-cli build --platform android --profile preview --local` (Requires Android Studio/JRE installed locally).
+3. **Automated (Git Push)**: Once GitHub is connected and the base directory is set to `servicestuff-rn`, any push to `main` triggers the EAS Workflow defined in `.eas/workflows/`.
+4. **Environment Variables**: Add all `.env` secrets to the **Expo Dashboard > Settings > Secrets** tab for they can be used during Cloud builds.
+
 ---
 
 ## WORKFLOWS
