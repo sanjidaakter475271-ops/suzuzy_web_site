@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from '../lib/auth';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { OfflineBanner } from '../components/OfflineBanner';
 import { PermissionManager } from '../components/PermissionManager';
@@ -14,22 +15,37 @@ function InitialLayout() {
   const segments = useSegments();
   const router = useRouter();
   const [permissionsDone, setPermissionsDone] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [isOnboarded, setIsOnboarded] = useState(false);
 
   useEffect(() => {
-    if (loading) return;
+    const checkOnboarding = async () => {
+      const value = await AsyncStorage.getItem('servicemate_onboarded');
+      setIsOnboarded(value === 'true');
+      setOnboardingChecked(true);
+    };
+    checkOnboarding();
+  }, []);
+
+  useEffect(() => {
+    if (loading || !onboardingChecked) return;
 
     const inAuthGroup = segments[0] === '(auth)';
 
     if (!user && !inAuthGroup) {
-      // Redirect to login if not authenticated
-      router.replace('/login');
+      // Redirect based on onboarding status
+      if (isOnboarded) {
+        router.replace('/login');
+      } else {
+        router.replace('/splash');
+      }
     } else if (user && inAuthGroup) {
       // Redirect to dashboard if authenticated
       router.replace('/(tabs)');
     }
-  }, [user, loading, segments]);
+  }, [user, loading, segments, onboardingChecked, isOnboarded]);
 
-  if (loading) return null;
+  if (loading || !onboardingChecked) return null;
 
   return (
     <>
