@@ -87,7 +87,7 @@ export class OfflineService {
             try {
                 switch (action.type) {
                     case 'update_status':
-                        await TechnicianAPI.updateJobStatus(action.data.jobId, action.data.status, { lat: 0, lng: 0 });
+                        await TechnicianAPI.updateJobStatus(action.data.jobId, action.data.status, action.data.location);
                         break;
                     case 'update_checklist':
                         await TechnicianAPI.updateChecklist(action.data.jobId, [{

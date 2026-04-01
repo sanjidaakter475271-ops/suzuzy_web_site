@@ -17,7 +17,7 @@ async function testPreflight() {
         for (const [key, val] of res.headers.entries()) {
             console.log(`  ${key}: ${val}`);
         }
-    } catch (err) {
+    } catch (err: any) {
         console.error('Error:', err.message);
     }
 }

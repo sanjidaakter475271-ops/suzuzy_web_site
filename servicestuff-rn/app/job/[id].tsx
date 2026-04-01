@@ -198,7 +198,7 @@ export default function JobCardDetail() {
             }
 
             if (!isOnline) {
-                await offlineService.queueAction('update_status', { jobId: job.id, status: newStatus });
+                await offlineService.queueAction('update_status', { jobId: job.id, status: newStatus, location });
                 if (newStatus === 'completed') router.replace('/(tabs)');
                 return;
             }
@@ -857,5 +857,7 @@ const styles = StyleSheet.create({
     qtyValue: { fontSize: 48, fontWeight: '900', color: 'white' },
     qtyLabel: { color: '#64748b', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' },
     modalDoneBtn: { backgroundColor: '#020617', width: '100%', padding: 20, borderRadius: 24, alignItems: 'center' },
-    modalDoneText: { color: 'white', fontWeight: '900', letterSpacing: 2 }
+    modalDoneText: { color: 'white', fontWeight: 'bold' as const, letterSpacing: 2 },
+    modalBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: '#3b82f6' },
+    modalClose: { padding: 10, backgroundColor: '#020617', borderRadius: 12 }
 });

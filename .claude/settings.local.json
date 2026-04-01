@@ -24,7 +24,11 @@
       "Bash(npx expo-doctor:*)",
       "Bash(node test-lightningcss.js)",
       "Bash(node test-nativewind-metro.js)",
-      "Bash(node test-nativewind-metro-stack.js)"
+      "Bash(node test-nativewind-metro-stack.js)",
+      "Bash(rm -rf .expo)",
+      "Bash(rm -rf node_modules/.cache)",
+      "Bash(npx patch-package:*)",
+      "Bash(npm uninstall:*)"
     ]
   }
 }

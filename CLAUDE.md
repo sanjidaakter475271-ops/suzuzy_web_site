@@ -27,7 +27,7 @@ d:\suzuzy_web_site\
 |-----|----------|
 | `apps/portal` | Next.js 16 (App Router), Prisma 7 + pg adapter, Supabase PostgreSQL, JWT auth (jose), Zustand, TanStack Query, shadcn/ui, Tailwind CSS v4, Zod v4 |
 | `apps/realtime` | Node.js 18+, Socket.io 4, CommonJS |
-| `servicestuff-rn` | React Native, Expo 54, Expo Router, NativeWind (Tailwind), FlashList, Moti, Reanimated, Socket.io-client |
+| `servicestuff-rn` | React Native 0.81.5, Expo 54, NativeWind 4.2.3 (Tailwind v3), Reanimated 4.1.7, Worklets 0.5.1 |
 | `servicestuff` | (DEPRECATED) Vite 6, React 19, Capacitor 7 (Android) |
 
 ### CRITICAL WARNINGS
@@ -252,32 +252,34 @@ if (error instanceof Prisma.PrismaClientKnownRequestError) {
 
 ### Mandatory Rules
 
-1. **Architecture**: Use **Expo Router** for file-based routing inside `app/`.
+1. **Architecture**: Use **Expo Router** for file-based routing inside `app/`. **New Architecture (Fabric) MUST be enabled** (`newArchEnabled: true` in `app.json`) for Reanimated 4 compatibility.
 2. **UI Components**: Always prefer native components (`View`, `Text`, `TouchableOpacity`, `TextInput`) over web elements.
 3. **Performance**: Use **FlashList** for all lists (MyJobs, Requisitions, Notifications) with appropriate `estimatedItemSize`.
-4. **Styling**: Use **NativeWind** (Tailwind classes) for styling. Ensure `global.css` is imported in `app/_layout.tsx`.
-5. **Animations**: Use **Moti** or **React Native Reanimated** for smooth 60fps animations.
-6. **API calls**: Use `TechnicianAPI` from `services/api.ts`.
-7. **Auth**: Use `useAuth()` hook. Session is stored in `AsyncStorage` via `auth-client.ts`.
-8. **Native APIs**: Use Expo modules (e.g., `expo-camera`, `expo-location`, `expo-local-authentication`).
-9. **Environment**: Config lives in `lib/env.ts` (proxied via `expo-constants`).
+4. **Styling**: Use **NativeWind v4** (Tailwind v3 classes). Pin `nativewind` to `4.2.3` and `tailwindcss` to `3.4.17` for maximum stability in Expo Go.
+5. **Animations**: Use **Moti** or **React Native Reanimated**. 
+   * **CRITICAL**: For Expo Go SDK 54, you MUST use `react-native-reanimated@4.1.7` with `react-native-worklets@0.5.1`. Version mismatch will cause `NullPointerException`.
+6. **Babel Config**: Plugins MUST be in this exact order: `react-native-worklets/plugin`, then `react-native-reanimated/plugin` (last).
+7. **Entry File**: `import 'react-native-reanimated';` MUST be at the very top of `app/_layout.tsx`.
+8. **API calls**: Use `TechnicianAPI` from `services/api.ts`.
+9. **Auth**: Use `useAuth()` hook. Session is stored in `AsyncStorage` via `auth-client.ts`.
+10. **Native APIs**: Use Expo modules (e.g., `expo-camera`, `expo-location`, `expo-local-authentication`).
+11. **Environment**: Config lives in `lib/env.ts` (proxied via `expo-constants`).
 
 ### Build & Deploy
 - Use **EAS Build** for generating APKs.
 - Local dev: `npx expo start`.
 
 ### 🛡️ WINDOWS BUILD & TAILWIND v4 FIXES
-- **Native Modules**: If `eas build` fails with `Cannot find module '...lightningcss.node'`, manually copy the binary from `node_modules/lightningcss-win32-x64-msvc/` to `node_modules/lightningcss/`. 
+- **Native Modules**: If `eas build` or `expo start` fails with `Cannot find module '...lightningcss.node'`, manually copy the binary from `node_modules/lightningcss-win32-x64-msvc/` to `node_modules/lightningcss/` and `node_modules/react-native-css-interop/node_modules/lightningcss/`. 
 - **ESM Loader Bug**: If Metro fails with `ERR_UNSUPPORTED_ESM_URL_SCHEME` on Windows, ensure the patch in `metro-config/src/loadConfig.js` (using `pathToFileURL`) is applied via `patch-package`.
-- **Tailwind Version**: Tailwind v4 MUST use **NativeWind v5 (preview)**. Pin `nativewind` and `react-native-css-interop` to `5.0.0-preview.x` in `package.json`.
-- **Global CSS**: Use `@import "tailwindcss";` and `@import "nativewind/theme";` instead of legacy `@tailwind` directives.
-- **Dependencies**: NativeWind v5 requires `react-native-css` for the Metro config engine.
+- **Styling Patch**: `react-native-css-interop` Babel config is patched to remove hardcoded `worklets/plugin` to avoid duplication and version conflicts.
 
 ### ⚙️ EXPO MOBILE BUILD PROCESS (EAS)
 1. **Interactive Build**: `npx eas-cli build --platform android --profile preview` (Follow terminal prompts for Keystore & Credentials).
 2. **Local Build (Offline APK)**: `npx eas-cli build --platform android --profile preview --local` (Requires Android Studio/JRE installed locally).
 3. **Automated (Git Push)**: Once GitHub is connected and the base directory is set to `servicestuff-rn`, any push to `main` triggers the EAS Workflow defined in `.eas/workflows/`.
-4. **Environment Variables**: Add all `.env` secrets to the **Expo Dashboard > Settings > Secrets** tab for they can be used during Cloud builds.
+4. **Environment Variables**: Add all `.env` secrets to the **Expo Dashboard > Settings > Secrets** tab.
+5. **CI/CD Security**: For GitHub Actions, ensure `EXPO_TOKEN` is added to repository secrets. Use `EAS_SKIP_AUTO_FINGERPRINT=1` to speed up CI builds.
 
 ---
 
@@ -295,6 +297,7 @@ if (error instanceof Prisma.PrismaClientKnownRequestError) {
 4. Create `src/app/api/v1/{module}/{endpoint}/route.ts` using standard template
 5. Add mobile API method to `servicestuff/services/api.ts` (if technician endpoint)
 6. Emit realtime event (if mutation)
+7. **AI Logic**: Move expensive AI SDK logic (like Gemini) to backend API (`/api/v1/technician/diagnose`) to reduce mobile app size and secure API keys.
 
 ### Prisma Schema Change
 1. Edit only the specific model/section needed
