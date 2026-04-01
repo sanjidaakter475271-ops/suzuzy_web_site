@@ -12,10 +12,6 @@
       "resizeMode": "contain",
       "backgroundColor": "#020617"
     },
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.suzuki.servicepro"
-    },
     "android": {
       "package": "com.suzuki.servicepro",
       "adaptiveIcon": {
