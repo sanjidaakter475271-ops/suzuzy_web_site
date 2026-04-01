@@ -13,13 +13,27 @@ File bugs here with exact file paths so they're easy to find and fix.
 
 ---
 
-## Open Bugs
-
-<!-- Add bugs here -->
-
 ---
 
 ## Fixed
+
+### [BUG-004] Infinite Session Verification Loop
+- **File:** `servicestuff-rn/lib/auth.tsx`
+- **Problem:** When a session is invalid, the app triggers logout, which then re-triggers the "online" session check due to `!user?.id` condition, causing a loop.
+- **Status:** fixed
+- **Notes:** Added session existence checks to prevent redundant verification calls during and after logout.
+
+### [BUG-005] Socket Connection Race Condition
+- **File:** `servicestuff-rn/services/socket.ts`, `lib/auth.tsx`
+- **Problem:** `SocketService.connect()` fails because it reads from `AsyncStorage` before the token is fully settled or during auth transitions.
+- **Status:** fixed
+- **Notes:** Modified connect() to accept an optional token parameter and passed it directly from AuthProvider.
+
+### [BUG-006] Navigator Not Ready Error
+- **File:** `servicestuff-rn/app/_layout.tsx`
+- **Problem:** `router.replace('/(tabs)')` fails on startup because the root navigator isn't fully mounted.
+- **Status:** fixed
+- **Notes:** Wrapped startup redirects in a `setTimeout(..., 1)` to ensure the Expo Router context is fully initialized.
 
 ### [PERF-01] List Memoization & Optimized Rendering
 - **File:** `pages/MyJobs.tsx`, `pages/WorkHistory.tsx`, `components/DashboardJobCards.tsx`
