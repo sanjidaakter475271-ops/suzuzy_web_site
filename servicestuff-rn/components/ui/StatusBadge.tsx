@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { CheckCircle, Clock, AlertCircle, PauseCircle, ShieldCheck, XCircle } from 'lucide-react-native';
 import { JobStatus } from '../../types';
+import { COLORS } from '../../constants/theme';
 
 interface StatusBadgeProps {
   status: JobStatus;
@@ -56,7 +57,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
         };
       default:
         return {
-          label: status.toUpperCase(),
+          label: (status as string).toUpperCase(),
           color: 'text-slate-400',
           bgColor: 'bg-slate-400/10',
           borderColor: 'border-slate-400/20',
@@ -72,11 +73,21 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
   const textClasses = size === 'sm' ? 'text-[10px]' : 'text-[11px]';
   const iconSize = size === 'sm' ? 10 : 12;
 
+  const getIconColor = (colorClass: string) => {
+    switch (colorClass) {
+      case 'text-success': return COLORS.success;
+      case 'text-primary': return COLORS.primary;
+      case 'text-warning': return COLORS.warning;
+      case 'text-danger': return COLORS.danger;
+      default: return COLORS.slate400;
+    }
+  };
+
   return (
     <View
       className={`flex-row items-center rounded-full border ${config.bgColor} ${config.borderColor} ${paddingClasses}`}
     >
-      <Icon size={iconSize} color={config.color.replace('text-', '#')} strokeWidth={3} />
+      <Icon size={iconSize} color={getIconColor(config.color)} strokeWidth={3} />
       <Text
         className={`ml-1 font-black tracking-widest ${config.color} ${textClasses}`}
       >

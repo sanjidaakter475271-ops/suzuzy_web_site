@@ -5,6 +5,7 @@ import { Bell, ChevronLeft, Home, ChevronRight } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TechnicianAPI } from '../services/api';
 import { SocketService } from '../services/socket';
+import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 
 interface Breadcrumb {
     label: string;
@@ -19,11 +20,16 @@ interface TopBarProps {
     onBack?: () => void;
 }
 
+// Module-level cache to persist between mounts
+let globalHasUnread = false;
+let lastFetchTime = 0;
+const CACHE_DURATION = 30000; // 30 seconds
+
 export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, breadcrumbs, onBack }) => {
     const router = useRouter();
     const segments = useSegments();
     const insets = useSafeAreaInsets();
-    const [hasUnread, setHasUnread] = useState(false);
+    const [hasUnread, setHasUnread] = useState(globalHasUnread);
 
     const currentPath = `/${segments.join('/')}`;
     const isHome = currentPath === '/(tabs)' || currentPath === '/(tabs)/index' || currentPath === '/';
@@ -34,7 +40,17 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
 
         const checkUnread = async () => {
             if (isNotifications) {
-                if (mounted) setHasUnread(false);
+                if (mounted) {
+                    setHasUnread(false);
+                    globalHasUnread = false;
+                }
+                return;
+            }
+
+            // Only fetch if cache is expired
+            const now = Date.now();
+            if (now - lastFetchTime < CACHE_DURATION) {
+                if (mounted) setHasUnread(globalHasUnread);
                 return;
             }
 
@@ -42,10 +58,14 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
                 const { data } = await TechnicianAPI.getNotifications();
                 if (data.success && data.data && mounted) {
                     const unread = data.data.some((n: any) => !n.is_read);
+                    globalHasUnread = unread;
+                    lastFetchTime = now;
                     setHasUnread(unread);
                 }
-            } catch (err) {
-                console.error("TopBar failed to fetch notification status:", err);
+            } catch (err: any) {
+                if (err.response?.status !== 401) {
+                    console.error("TopBar failed to fetch notification status:", err);
+                }
             }
         };
 
@@ -53,6 +73,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
 
         const socket = SocketService.getInstance();
         const handleNewNotification = () => {
+            globalHasUnread = true;
             if (mounted) setHasUnread(true);
         };
 
@@ -79,21 +100,21 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
         <View
             style={{
                 paddingTop: insets.top,
-                backgroundColor: '#0f172a',
+                backgroundColor: COLORS.slate900,
                 borderBottomWidth: 1,
-                borderBottomColor: 'rgba(30, 41, 59, 0.5)',
+                borderBottomColor: COLORS.darkBorder,
             }}
         >
-            <View style={{ height: 60, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 }}>
+            <View style={{ height: 60, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.md }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                     <TouchableOpacity
                         onPress={handleBackAction}
-                        style={{ padding: 8, marginRight: 8, borderRadius: 12 }}
+                        style={{ padding: SPACING.sm, marginRight: SPACING.sm, borderRadius: 12 }}
                     >
                         {(onBack || showBack) ? (
-                            <ChevronLeft size={22} color="#3b82f6" strokeWidth={2.5} />
+                            <ChevronLeft size={22} color={COLORS.primary} strokeWidth={2.5} />
                         ) : (
-                            <Home size={20} color={isHome ? "#3b82f6" : "#64748b"} />
+                            <Home size={20} color={isHome ? COLORS.primary : COLORS.slate500} />
                         )}
                     </TouchableOpacity>
 
@@ -101,10 +122,11 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
                         <Text style={{
                             fontSize: isHome ? 10 : 14,
                             fontWeight: isHome ? '900' : 'bold',
-                            color: isHome ? '#60a5fa' : '#64748b',
+                            color: isHome ? COLORS.primaryLight : COLORS.slate500,
                             textTransform: isHome ? 'uppercase' : 'none',
                             letterSpacing: isHome ? 2 : 0,
-                            fontStyle: isHome ? 'italic' : 'normal'
+                            fontStyle: isHome ? 'italic' : 'normal',
+                            fontFamily: isHome ? TYPOGRAPHY.families.black : TYPOGRAPHY.families.bold,
                         }}>
                             Workshop
                         </Text>
@@ -112,13 +134,14 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
                         {breadcrumbs ? (
                             breadcrumbs.map((bc, idx) => (
                                 <React.Fragment key={idx}>
-                                    <ChevronRight size={12} color="#334155" style={{ marginHorizontal: 4 }} />
+                                    <ChevronRight size={12} color={COLORS.slate700} style={{ marginHorizontal: 4 }} />
                                     <Text
                                         numberOfLines={1}
                                         style={{
                                             fontSize: 14,
                                             fontWeight: '800',
-                                            color: idx === breadcrumbs.length - 1 ? '#e2e8f0' : '#3b82f6'
+                                            color: idx === breadcrumbs.length - 1 ? COLORS.slate200 : COLORS.primary,
+                                            fontFamily: TYPOGRAPHY.families.bold,
                                         }}
                                     >
                                         {bc.label}
@@ -128,10 +151,15 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
                         ) : (
                             !isHome && (
                                 <>
-                                    <ChevronRight size={14} color="#334155" style={{ marginHorizontal: 4 }} />
+                                    <ChevronRight size={14} color={COLORS.slate700} style={{ marginHorizontal: 4 }} />
                                     <Text
                                         numberOfLines={1}
-                                        style={{ fontSize: 14, fontWeight: '900', color: '#60a5fa' }}
+                                        style={{
+                                            fontSize: 14,
+                                            fontWeight: '900',
+                                            color: COLORS.primaryLight,
+                                            fontFamily: TYPOGRAPHY.families.bold,
+                                        }}
                                     >
                                         {title === 'Dashboard' ? 'Home' : title}
                                     </Text>
@@ -146,12 +174,12 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
                     style={{
                         padding: 10,
                         borderRadius: 999,
-                        backgroundColor: isNotifications ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                        backgroundColor: isNotifications ? COLORS.infoBg : 'transparent',
                         borderWidth: isNotifications ? 1 : 0,
-                        borderColor: 'rgba(59, 130, 246, 0.2)'
+                        borderColor: COLORS.darkBorder
                     }}
                 >
-                    <Bell size={24} color={isNotifications ? "#3b82f6" : "#64748b"} />
+                    <Bell size={24} color={isNotifications ? COLORS.primary : COLORS.slate500} />
                     {hasUnread && (
                         <View style={{
                             position: 'absolute',
@@ -159,10 +187,10 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
                             right: 10,
                             width: 10,
                             height: 10,
-                            backgroundColor: '#ef4444',
+                            backgroundColor: COLORS.danger,
                             borderRadius: 5,
                             borderWidth: 2,
-                            borderColor: '#0f172a'
+                            borderColor: COLORS.slate900
                         }} />
                     )}
                 </TouchableOpacity>

@@ -9,6 +9,7 @@ interface AuthContextType {
     user: User | null;
     session: any;
     loading: boolean;
+    isAuthReady: boolean;
     signIn: (email: string, password: any) => Promise<{ error?: string }>;
     signUp: (email: string, password: any, name: string) => Promise<{ error?: string }>;
     signOut: () => Promise<void>;
@@ -20,6 +21,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [isAuthReady, setIsAuthReady] = useState(false);
 
     const refreshSession = async () => {
         setLoading(true);
@@ -27,6 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (data && !error) {
             setUser(data.user);
             setSession(data.session);
+            setIsAuthReady(true);
             // Cache profile for offline access
             await OfflineService.getInstance().cacheUserProfile(data.user);
         } else {
@@ -34,10 +37,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const cachedUser = await OfflineService.getInstance().getCachedUserProfile();
             if (cachedUser) {
                 setUser(cachedUser);
-                setSession({ token: "cached" });
+                setSession({ token: "cached", accessToken: "cached" });
+                setIsAuthReady(true);
             } else {
                 setUser(null);
                 setSession(null);
+                setIsAuthReady(false);
             }
         }
         setLoading(false);
@@ -93,11 +98,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (data?.user) {
             setUser(data.user);
+            const token = data.session?.accessToken || data.session?.token;
             const sessionData = {
                 ...data.session,
-                token: data.session?.accessToken || data.session?.token
+                token,
+                accessToken: token
             };
             setSession(sessionData);
+            setIsAuthReady(true);
 
             // Cache profile for offline access
             await OfflineService.getInstance().cacheUserProfile(data.user);
@@ -118,10 +126,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         SocketService.getInstance().disconnect();
         setUser(null);
         setSession(null);
+        setIsAuthReady(false);
     };
 
     return (
-        <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut }}>
+        <AuthContext.Provider value={{ user, session, loading, isAuthReady, signIn, signUp, signOut }}>
             {children}
         </AuthContext.Provider>
     );

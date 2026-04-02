@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
-import { Playfair_Display, DM_Sans, Hind_Siliguri, Roboto, Inter } from "next/font/google";
+import { Playfair_Display, DM_Sans, Hind_Siliguri, Roboto, Inter, M_PLUS_Rounded_1c } from "next/font/google";
 import "./globals.css";
+
+const mPlus = M_PLUS_Rounded_1c({
+  variable: "--font-mplus",
+  subsets: ["latin"],
+  weight: ["100", "300", "400", "500", "700", "800", "900"],
+});
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -44,11 +50,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth dark" suppressHydrationWarning>
-      <body className={`${playfair.variable} ${dmSans.variable} ${hindSiliguri.variable} ${roboto.variable} ${inter.variable} font-sans antialiased bg-[#0D0D0F] text-[#F8F8F8]`}>
+      <body className={`${mPlus.variable} ${playfair.variable} ${dmSans.variable} ${hindSiliguri.variable} ${roboto.variable} ${inter.variable} font-sans antialiased bg-[#0D0D0F] text-[#F8F8F8]`}>
         <QueryProvider>
           {children}
         </QueryProvider>
-        <Toaster richColors position="top-right" theme="dark" />
+        <Toaster richColors position="bottom-right" theme="dark" />
       </body>
     </html>
   );

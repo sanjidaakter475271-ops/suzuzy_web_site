@@ -1,21 +1,22 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Platform } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   Clock, CheckCircle, AlertCircle, Calendar, RefreshCw,
-  PlayCircle, StopCircle, ClipboardList, ChevronRight, X, QrCode, Scan, LogOut, Zap
+  ClipboardList, ChevronRight, QrCode, Scan, Zap
 } from 'lucide-react-native';
 import { MotiView, AnimatePresence } from 'moti';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
-import { FlashList } from '@shopify/flash-list';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { DashboardSkeleton } from '../../components/Skeleton';
+import { TopBar } from '../../components/TopBar';
 import { TechnicianAPI } from '../../services/api';
-import { JobCard, DashboardStats, AttendanceStatus, RoutePath, JobStatus } from '../../types';
+import { JobCard, DashboardStats, AttendanceStatus, JobStatus } from '../../types';
 import { SocketService } from '../../services/socket';
-import { LocationService } from '../../services/location';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
 
 // Memoized Shift Timer Component
 const ShiftTimer = React.memo(({ startTime }: { startTime: string | null }) => {
@@ -49,57 +50,40 @@ const ShiftTimer = React.memo(({ startTime }: { startTime: string | null }) => {
   }, [startTime]);
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999 }}>
-      <Clock size={12} color="#bfdbfe" />
-      <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#dbeafe', marginLeft: 6 }}>{elapsed}</Text>
+    <View style={styles.timerContainer}>
+      <Clock size={12} color={COLORS.slate200} />
+      <Text style={styles.timerText}>{elapsed}</Text>
     </View>
   );
 });
 
-// Task Card Component for FlashList
+// Task Card Component
 const TaskCard = React.memo(({ item, onPress }: { item: JobCard, onPress: (id: string) => void }) => {
-  const getStatusStyle = (status: string) => {
-    switch (status) {
-      case 'completed':
-      case 'qc_passed':
-      case 'verified':
-        return { bg: 'rgba(74, 222, 128, 0.1)', text: '#4ade80', border: 'rgba(74, 222, 128, 0.2)', icon: <CheckCircle size={14} color="#4ade80" /> };
-      case 'in_progress':
-        return { bg: 'rgba(96, 165, 250, 0.1)', text: '#60a5fa', border: 'rgba(96, 165, 250, 0.2)', icon: <Clock size={14} color="#60a5fa" /> };
-      case 'qc_pending':
-        return { bg: 'rgba(251, 191, 36, 0.1)', text: '#fbbf24', border: 'rgba(251, 191, 36, 0.2)', icon: <AlertCircle size={14} color="#fbbf24" /> };
-      default:
-        return { bg: 'rgba(148, 163, 184, 0.1)', text: '#94a3b8', border: 'rgba(148, 163, 184, 0.2)', icon: <AlertCircle size={14} color="#94a3b8" /> };
-    }
-  };
-
-  const style = getStatusStyle(item.status);
-
   return (
     <TouchableOpacity
       onPress={() => onPress(item.id)}
-      style={{ backgroundColor: '#0d1326', padding: 20, borderRadius: 32, borderWidth: 1, borderColor: 'rgba(30, 41, 59, 0.5)', marginBottom: 16 }}
+      style={styles.taskCard}
       activeOpacity={0.8}
     >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-        <Text style={{ fontWeight: 'bold', color: '#f1f5f9', fontSize: 16 }}>{item.vehicle?.model_name || 'Unknown Model'}</Text>
+      <View style={styles.taskHeader}>
+        <Text style={styles.taskModel}>{item.vehicle?.model_name || 'Unknown Model'}</Text>
         <StatusBadge status={item.status} size="sm" />
       </View>
 
-      <View style={{ backgroundColor: 'rgba(30, 41, 59, 0.5)', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginBottom: 8 }}>
-        <Text style={{ fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', color: '#94a3b8', letterSpacing: 1, textTransform: 'uppercase' }}>{item.vehicle?.license_plate || 'N/A'}</Text>
+      <View style={styles.plateBadge}>
+        <Text style={styles.plateText}>{item.vehicle?.license_plate || 'N/A'}</Text>
       </View>
 
-      <Text style={{ fontSize: 14, color: '#94a3b8', marginBottom: 12 }} numberOfLines={2}>
+      <Text style={styles.taskDescription} numberOfLines={2}>
         {item.vehicle?.issue_description || 'No description provided'}
       </Text>
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(30, 41, 59, 0.5)' }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Calendar size={12} color="#64748b" />
-          <Text style={{ fontSize: 12, color: '#64748b', marginLeft: 4 }}>{new Date(item.created_at).toLocaleDateString()}</Text>
+      <View style={styles.taskFooter}>
+        <View style={styles.taskDateContainer}>
+          <Calendar size={12} color={COLORS.slate500} />
+          <Text style={styles.taskDateText}>{new Date(item.created_at).toLocaleDateString()}</Text>
         </View>
-        <Text style={{ fontSize: 12, fontWeight: '500', color: '#94a3b8' }}>Owner: {item.vehicle?.customer_name || 'Unknown'}</Text>
+        <Text style={styles.taskOwner}>Owner: {item.vehicle?.customer_name || 'Unknown'}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -107,6 +91,7 @@ const TaskCard = React.memo(({ item, onPress }: { item: JobCard, onPress: (id: s
 
 export default function Dashboard() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [tasks, setTasks] = useState<JobCard[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus | null>(null);
@@ -159,6 +144,13 @@ export default function Dashboard() {
     fetchData(false);
   }, []);
 
+  const getEfficiencyRating = (score: number) => {
+    if (score >= 90) return { label: 'Outstanding', color: COLORS.success };
+    if (score >= 75) return { label: 'Above Average', color: COLORS.success };
+    if (score >= 60) return { label: 'Satisfactory', color: COLORS.warning };
+    return { label: 'Needs Improvement', color: COLORS.danger };
+  };
+
   const renderEfficiencyCircle = () => {
     const score = stats?.efficiency_score || 0;
     const radius = 24;
@@ -166,13 +158,13 @@ export default function Dashboard() {
     const offset = circumference - (score / 100) * circumference;
 
     return (
-      <View style={{ position: 'relative', width: 56, height: 56, alignItems: 'center', justifyContent: 'center' }}>
-        <Svg width="56" height="56" viewBox="0 0 56 56" style={{ transform: [{ rotate: '-90deg' }] }}>
+      <View style={styles.efficiencyCircleContainer}>
+        <Svg width="56" height="56" viewBox="0 0 56 56" style={styles.svgRotate}>
           <Circle
             cx="28"
             cy="28"
             r={radius}
-            stroke="#1e293b"
+            stroke={COLORS.slate800}
             strokeWidth="4"
             fill="transparent"
           />
@@ -180,7 +172,7 @@ export default function Dashboard() {
             cx="28"
             cy="28"
             r={radius}
-            stroke="#10b981"
+            stroke={COLORS.success}
             strokeWidth="4"
             fill="transparent"
             strokeDasharray={circumference}
@@ -188,53 +180,48 @@ export default function Dashboard() {
             strokeLinecap="round"
           />
         </Svg>
-        <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#cbd5e1' }}>{score}%</Text>
+        <View style={styles.efficiencyCircleTextContainer}>
+          <Text style={styles.efficiencyScoreText}>{score}%</Text>
         </View>
       </View>
     );
   };
 
-  return (
-    <View style={{ flex: 1, backgroundColor: '#020617' }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 100 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />}
-      >
-        {/* Header Spacer */}
-        <View style={{ height: 48 }} />
+  const renderHeader = () => {
+    const efficiency = getEfficiencyRating(stats?.efficiency_score || 0);
 
+    return (
+      <View>
         {/* Top Header */}
-        <View style={{ paddingHorizontal: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <View style={styles.headerContainer}>
           <View>
-            <Text style={{ color: '#64748b', fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>Technician</Text>
-            <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>Dashboard</Text>
+            <Text style={styles.headerSubtitle}>Technician</Text>
+            <Text style={styles.headerTitle}>Dashboard</Text>
           </View>
-          <TouchableOpacity style={{ width: 40, height: 40, backgroundColor: '#0f172a', borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#1e293b' }} onPress={() => fetchData(true)}>
-            <RefreshCw size={20} color="#3b82f6" />
+          <TouchableOpacity style={styles.refreshButton} onPress={() => fetchData(true)}>
+            <RefreshCw size={20} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
 
         {/* Attendance Widget */}
-        <View style={{ paddingHorizontal: 16, marginBottom: 24 }}>
+        <View style={styles.widgetContainer}>
           <TouchableOpacity onPress={() => router.push('/attendance')}>
             <LinearGradient
               colors={['rgba(59, 130, 246, 0.15)', 'rgba(79, 70, 229, 0.15)']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={{ borderRadius: 40, padding: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}
+              style={styles.attendanceGradient}
             >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={styles.attendanceContent}>
                 <View>
-                  <Text style={{ color: '#60a5fa', fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4, fontStyle: 'italic' }}>Workshop Status</Text>
-                  <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white', textTransform: 'uppercase', letterSpacing: -0.5 }}>
+                  <Text style={styles.workshopStatusLabel}>Workshop Status</Text>
+                  <Text style={styles.workshopStatusText}>
                     {attendanceStatus?.currentState === 'SHIFT_ACTIVE' ? 'Working Active' :
                      attendanceStatus?.currentState === 'SHIFT_PAUSED' ? 'On Break' :
                      attendanceStatus?.currentState === 'CHECKED_IN_IDLE' ? 'Logged In' : 'Offline'}
                   </Text>
 
-                  <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={styles.statusDetailContainer}>
                     {attendanceStatus?.currentState === 'SHIFT_ACTIVE' ? (
                       <>
                         <ShiftTimer startTime={attendanceStatus.currentShiftStartedAt} />
@@ -242,20 +229,20 @@ export default function Dashboard() {
                           from={{ opacity: 0.3 }}
                           animate={{ opacity: 1 }}
                           transition={{ loop: true, type: 'timing', duration: 1000 }}
-                          style={{ marginLeft: 8, width: 8, height: 8, backgroundColor: '#10b981', borderRadius: 999 }}
+                          style={styles.activeDot}
                         />
                       </>
                     ) : (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999 }}>
-                        <Clock size={12} color="#94a3b8" />
-                        <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#94a3b8', marginLeft: 6 }}>Session Idle</Text>
+                      <View style={styles.idleContainer}>
+                        <Clock size={12} color={COLORS.slate400} />
+                        <Text style={styles.idleText}>Session Idle</Text>
                       </View>
                     )}
                   </View>
                 </View>
 
-                <View style={{ width: 56, height: 56, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-                  <QrCode size={24} color="white" />
+                <View style={styles.qrContainer}>
+                  <QrCode size={24} color={COLORS.white} />
                 </View>
               </View>
             </LinearGradient>
@@ -263,90 +250,454 @@ export default function Dashboard() {
         </View>
 
         {/* Stats Grid */}
-        <View style={{ paddingHorizontal: 16, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+        <View style={styles.statsGrid}>
           {/* Scanner */}
           <TouchableOpacity
-            style={{ width: '100%', backgroundColor: 'rgba(15, 23, 42, 0.5)', padding: 20, borderRadius: 32, borderWidth: 1, borderColor: 'rgba(30, 41, 59, 0.5)', marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+            style={styles.scannerCard}
             activeOpacity={0.8}
+            onPress={() => router.push('/attendance')} // Default to attendance scanner for now
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={{ width: 48, height: 48, backgroundColor: 'rgba(59, 130, 246, 0.1)', borderRadius: 16, alignItems: 'center', justifyContent: 'center' }}>
-                <Scan size={24} color="#3b82f6" />
+            <View style={styles.scannerContent}>
+              <View style={styles.scannerIconContainer}>
+                <Scan size={24} color={COLORS.primary} />
               </View>
-              <View style={{ marginLeft: 16 }}>
-                <Text style={{ color: '#64748b', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>Scanner</Text>
-                <Text style={{ fontSize: 14, fontWeight: 'bold', color: 'white' }}>Scan VIN or Ticket</Text>
+              <View style={styles.scannerTextContainer}>
+                <Text style={styles.scannerLabel}>Scanner</Text>
+                <Text style={styles.scannerTitle}>Scan VIN or Ticket</Text>
               </View>
             </View>
-            <ChevronRight size={18} color="#475569" />
+            <ChevronRight size={18} color={COLORS.slate600} />
           </TouchableOpacity>
 
           {/* Pending */}
           <TouchableOpacity
-            style={{ width: '48%', backgroundColor: 'rgba(15, 23, 42, 0.5)', padding: 20, borderRadius: 32, borderWidth: 1, borderColor: 'rgba(30, 41, 59, 0.5)', marginBottom: 16 }}
+            style={styles.statsCardSmall}
             onPress={() => router.push({ pathname: '/jobs', params: { status: JobStatus.PENDING } })}
           >
-            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 }}>Pending</Text>
-            <Text style={{ fontSize: 36, fontWeight: '900', color: '#fbbf24', marginTop: 8, fontStyle: 'italic', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>{stats?.pending || 0}</Text>
+            <Text style={styles.statsLabelSmall}>Pending</Text>
+            <Text style={[styles.statsValueSmall, { color: COLORS.warning }]}>{stats?.pending || 0}</Text>
           </TouchableOpacity>
 
           {/* Active */}
           <TouchableOpacity
-            style={{ width: '48%', backgroundColor: 'rgba(15, 23, 42, 0.5)', padding: 20, borderRadius: 32, borderWidth: 1, borderColor: 'rgba(30, 41, 59, 0.5)', marginBottom: 16 }}
+            style={styles.statsCardSmall}
             onPress={() => router.push({ pathname: '/jobs', params: { status: JobStatus.IN_PROGRESS } })}
           >
-            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 }}>Active</Text>
-            <Text style={{ fontSize: 36, fontWeight: '900', color: '#3b82f6', marginTop: 8, fontStyle: 'italic', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>{stats?.active || 0}</Text>
+            <Text style={styles.statsLabelSmall}>Active</Text>
+            <Text style={[styles.statsValueSmall, { color: COLORS.primary }]}>{stats?.active || 0}</Text>
           </TouchableOpacity>
 
           {/* Efficiency Card */}
-          <View style={{ width: '100%', backgroundColor: '#0d1326', padding: 24, borderRadius: 40, borderWidth: 1, borderColor: 'rgba(30, 41, 59, 0.5)', marginBottom: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={styles.efficiencyCard}>
+            <View style={styles.efficiencyContent}>
               {renderEfficiencyCircle()}
-              <View style={{ marginLeft: 16 }}>
-                <Text style={{ color: '#64748b', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>Efficiency</Text>
-                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#10b981' }}>Above Average</Text>
+              <View style={styles.efficiencyTextContainer}>
+                <Text style={styles.efficiencyLabel}>Efficiency</Text>
+                <Text style={[styles.efficiencyValue, { color: efficiency.color }]}>{efficiency.label}</Text>
               </View>
             </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={{ color: '#64748b', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>Work Hours</Text>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: 'white' }}>{stats?.hours_worked || 0}h</Text>
+            <View style={styles.hoursContainer}>
+              <Text style={styles.hoursLabel}>Work Hours</Text>
+              <Text style={styles.hoursValue}>{stats?.hours_worked || 0}h</Text>
             </View>
           </View>
         </View>
 
-        {/* Recent Tasks List */}
-        <View style={{ paddingHorizontal: 24, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={{ fontSize: 18, fontWeight: 'bold', color: 'white' }}>Recent Tasks</Text>
+        {/* Recent Tasks List Header */}
+        <View style={styles.listHeader}>
+          <Text style={styles.listTitle}>Recent Tasks</Text>
           <TouchableOpacity onPress={() => router.push('/jobs')}>
-            <Text style={{ color: '#3b82f6', fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>View All</Text>
+            <Text style={styles.viewAllText}>View All</Text>
           </TouchableOpacity>
         </View>
+      </View>
+    );
+  };
 
-        <View style={{ paddingHorizontal: 16, minHeight: 300 }}>
-          {loading ? (
-            <DashboardSkeleton />
-          ) : tasks.length > 0 ? (
-            <FlashList
-              data={tasks}
-              renderItem={({ item }: { item: JobCard }) => (
-                <TaskCard
-                  item={item}
-                  onPress={(id: string) => router.push(`/job/${id}`)}
-                />
-              )}
-              // @ts-ignore - FlashList types can be finicky with estimatedItemSize in some TS environments
-              estimatedItemSize={160}
-              scrollEnabled={false}
-            />
-          ) : (
-            <View style={{ alignItems: 'center', paddingVertical: 40, opacity: 0.3 }}>
-              <ClipboardList size={48} color="#94a3b8" />
-              <Text style={{ color: '#94a3b8', marginTop: 12, fontWeight: '500' }}>No recent tasks found</Text>
-            </View>
-          )}
-        </View>
-      </ScrollView>
+  const renderEmpty = () => (
+    <View style={styles.emptyContainer}>
+      <ClipboardList size={48} color={COLORS.slate500} />
+      <Text style={styles.emptyText}>No recent tasks found</Text>
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      <TopBar title="Dashboard" />
+      <FlatList
+        data={tasks}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <TaskCard
+            item={item}
+            onPress={(id: string) => router.push(`/job/${id}`)}
+          />
+        )}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={loading ? null : renderEmpty}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
+        }
+        ListFooterComponent={loading ? <DashboardSkeleton /> : null}
+      />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.slate950,
+  },
+  scrollContent: {
+    paddingBottom: 24,
+  },
+  timerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  timerText: {
+    fontSize: TYPOGRAPHY.sizes.xxs,
+    fontFamily: TYPOGRAPHY.families.bold,
+    color: '#dbeafe',
+    marginLeft: SPACING.sm,
+  },
+  taskCard: {
+    backgroundColor: COLORS.darkCard,
+    padding: SPACING.xl,
+    borderRadius: BORDER_RADIUS.xxl,
+    borderWidth: 1,
+    borderColor: COLORS.darkBorder,
+    marginBottom: SPACING.md,
+    marginHorizontal: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  taskHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: SPACING.sm,
+  },
+  taskModel: {
+    fontFamily: TYPOGRAPHY.families.bold,
+    color: COLORS.slate100,
+    fontSize: TYPOGRAPHY.sizes.lg,
+  },
+  plateBadge: {
+    backgroundColor: COLORS.darkBorder,
+    alignSelf: 'flex-start',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.xs,
+    marginBottom: SPACING.sm,
+  },
+  plateText: {
+    fontSize: TYPOGRAPHY.sizes.xxs,
+    fontFamily: 'monospace',
+    color: COLORS.slate400,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  taskDescription: {
+    fontSize: TYPOGRAPHY.sizes.md,
+    color: COLORS.slate400,
+    fontFamily: TYPOGRAPHY.families.regular,
+    marginBottom: SPACING.md,
+  },
+  taskFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.darkBorder,
+  },
+  taskDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  taskDateText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.slate500,
+    fontFamily: TYPOGRAPHY.families.regular,
+    marginLeft: SPACING.xs,
+  },
+  taskOwner: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    fontFamily: TYPOGRAPHY.families.medium,
+    color: COLORS.slate400,
+  },
+  headerContainer: {
+    paddingHorizontal: SPACING.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.lg,
+  },
+  headerSubtitle: {
+    color: COLORS.slate500,
+    fontSize: TYPOGRAPHY.sizes.xxs,
+    fontFamily: TYPOGRAPHY.families.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+  },
+  headerTitle: {
+    fontSize: TYPOGRAPHY.sizes.xxl,
+    fontFamily: TYPOGRAPHY.families.bold,
+    color: COLORS.white,
+  },
+  refreshButton: {
+    width: 40,
+    height: 40,
+    backgroundColor: COLORS.slate900,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.slate800,
+  },
+  widgetContainer: {
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  attendanceGradient: {
+    borderRadius: BORDER_RADIUS.xxl,
+    padding: SPACING.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  attendanceContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  workshopStatusLabel: {
+    color: COLORS.primaryLight,
+    fontSize: TYPOGRAPHY.sizes.xxs,
+    fontFamily: TYPOGRAPHY.families.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: SPACING.xs,
+    fontStyle: 'italic',
+  },
+  workshopStatusText: {
+    fontSize: TYPOGRAPHY.sizes.xxl,
+    fontFamily: TYPOGRAPHY.families.bold,
+    color: COLORS.white,
+    textTransform: 'uppercase',
+    letterSpacing: -0.5,
+  },
+  statusDetailContainer: {
+    marginTop: SPACING.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  activeDot: {
+    marginLeft: SPACING.sm,
+    width: 8,
+    height: 8,
+    backgroundColor: COLORS.success,
+    borderRadius: 4,
+  },
+  idleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  idleText: {
+    fontSize: TYPOGRAPHY.sizes.xxs,
+    fontFamily: TYPOGRAPHY.families.bold,
+    color: COLORS.slate400,
+    marginLeft: SPACING.sm,
+  },
+  qrContainer: {
+    width: 56,
+    height: 56,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: BORDER_RADIUS.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  statsGrid: {
+    paddingHorizontal: SPACING.md,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  scannerCard: {
+    width: '100%',
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    padding: SPACING.xl,
+    borderRadius: BORDER_RADIUS.xxl,
+    borderWidth: 1,
+    borderColor: COLORS.darkBorder,
+    marginBottom: SPACING.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    ...SHADOWS.sm,
+  },
+  scannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  scannerIconContainer: {
+    width: 48,
+    height: 48,
+    backgroundColor: COLORS.infoBg,
+    borderRadius: BORDER_RADIUS.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scannerTextContainer: {
+    marginLeft: SPACING.md,
+  },
+  scannerLabel: {
+    color: COLORS.slate500,
+    fontSize: TYPOGRAPHY.sizes.xxs,
+    fontFamily: TYPOGRAPHY.families.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  scannerTitle: {
+    fontSize: TYPOGRAPHY.sizes.md,
+    fontFamily: TYPOGRAPHY.families.bold,
+    color: COLORS.white,
+  },
+  statsCardSmall: {
+    width: '48%',
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    padding: SPACING.xl,
+    borderRadius: BORDER_RADIUS.xxl,
+    borderWidth: 1,
+    borderColor: COLORS.darkBorder,
+    marginBottom: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  statsLabelSmall: {
+    color: COLORS.slate500,
+    fontSize: TYPOGRAPHY.sizes.xxs,
+    fontFamily: TYPOGRAPHY.families.black,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  statsValueSmall: {
+    fontSize: 36,
+    fontFamily: 'monospace',
+    fontWeight: '900',
+    marginTop: SPACING.sm,
+    fontStyle: 'italic',
+  },
+  efficiencyCard: {
+    width: '100%',
+    backgroundColor: COLORS.darkCard,
+    padding: SPACING.lg,
+    borderRadius: BORDER_RADIUS.xxl,
+    borderWidth: 1,
+    borderColor: COLORS.darkBorder,
+    marginBottom: SPACING.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    ...SHADOWS.sm,
+  },
+  efficiencyContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  efficiencyCircleContainer: {
+    position: 'relative',
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  svgRotate: {
+    transform: [{ rotate: '-90deg' }],
+  },
+  efficiencyCircleTextContainer: {
+    position: 'absolute',
+    inset: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  efficiencyScoreText: {
+    fontSize: TYPOGRAPHY.sizes.xxs,
+    fontFamily: TYPOGRAPHY.families.bold,
+    color: COLORS.slate300,
+  },
+  efficiencyTextContainer: {
+    marginLeft: SPACING.md,
+  },
+  efficiencyLabel: {
+    color: COLORS.slate500,
+    fontSize: TYPOGRAPHY.sizes.xxs,
+    fontFamily: TYPOGRAPHY.families.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  efficiencyValue: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    fontFamily: TYPOGRAPHY.families.bold,
+  },
+  hoursContainer: {
+    alignItems: 'flex-end',
+  },
+  hoursLabel: {
+    color: COLORS.slate500,
+    fontSize: TYPOGRAPHY.sizes.xxs,
+    fontFamily: TYPOGRAPHY.families.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  hoursValue: {
+    fontSize: TYPOGRAPHY.sizes.lg,
+    fontFamily: TYPOGRAPHY.families.bold,
+    color: COLORS.white,
+  },
+  listHeader: {
+    paddingHorizontal: SPACING.lg,
+    marginBottom: SPACING.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  listTitle: {
+    fontSize: TYPOGRAPHY.sizes.xl,
+    fontFamily: TYPOGRAPHY.families.bold,
+    color: COLORS.white,
+  },
+  viewAllText: {
+    color: COLORS.primary,
+    fontSize: TYPOGRAPHY.sizes.xs,
+    fontFamily: TYPOGRAPHY.families.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    opacity: 0.3,
+  },
+  emptyText: {
+    color: COLORS.slate400,
+    marginTop: SPACING.sm,
+    fontFamily: TYPOGRAPHY.families.medium,
+  },
+});

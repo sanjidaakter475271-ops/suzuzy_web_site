@@ -4,7 +4,6 @@ import {
     Text,
     TouchableOpacity,
     ScrollView,
-    Image,
     ActivityIndicator,
     TextInput,
     Alert,
@@ -13,6 +12,7 @@ import {
     Dimensions,
     Modal
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
     ChevronLeft,
@@ -50,6 +50,7 @@ import { DetailSkeleton } from '../../components/Skeleton';
 import { diagnoseIssue } from '../../services/geminiService';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { JobStatus } from '../../types';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
 
 type Tab = 'summary' | 'checklist' | 'parts' | 'photos' | 'notes';
 
@@ -431,14 +432,26 @@ export default function JobCardDetail() {
 
                 <View style={styles.issueSection}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                        <Text style={styles.sectionHeader}><AlertTriangle size={12} color="#f59e0b" /> CUSTOMER ISSUE</Text>
-                        <TouchableOpacity
-                            onPress={handleDiagnose}
-                            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(59, 130, 246, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}
-                        >
-                            <Sparkles size={14} color="#3b82f6" />
-                            <Text style={{ color: '#3b82f6', fontSize: 10, fontWeight: 'bold' }}>AI DIAGNOSIS</Text>
-                        </TouchableOpacity>
+                        <Text style={styles.sectionHeader}><AlertTriangle size={12} color={COLORS.warning} /> CUSTOMER ISSUE</Text>
+
+                        {process.env.EXPO_PUBLIC_GEMINI_API_KEY &&
+                         process.env.EXPO_PUBLIC_GEMINI_API_KEY !== 'PLACEHOLDER_API_KEY' && (
+                            <TouchableOpacity
+                                onPress={handleDiagnose}
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    backgroundColor: COLORS.infoBg,
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 6,
+                                    borderRadius: BORDER_RADIUS.md
+                                }}
+                            >
+                                <Sparkles size={14} color={COLORS.primary} />
+                                <Text style={{ color: COLORS.primary, fontSize: 10, fontFamily: TYPOGRAPHY.families.bold }}>AI DIAGNOSIS</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                     <Text style={styles.issueBody}>{job.vehicle?.issue_description || 'General maintenance and checkup.'}</Text>
                 </View>
@@ -475,7 +488,12 @@ export default function JobCardDetail() {
                                             </Text>
                                             {(item as any).photo_url && (
                                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                                                    <Image source={{ uri: (item as any).photo_url }} style={styles.checkItemImage} />
+                                                    <Image
+                                                        source={{ uri: (item as any).photo_url }}
+                                                        style={styles.checkItemImage}
+                                                        contentFit="cover"
+                                                        transition={200}
+                                                    />
                                                     <Text style={styles.evidenceText}>Evidence Attached</Text>
                                                 </View>
                                             )}
@@ -597,7 +615,12 @@ export default function JobCardDetail() {
                     <View style={styles.photoGrid}>
                         {job.photos?.map(photo => (
                             <View key={photo.id} style={styles.photoContainer}>
-                                <Image source={{ uri: photo.image_url }} style={styles.jobPhoto} />
+                                <Image
+                                    source={{ uri: photo.image_url }}
+                                    style={styles.jobPhoto}
+                                    contentFit="cover"
+                                    transition={300}
+                                />
                                 <View style={styles.photoTag}>
                                     <Text style={styles.photoTagText}>{photo.tag}</Text>
                                 </View>
@@ -763,86 +786,86 @@ export default function JobCardDetail() {
 }
 
 const styles = StyleSheet.create({
-    card: { backgroundColor: 'rgba(15, 23, 42, 0.5)', borderRadius: 32, padding: 24, borderWidth: 1, borderColor: 'rgba(30, 41, 59, 0.5)' },
-    vehicleName: { fontSize: 24, fontWeight: '900', color: 'white', textTransform: 'uppercase' },
-    plateNumber: { fontSize: 14, color: '#60a5fa', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', marginTop: 4 },
-    statusBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 99, borderWidth: 1 },
-    statusText: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase' },
-    infoText: { fontSize: 14, color: '#94a3b8' },
-    detailSection: { marginTop: 24, padding: 16, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 16 },
-    sectionHeader: { fontSize: 10, fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: 12, letterSpacing: 1 },
-    label: { fontSize: 10, color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold' },
-    value: { fontSize: 14, color: '#cbd5e1', fontWeight: 'bold', marginTop: 2 },
-    issueSection: { marginTop: 16, padding: 16, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 16 },
-    issueBody: { fontSize: 14, color: '#cbd5e1', lineHeight: 22 },
-    offlineBanner: { backgroundColor: 'rgba(245, 158, 11, 0.1)', paddingVertical: 8, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    offlineText: { color: '#f59e0b', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' },
-    offlineSubtext: { color: 'rgba(245, 158, 11, 0.6)', fontSize: 9, fontStyle: 'italic' },
-    tabContainer: { height: 60, borderBottomWidth: 1, borderBottomColor: 'rgba(30, 41, 59, 0.5)', backgroundColor: '#0f172a' },
-    tabButton: { minWidth: 80, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center', gap: 4 },
+    card: { backgroundColor: COLORS.slate900, borderRadius: BORDER_RADIUS.xxl, padding: SPACING.xl, borderWidth: 1, borderColor: COLORS.darkBorder },
+    vehicleName: { fontSize: TYPOGRAPHY.sizes.xxl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.white, textTransform: 'uppercase' },
+    plateNumber: { fontSize: TYPOGRAPHY.sizes.md, color: COLORS.primaryLight, fontFamily: 'monospace', marginTop: SPACING.xs },
+    statusBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: BORDER_RADIUS.full, borderWidth: 1 },
+    statusText: { fontSize: 10, fontFamily: TYPOGRAPHY.families.black, textTransform: 'uppercase' },
+    infoText: { fontSize: TYPOGRAPHY.sizes.md, color: COLORS.slate400, fontFamily: TYPOGRAPHY.families.regular },
+    detailSection: { marginTop: SPACING.xl, padding: SPACING.md, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: BORDER_RADIUS.lg },
+    sectionHeader: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate500, textTransform: 'uppercase', marginBottom: SPACING.md, letterSpacing: 1 },
+    label: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.slate500, textTransform: 'uppercase', fontFamily: TYPOGRAPHY.families.bold },
+    value: { fontSize: TYPOGRAPHY.sizes.md, color: COLORS.slate200, fontFamily: TYPOGRAPHY.families.bold, marginTop: 2 },
+    issueSection: { marginTop: SPACING.md, padding: SPACING.md, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: BORDER_RADIUS.lg },
+    issueBody: { fontSize: TYPOGRAPHY.sizes.md, color: COLORS.slate300, lineHeight: 22, fontFamily: TYPOGRAPHY.families.regular },
+    offlineBanner: { backgroundColor: COLORS.warningBg, paddingVertical: 8, paddingHorizontal: SPACING.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    offlineText: { color: COLORS.warning, fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase' },
+    offlineSubtext: { color: 'rgba(234, 179, 8, 0.6)', fontSize: 9, fontStyle: 'italic', fontFamily: TYPOGRAPHY.families.medium },
+    tabContainer: { height: 60, borderBottomWidth: 1, borderBottomColor: COLORS.darkBorder, backgroundColor: COLORS.slate900 },
+    tabButton: { minWidth: 80, paddingHorizontal: SPACING.md, justifyContent: 'center', alignItems: 'center', gap: 4 },
     tabButtonActive: {},
-    tabLabel: { fontSize: 10, fontWeight: 'bold', color: '#64748b' },
-    tabLabelActive: { color: '#3b82f6' },
-    tabIndicator: { position: 'absolute', bottom: 0, left: 16, right: 16, height: 2, backgroundColor: '#3b82f6' },
-    categoryHeader: { fontSize: 10, fontWeight: '900', color: '#64748b', textTransform: 'uppercase', marginBottom: 12, paddingHorizontal: 8, letterSpacing: 2 },
-    checkItemCard: { backgroundColor: 'rgba(15, 23, 42, 0.5)', padding: 16, borderRadius: 24, marginBottom: 12, gap: 16 },
-    checkbox: { padding: 8, borderRadius: 12, backgroundColor: '#0f172a' },
-    checkboxActive: { backgroundColor: 'rgba(16, 185, 129, 0.1)' },
-    checkItemName: { fontSize: 16, fontWeight: 'bold', color: '#e2e8f0' },
-    checkItemNameDone: { color: '#64748b', textDecorationLine: 'line-through' },
-    checkItemImage: { width: 48, height: 48, borderRadius: 8 },
-    evidenceText: { fontSize: 10, color: '#64748b', fontWeight: 'bold' },
-    cameraBtn: { padding: 10, borderRadius: 12, backgroundColor: '#0f172a' },
-    cameraBtnActive: { backgroundColor: 'rgba(59, 130, 246, 0.1)' },
-    conditionRow: { flexDirection: 'row', gap: 8, backgroundColor: 'rgba(0,0,0,0.3)', padding: 4, borderRadius: 16 },
-    conditionBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 12 },
-    conditionText: { fontSize: 10, fontWeight: '900', color: '#475569', textTransform: 'uppercase' },
-    conditionTextActive: { color: 'white' },
-    conditionBtn_ok: { backgroundColor: '#10b981' },
-    conditionBtn_fair: { backgroundColor: '#f59e0b' },
-    conditionBtn_bad: { backgroundColor: '#f43f5e' },
-    conditionBtn_na: { backgroundColor: '#334155' },
-    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: 'white' },
-    addPartBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(59, 130, 246, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99 },
-    addPartBtnText: { color: '#3b82f6', fontSize: 12, fontWeight: 'bold' },
-    partItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: 'rgba(15, 23, 42, 0.4)', borderRadius: 24, marginBottom: 12 },
-    partName: { color: '#f1f5f9', fontWeight: 'bold' },
-    partMeta: { fontSize: 10, color: '#64748b', marginTop: 2 },
-    partPrice: { color: '#cbd5e1', fontWeight: 'bold' },
-    issuedIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: 'rgba(59, 130, 246, 0.1)', alignItems: 'center', justifyContent: 'center' },
-    reqBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99, marginTop: 4 },
-    reqBadge_approved: { backgroundColor: 'rgba(16, 185, 129, 0.1)' },
-    reqBadgeText: { fontSize: 8, fontWeight: '900', color: 'white', textTransform: 'uppercase' },
+    tabLabel: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate500 },
+    tabLabelActive: { color: COLORS.primary },
+    tabIndicator: { position: 'absolute', bottom: 0, left: 16, right: 16, height: 2, backgroundColor: COLORS.primary },
+    categoryHeader: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.black, color: COLORS.slate500, textTransform: 'uppercase', marginBottom: SPACING.md, paddingHorizontal: SPACING.sm, letterSpacing: 2 },
+    checkItemCard: { backgroundColor: 'rgba(15, 23, 42, 0.5)', padding: SPACING.md, borderRadius: BORDER_RADIUS.xl, marginBottom: SPACING.sm, gap: SPACING.lg },
+    checkbox: { padding: SPACING.sm, borderRadius: BORDER_RADIUS.md, backgroundColor: COLORS.slate900 },
+    checkboxActive: { backgroundColor: COLORS.successBg },
+    checkItemName: { fontSize: TYPOGRAPHY.sizes.lg, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate100 },
+    checkItemNameDone: { color: COLORS.slate500, textDecorationLine: 'line-through' },
+    checkItemImage: { width: 48, height: 48, borderRadius: BORDER_RADIUS.sm },
+    evidenceText: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.slate500, fontFamily: TYPOGRAPHY.families.bold },
+    cameraBtn: { padding: 10, borderRadius: BORDER_RADIUS.md, backgroundColor: COLORS.slate900 },
+    cameraBtnActive: { backgroundColor: COLORS.infoBg },
+    conditionRow: { flexDirection: 'row', gap: SPACING.sm, backgroundColor: 'rgba(0,0,0,0.3)', padding: 4, borderRadius: BORDER_RADIUS.lg },
+    conditionBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: BORDER_RADIUS.md },
+    conditionText: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.black, color: COLORS.slate600, textTransform: 'uppercase' },
+    conditionTextActive: { color: COLORS.white },
+    conditionBtn_ok: { backgroundColor: COLORS.success },
+    conditionBtn_fair: { backgroundColor: COLORS.warning },
+    conditionBtn_bad: { backgroundColor: COLORS.danger },
+    conditionBtn_na: { backgroundColor: COLORS.slate700 },
+    sectionTitle: { fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.white },
+    addPartBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.infoBg, paddingHorizontal: 12, paddingVertical: 6, borderRadius: BORDER_RADIUS.full },
+    addPartBtnText: { color: COLORS.primary, fontSize: TYPOGRAPHY.sizes.xs, fontFamily: TYPOGRAPHY.families.bold },
+    partItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: SPACING.md, backgroundColor: 'rgba(15, 23, 42, 0.4)', borderRadius: BORDER_RADIUS.xl, marginBottom: SPACING.sm },
+    partName: { color: COLORS.slate100, fontFamily: TYPOGRAPHY.families.bold, fontSize: TYPOGRAPHY.sizes.sm },
+    partMeta: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.slate500, marginTop: 2, fontFamily: TYPOGRAPHY.families.medium },
+    partPrice: { color: COLORS.slate300, fontFamily: TYPOGRAPHY.families.bold },
+    issuedIcon: { width: 32, height: 32, borderRadius: BORDER_RADIUS.sm, backgroundColor: COLORS.infoBg, alignItems: 'center', justifyContent: 'center' },
+    reqBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: BORDER_RADIUS.full, marginTop: 4 },
+    reqBadge_approved: { backgroundColor: COLORS.successBg },
+    reqBadgeText: { fontSize: 8, fontFamily: TYPOGRAPHY.families.black, color: COLORS.white, textTransform: 'uppercase' },
     photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-    photoContainer: { width: (Dimensions.get('window').width - 44) / 2, aspectRatio: 1, borderRadius: 16, overflow: 'hidden' },
+    photoContainer: { width: (Dimensions.get('window').width - 44) / 2, aspectRatio: 1, borderRadius: BORDER_RADIUS.lg, overflow: 'hidden' },
     jobPhoto: { width: '100%', height: '100%' },
-    photoTag: { position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
-    photoTagText: { color: 'white', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' },
-    addPhotoBtn: { width: (Dimensions.get('window').width - 44) / 2, aspectRatio: 1, borderRadius: 16, borderStyle: 'dashed', borderWidth: 2, borderColor: '#1e293b', alignItems: 'center', justifyContent: 'center' },
-    addPhotoText: { color: '#64748b', fontSize: 12, marginTop: 8 },
-    notesCard: { backgroundColor: 'rgba(15, 23, 42, 0.5)', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#1e293b' },
-    notesBody: { color: '#cbd5e1', fontSize: 14, lineHeight: 22 },
+    photoTag: { position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: BORDER_RADIUS.xs },
+    photoTagText: { color: COLORS.white, fontSize: 10, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase' },
+    addPhotoBtn: { width: (Dimensions.get('window').width - 44) / 2, aspectRatio: 1, borderRadius: BORDER_RADIUS.lg, borderStyle: 'dashed', borderWidth: 2, borderColor: COLORS.slate800, alignItems: 'center', justifyContent: 'center' },
+    addPhotoText: { color: COLORS.slate500, fontSize: TYPOGRAPHY.sizes.xs, marginTop: 8, fontFamily: TYPOGRAPHY.families.medium },
+    notesCard: { backgroundColor: 'rgba(15, 23, 42, 0.5)', padding: SPACING.md, borderRadius: BORDER_RADIUS.lg, borderWidth: 1, borderColor: COLORS.slate800 },
+    notesBody: { color: COLORS.slate300, fontSize: TYPOGRAPHY.sizes.md, lineHeight: 22, fontFamily: TYPOGRAPHY.families.regular },
     noteInputContainer: { flexDirection: 'row', gap: 12, alignItems: 'flex-end' },
-    noteInput: { flex: 1, backgroundColor: '#0f172a', borderRadius: 16, padding: 12, color: 'white', fontSize: 14, minHeight: 50 },
-    sendNoteBtn: { backgroundColor: '#2563eb', width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+    noteInput: { flex: 1, backgroundColor: COLORS.slate900, borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, color: COLORS.white, fontSize: TYPOGRAPHY.sizes.md, minHeight: 50, fontFamily: TYPOGRAPHY.families.regular },
+    sendNoteBtn: { backgroundColor: COLORS.primary, width: 50, height: 50, borderRadius: BORDER_RADIUS.lg, alignItems: 'center', justifyContent: 'center' },
     actionBar: { position: 'absolute', bottom: 24, left: 16, right: 16, height: 70 },
-    primaryAction: { flex: 1, backgroundColor: '#2563eb', borderRadius: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, shadowColor: '#2563eb', shadowOpacity: 0.3, shadowRadius: 10, elevation: 5 },
-    pauseAction: { width: 70, height: 70, backgroundColor: 'rgba(245, 158, 11, 0.1)', borderRadius: 24, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.3)' },
-    actionLabel: { color: 'white', fontWeight: 'bold', fontSize: 16 },
-    waitingBadge: { flex: 1, backgroundColor: 'rgba(245, 158, 11, 0.1)', borderRadius: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.3)' },
-    waitingText: { color: '#f59e0b', fontWeight: 'bold', fontSize: 16 },
+    primaryAction: { flex: 1, backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.xl, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, ...SHADOWS.md },
+    pauseAction: { width: 70, height: 70, backgroundColor: COLORS.warningBg, borderRadius: BORDER_RADIUS.xl, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(234, 179, 8, 0.3)' },
+    actionLabel: { color: COLORS.white, fontFamily: TYPOGRAPHY.families.bold, fontSize: TYPOGRAPHY.sizes.lg },
+    waitingBadge: { flex: 1, backgroundColor: COLORS.warningBg, borderRadius: BORDER_RADIUS.xl, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, borderWidth: 1, borderColor: 'rgba(234, 179, 8, 0.3)' },
+    waitingText: { color: COLORS.warning, fontFamily: TYPOGRAPHY.families.bold, fontSize: TYPOGRAPHY.sizes.lg },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
-    quickAdjustModal: { backgroundColor: '#0f172a', padding: 32, borderTopLeftRadius: 40, borderTopRightRadius: 40, alignItems: 'center' },
-    modalHeader: { alignItems: 'center', marginBottom: 24 },
-    modalIcon: { width: 64, height: 64, backgroundColor: '#020617', borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-    modalTitle: { color: 'white', fontSize: 20, fontWeight: 'bold' },
-    modalSku: { color: '#64748b', fontSize: 12, fontWeight: 'bold', marginTop: 4 },
-    qtyContainer: { flexDirection: 'row', alignItems: 'center', gap: 40, marginBottom: 32 },
-    qtyBtn: { width: 56, height: 56, backgroundColor: '#020617', borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-    qtyValue: { fontSize: 48, fontWeight: '900', color: 'white' },
-    qtyLabel: { color: '#64748b', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' },
-    modalDoneBtn: { backgroundColor: '#020617', width: '100%', padding: 20, borderRadius: 24, alignItems: 'center' },
-    modalDoneText: { color: 'white', fontWeight: 'bold' as const, letterSpacing: 2 },
-    modalBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: '#3b82f6' },
-    modalClose: { padding: 10, backgroundColor: '#020617', borderRadius: 12 }
+    quickAdjustModal: { backgroundColor: COLORS.slate900, padding: SPACING.xl, borderTopLeftRadius: BORDER_RADIUS.xxl, borderTopRightRadius: BORDER_RADIUS.xxl, alignItems: 'center' },
+    modalHeader: { alignItems: 'center', marginBottom: SPACING.xl },
+    modalIcon: { width: 64, height: 64, backgroundColor: COLORS.slate950, borderRadius: BORDER_RADIUS.xl, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.md },
+    modalTitle: { color: COLORS.white, fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.bold },
+    modalSku: { color: COLORS.slate500, fontSize: TYPOGRAPHY.sizes.xs, fontFamily: TYPOGRAPHY.families.bold, marginTop: 4 },
+    qtyContainer: { flexDirection: 'row', alignItems: 'center', gap: 40, marginBottom: SPACING.xl },
+    qtyBtn: { width: 56, height: 56, backgroundColor: COLORS.slate950, borderRadius: BORDER_RADIUS.xl, alignItems: 'center', justifyContent: 'center' },
+    qtyValue: { fontSize: 48, fontFamily: TYPOGRAPHY.families.black, color: COLORS.white },
+    qtyLabel: { color: COLORS.slate500, fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase' },
+    modalDoneBtn: { backgroundColor: COLORS.slate950, width: '100%', padding: 20, borderRadius: BORDER_RADIUS.xl, alignItems: 'center' },
+    modalDoneText: { color: COLORS.white, fontFamily: TYPOGRAPHY.families.bold, letterSpacing: 2 },
+    modalBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: COLORS.primary },
+    modalClose: { padding: 10, backgroundColor: COLORS.slate950, borderRadius: BORDER_RADIUS.md }
 });

@@ -24,6 +24,7 @@ const serialize = (obj: any): any => {
  * PATCH: Approve/Reject individual requisition item
  */
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    const { id: requisitionId } = await params;
     try {
         const user = await getCurrentUser();
         // Permission check
@@ -41,8 +42,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         if (!['approved', 'rejected'].includes(status)) {
             return NextResponse.json({ success: false, error: "Invalid status" }, { status: 400 });
         }
-
-        const { id: requisitionId } = await params;
 
         const result = await prisma.$transaction(async (tx) => {
             // 1. Get current requisition with dealer scoping
@@ -150,6 +149,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             }
 
             return updated;
+        }, {
+            timeout: 20000 // Increase timeout to 20 seconds for heavy inventory logic
         });
 
         // 4. Notify via Real-time
@@ -183,7 +184,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         return NextResponse.json({ success: true, data: serialize(result) });
 
     } catch (error: any) {
-        console.error("Requisition update error:", error);
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        console.error(`[REQUISITION_PATCH_ERROR] ID: ${requisitionId}`, {
+            error: error.message,
+            code: error.code,
+            meta: error.meta,
+            stack: error.stack
+        });
+        return NextResponse.json({
+            success: false,
+            error: error.message || "Internal server error during requisition update"
+        }, { status: 500 });
     }
 }

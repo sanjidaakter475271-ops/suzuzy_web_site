@@ -1,7 +1,8 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { ENV } from './env';
 
 const PORTAL_API_URL = ENV.PORTAL_API_URL;
+const AUTH_TOKEN_KEY = 'auth_token';
 
 export const authClient = {
     signIn: {
@@ -18,9 +19,12 @@ export const authClient = {
                     return { data: null, error: { message: data.error || "Login failed" } };
                 }
 
-                // Store token in AsyncStorage
-                if (data.session?.accessToken) {
-                    await AsyncStorage.setItem('auth_token', data.session.accessToken);
+                // Store token in SecureStore
+                const token = data.session?.accessToken;
+                if (token) {
+                    await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
+                    // Normalize session for consistency
+                    data.session.token = token;
                 }
 
                 return { data, error: null };
@@ -59,15 +63,21 @@ export const authClient = {
 
     signOut: async () => {
         try {
-            await fetch(`${PORTAL_API_URL}/api/auth/logout`, { method: "POST" });
+            const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+            await fetch(`${PORTAL_API_URL}/api/auth/logout`, {
+                method: "POST",
+                headers: {
+                    'Authorization': token ? `Bearer ${token}` : ''
+                }
+            });
         } catch (e) {
             console.error("Logout request failed", e);
         }
-        await AsyncStorage.removeItem('auth_token');
+        await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
     },
 
     getMe: async () => {
-        const token = await AsyncStorage.getItem('auth_token');
+        const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
         if (!token) return { data: null, error: "No token" };
 
         try {
@@ -79,7 +89,17 @@ export const authClient = {
             const data = await res.json();
             if (!res.ok) return { data: null, error: data.error };
 
-            return { data: { user: data.user, session: { token } }, error: null };
+            // Normalize session to match signIn structure: { user, session: { token, accessToken } }
+            return {
+                data: {
+                    user: data.user,
+                    session: {
+                        token,
+                        accessToken: token
+                    }
+                },
+                error: null
+            };
         } catch (err: any) {
             return { data: null, error: err.message };
         }

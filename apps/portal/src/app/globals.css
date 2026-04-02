@@ -184,8 +184,8 @@
   --shadow-card-glow: var(--shadow-service-card);
   --shadow-hover-gold: var(--shadow-service-hover);
 
-  --font-sans: var(--font-dmsans), ui-sans-serif, system-ui;
-  --font-display: var(--font-playfair), ui-serif, Georgia;
+  --font-sans: var(--font-mplus), var(--font-dmsans), ui-sans-serif, system-ui;
+  --font-display: var(--font-mplus), var(--font-playfair), ui-serif, Georgia;
   --font-bengali: var(--font-bengali), sans-serif;
 
   --radius-lg: var(--radius);

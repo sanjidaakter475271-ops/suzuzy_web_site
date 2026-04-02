@@ -1,3 +1,9 @@
+export interface Session {
+  token: string;
+  accessToken?: string;
+  expires_at?: number;
+}
+
 export interface User {
   id: string;
   name: string;

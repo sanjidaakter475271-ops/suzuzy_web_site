@@ -64,57 +64,57 @@ export const BarcodeScannerComponent: React.FC<ScannerProps> = ({ onScan, onClos
                 barcodeScannerSettings={{
                     barcodeTypes: ["qr", "code128", "ean13", "ean8"],
                 }}
-            >
-                <View style={styles.overlay}>
-                    {/* Dark edges with center cutout */}
+            />
+            {/* Overlay should be sibling of CameraView */}
+            <View style={[styles.overlay, StyleSheet.absoluteFillObject]}>
+                {/* Dark edges with center cutout */}
+                <View style={styles.unfocusedContainer}></View>
+                <View style={{ flexDirection: 'row' }}>
                     <View style={styles.unfocusedContainer}></View>
-                    <View style={{ flexDirection: 'row' }}>
-                        <View style={styles.unfocusedContainer}></View>
-                        <View style={styles.focusedContainer}>
-                            {/* Corner markers */}
-                            <View style={[styles.corner, { top: 0, left: 0, borderTopWidth: 4, borderLeftWidth: 4 }]} />
-                            <View style={[styles.corner, { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4 }]} />
-                            <View style={[styles.corner, { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4 }]} />
-                            <View style={[styles.corner, { bottom: 0, right: 0, borderBottomWidth: 4, borderRightWidth: 4 }]} />
+                    <View style={styles.focusedContainer}>
+                        {/* Corner markers */}
+                        <View style={[styles.corner, { top: 0, left: 0, borderTopWidth: 4, borderLeftWidth: 4 }]} />
+                        <View style={[styles.corner, { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4 }]} />
+                        <View style={[styles.corner, { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4 }]} />
+                        <View style={[styles.corner, { bottom: 0, right: 0, borderBottomWidth: 4, borderRightWidth: 4 }]} />
 
-                            {/* Animated scanning line */}
-                            <MotiView
-                                from={{ translateY: 20, opacity: 0 }}
-                                animate={{ translateY: 230, opacity: 1 }}
-                                transition={{
-                                    type: 'timing',
-                                    duration: 2000,
-                                    loop: true,
-                                }}
-                                style={styles.scanLine}
-                            />
-                        </View>
-                        <View style={styles.unfocusedContainer}></View>
+                        {/* Animated scanning line */}
+                        <MotiView
+                            from={{ translateY: 20, opacity: 0 }}
+                            animate={{ translateY: 230, opacity: 1 }}
+                            transition={{
+                                type: 'timing',
+                                duration: 2000,
+                                loop: true,
+                            }}
+                            style={styles.scanLine}
+                        />
                     </View>
                     <View style={styles.unfocusedContainer}></View>
+                </View>
+                <View style={styles.unfocusedContainer}></View>
 
-                    {/* Header */}
-                    <View style={styles.header}>
-                        <View style={styles.headerLabel}>
-                            <Text style={styles.headerText}>Scan</Text>
-                        </View>
-                        <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                            <X size={24} color="white" />
-                        </TouchableOpacity>
+                {/* Header */}
+                <View style={styles.header}>
+                    <View style={styles.headerLabel}>
+                        <Text style={styles.headerText}>Scan</Text>
                     </View>
+                    <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                        <X size={24} color="white" />
+                    </TouchableOpacity>
+                </View>
 
-                    {/* Footer */}
-                    <View style={styles.footer}>
-                        <View style={styles.statusPanel}>
-                            <View style={styles.cameraIconBg}>
-                                <Camera size={20} color="#60a5fa" />
-                            </View>
-                            <Text style={styles.footerMessage}>{message || "Align within the frame"}</Text>
-                            <Text style={styles.footerSubtext}>Scanning for Data</Text>
+                {/* Footer */}
+                <View style={styles.footer}>
+                    <View style={styles.statusPanel}>
+                        <View style={styles.cameraIconBg}>
+                            <Camera size={20} color="#60a5fa" />
                         </View>
+                        <Text style={styles.footerMessage}>{message || "Align within the frame"}</Text>
+                        <Text style={styles.footerSubtext}>Scanning for Data</Text>
                     </View>
                 </View>
-            </CameraView>
+            </View>
         </View>
     );
 };

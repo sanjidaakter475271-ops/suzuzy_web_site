@@ -9,9 +9,10 @@ import {
     Platform,
     StyleSheet,
     Dimensions,
-    Alert
+    Alert,
+    RefreshControl
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import {
     Clock,
     PlayCircle,
@@ -29,18 +30,21 @@ import {
     LogOut
 } from 'lucide-react-native';
 import { MotiView, AnimatePresence } from 'moti';
+import { useCallback } from 'react';
 
 import { TechnicianAPI } from '../../services/api';
 import { LocationService } from '../../services/location';
 import { TechnicianAttendance, AttendanceStatus } from '../../types';
 import { TopBar } from '../../components/TopBar';
 import { BarcodeScannerComponent } from '../../components/BarcodeScanner';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
 
 export default function Attendance() {
     const router = useRouter();
     const [history, setHistory] = useState<TechnicianAttendance[]>([]);
     const [status, setStatus] = useState<AttendanceStatus | null>(null);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
     const [scanPurpose, setScanPurpose] = useState<'clock_in' | 'clock_out' | null>(null);
     const [operationLoading, setOperationLoading] = useState(false);
@@ -66,6 +70,19 @@ export default function Attendance() {
         await fetchStatus();
         setLoading(false);
     };
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        await fetchStatus();
+        setRefreshing(false);
+    }, []);
+
+    // Refresh data when screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            fetchStatus();
+        }, [])
+    );
 
     useEffect(() => {
         fetchData();
@@ -172,6 +189,14 @@ export default function Attendance() {
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const [dayStats, setDayStats] = useState<any>(null);
     const [statsLoading, setStatsLoading] = useState(false);
+
+    const handlePrevMonth = () => {
+        setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+    };
+
+    const handleNextMonth = () => {
+        setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    };
 
     const getDaysInMonth = (date: Date) => {
         const year = date.getFullYear();
@@ -315,7 +340,18 @@ export default function Attendance() {
             )}
             <TopBar title="Attendance" />
 
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
+            <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ padding: SPACING.md, paddingBottom: 100 }}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor={COLORS.primary}
+                        colors={[COLORS.primary]}
+                    />
+                }
+            >
                 {/* Main Action Card */}
                 <View style={styles.actionCard}>
                     <View style={styles.accentGlow} />
@@ -350,8 +386,8 @@ export default function Attendance() {
                             </Text>
                         </View>
                         <View style={styles.monthNav}>
-                            <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))} style={styles.navBtn}><ChevronLeft size={18} color="white" /></TouchableOpacity>
-                            <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))} style={[styles.navBtn, { transform: [{ rotate: '180deg' }] }]}><ChevronLeft size={18} color="white" /></TouchableOpacity>
+                            <TouchableOpacity onPress={handlePrevMonth} style={styles.navBtn}><ChevronLeft size={18} color={COLORS.white} /></TouchableOpacity>
+                            <TouchableOpacity onPress={handleNextMonth} style={[styles.navBtn, { transform: [{ rotate: '180deg' }] }]}><ChevronLeft size={18} color={COLORS.white} /></TouchableOpacity>
                         </View>
                     </View>
 
@@ -463,53 +499,53 @@ export default function Attendance() {
 }
 
 const styles = StyleSheet.create({
-    actionCard: { backgroundColor: '#0f172a', padding: 32, borderRadius: 48, borderWidth: 2, borderColor: 'rgba(255,255,255,0.05)', overflow: 'hidden' },
+    actionCard: { backgroundColor: COLORS.slate900, padding: SPACING.xl, borderRadius: BORDER_RADIUS.xxl, borderWidth: 2, borderColor: COLORS.darkBorder, overflow: 'hidden' },
     accentGlow: { position: 'absolute', top: -100, right: -100, width: 250, height: 250, backgroundColor: 'rgba(249, 115, 22, 0.05)', borderRadius: 999 },
     largeButtonOrange: { width: '100%', paddingVertical: 24, paddingHorizontal: 32, borderRadius: 40, backgroundColor: '#ea580c', flexDirection: 'row', alignItems: 'center', gap: 16 },
-    largeButtonBlue: { width: '100%', paddingVertical: 24, paddingHorizontal: 32, borderRadius: 40, backgroundColor: '#2563eb', flexDirection: 'row', alignItems: 'center', gap: 16 },
-    largeButtonDark: { width: '100%', paddingVertical: 24, paddingHorizontal: 32, borderRadius: 40, backgroundColor: '#1e293b', flexDirection: 'row', alignItems: 'center', gap: 16 },
-    btnLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
-    btnTitle: { color: 'white', fontSize: 22, fontWeight: 'bold' },
-    secondaryBtn: { width: '100%', paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-    secondaryBtnText: { color: '#64748b', fontWeight: 'bold', fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 },
-    timerSub: { fontSize: 10, fontWeight: '900', color: '#f97316', textTransform: 'uppercase', letterSpacing: 1, fontStyle: 'italic', marginBottom: 4 },
-    timerMain: { fontSize: 56, fontWeight: '900', color: 'white', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
-    successIconBg: { width: 64, height: 64, backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-    endedTitle: { fontSize: 20, fontWeight: '900', color: 'white', textTransform: 'uppercase' },
-    endedSub: { color: '#64748b', fontWeight: 'bold', fontSize: 14, marginTop: 4 },
-    miniStatCard: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.5)', padding: 16, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-    miniStatLabel: { fontSize: 10, fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
-    miniStatValue: { fontSize: 20, fontWeight: 'bold', color: 'white', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
-    sectionHeader: { fontSize: 10, fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: 2, fontStyle: 'italic', marginBottom: 4 },
-    monthTitle: { fontSize: 18, fontWeight: '900', color: 'white' },
-    monthNav: { flexDirection: 'row', backgroundColor: '#0f172a', padding: 4, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-    navBtn: { padding: 8, borderRadius: 8 },
-    calendarCard: { backgroundColor: 'rgba(15, 23, 42, 0.4)', padding: 24, borderRadius: 40, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-    dayHeader: { flex: 1, textAlign: 'center', fontSize: 10, fontWeight: '900', color: '#475569' },
-    dayBtn: { flex: 1, backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    largeButtonBlue: { width: '100%', paddingVertical: 24, paddingHorizontal: 32, borderRadius: 40, backgroundColor: COLORS.primary, flexDirection: 'row', alignItems: 'center', gap: 16 },
+    largeButtonDark: { width: '100%', paddingVertical: 24, paddingHorizontal: 32, borderRadius: 40, backgroundColor: COLORS.slate800, flexDirection: 'row', alignItems: 'center', gap: 16 },
+    btnLabel: { color: 'rgba(255,255,255,0.8)', fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase', letterSpacing: 1 },
+    btnTitle: { color: COLORS.white, fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.bold },
+    secondaryBtn: { width: '100%', paddingVertical: SPACING.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+    secondaryBtnText: { color: COLORS.slate500, fontFamily: TYPOGRAPHY.families.bold, fontSize: TYPOGRAPHY.sizes.xxs, textTransform: 'uppercase', letterSpacing: 1 },
+    timerSub: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.warning, textTransform: 'uppercase', letterSpacing: 1, fontStyle: 'italic', marginBottom: SPACING.xs },
+    timerMain: { fontSize: 56, fontFamily: 'monospace', fontWeight: '900', color: COLORS.white },
+    successIconBg: { width: 64, height: 64, backgroundColor: COLORS.successBg, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.md },
+    endedTitle: { fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.white, textTransform: 'uppercase' },
+    endedSub: { color: COLORS.slate500, fontFamily: TYPOGRAPHY.families.bold, fontSize: TYPOGRAPHY.sizes.md, marginTop: SPACING.xs },
+    miniStatCard: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.5)', padding: SPACING.md, borderRadius: BORDER_RADIUS.xl, borderWidth: 1, borderColor: COLORS.darkBorder },
+    miniStatLabel: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate500, textTransform: 'uppercase', letterSpacing: 1, marginBottom: SPACING.xs },
+    miniStatValue: { fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.white },
+    sectionHeader: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate500, textTransform: 'uppercase', letterSpacing: 2, fontStyle: 'italic', marginBottom: SPACING.xs },
+    monthTitle: { fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.white },
+    monthNav: { flexDirection: 'row', backgroundColor: COLORS.slate900, padding: 4, borderRadius: BORDER_RADIUS.sm, borderWidth: 1, borderColor: COLORS.darkBorder },
+    navBtn: { padding: SPACING.sm, borderRadius: BORDER_RADIUS.xs },
+    calendarCard: { backgroundColor: 'rgba(15, 23, 42, 0.4)', padding: SPACING.lg, borderRadius: BORDER_RADIUS.xxl, borderWidth: 1, borderColor: COLORS.darkBorder },
+    dayHeader: { flex: 1, textAlign: 'center', fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate600 },
+    dayBtn: { flex: 1, backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: BORDER_RADIUS.sm, alignItems: 'center', justifyContent: 'center' },
     dayBtnPresent: { backgroundColor: '#ea580c' },
-    dayBtnLeave: { backgroundColor: '#2563eb' },
-    dayBtnSick: { backgroundColor: '#eab308' },
-    dayText: { fontSize: 12, fontWeight: '900', color: '#475569' },
-    dayTextActive: { color: 'white' },
-    legendContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, backgroundColor: 'rgba(15, 23, 42, 0.3)', padding: 20, borderRadius: 24, marginTop: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    dayBtnLeave: { backgroundColor: COLORS.primary },
+    dayBtnSick: { backgroundColor: COLORS.warning },
+    dayText: { fontSize: TYPOGRAPHY.sizes.sm, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate600 },
+    dayTextActive: { color: COLORS.white },
+    legendContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md, backgroundColor: 'rgba(15, 23, 42, 0.3)', padding: SPACING.lg, borderRadius: BORDER_RADIUS.xl, marginTop: SPACING.lg, borderWidth: 1, borderColor: COLORS.darkBorder },
+    legendItem: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
     dot: { width: 10, height: 10, borderRadius: 5 },
-    legendText: { fontSize: 8, fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 },
+    legendText: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate500, textTransform: 'uppercase', letterSpacing: 1 },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'flex-end' },
-    summaryModal: { backgroundColor: '#0f172a', padding: 32, borderTopLeftRadius: 48, borderTopRightRadius: 48, overflow: 'hidden' },
+    summaryModal: { backgroundColor: COLORS.slate900, padding: SPACING.xl, borderTopLeftRadius: BORDER_RADIUS.xxl, borderTopRightRadius: BORDER_RADIUS.xxl, overflow: 'hidden' },
     modalBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 6, backgroundColor: '#ea580c' },
-    modalLabel: { fontSize: 10, fontWeight: '900', color: '#f97316', textTransform: 'uppercase', letterSpacing: 2, fontStyle: 'italic', marginBottom: 4 },
-    modalDate: { fontSize: 32, fontWeight: '900', color: 'white' },
-    modalClose: { padding: 12, backgroundColor: '#1e293b', borderRadius: 999 },
-    modalSyncText: { fontSize: 10, fontWeight: '900', color: '#475569', textTransform: 'uppercase', letterSpacing: 3 },
-    modalStatItem: { flex: 1, backgroundColor: '#1e293b', padding: 24, borderRadius: 32 },
-    statLabel: { fontSize: 10, color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 8 },
-    statValue: { fontSize: 28, fontWeight: '900', color: 'white', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
-    qualityCard: { backgroundColor: 'rgba(234, 88, 12, 0.05)', padding: 24, borderRadius: 40, borderWidth: 1, borderColor: 'rgba(234, 88, 12, 0.1)', alignItems: 'center', gap: 8 },
-    qualityLabel: { fontSize: 10, color: '#f97316', fontWeight: '900', textTransform: 'uppercase', letterSpacing: 2 },
-    qualityValue: { fontSize: 48, fontWeight: '900', color: '#f97316' },
-    qualityTotal: { fontSize: 14, fontWeight: '900', color: 'rgba(234, 88, 12, 0.3)' },
-    verifiedText: { fontSize: 9, color: '#475569', textAlign: 'center', fontWeight: 'bold', textTransform: 'uppercase', lineHeight: 18 },
-    noRecordsText: { fontSize: 12, fontWeight: '900', color: '#475569', textTransform: 'uppercase', letterSpacing: 1, marginTop: 16 }
+    modalLabel: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.warning, textTransform: 'uppercase', letterSpacing: 2, fontStyle: 'italic', marginBottom: SPACING.xs },
+    modalDate: { fontSize: TYPOGRAPHY.sizes.xxxl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.white },
+    modalClose: { padding: SPACING.md, backgroundColor: COLORS.slate800, borderRadius: BORDER_RADIUS.full },
+    modalSyncText: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate600, textTransform: 'uppercase', letterSpacing: 3 },
+    modalStatItem: { flex: 1, backgroundColor: COLORS.slate800, padding: SPACING.lg, borderRadius: BORDER_RADIUS.xl },
+    statLabel: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.slate500, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase', marginBottom: SPACING.sm },
+    statValue: { fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.white },
+    qualityCard: { backgroundColor: 'rgba(234, 88, 12, 0.05)', padding: SPACING.lg, borderRadius: BORDER_RADIUS.xxl, borderWidth: 1, borderColor: 'rgba(234, 88, 12, 0.1)', alignItems: 'center', gap: SPACING.sm },
+    qualityLabel: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.warning, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase', letterSpacing: 2 },
+    qualityValue: { fontSize: TYPOGRAPHY.sizes.xxxl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.warning },
+    qualityTotal: { fontSize: TYPOGRAPHY.sizes.md, fontFamily: TYPOGRAPHY.families.bold, color: 'rgba(234, 88, 12, 0.3)' },
+    verifiedText: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.slate600, textAlign: 'center', fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase', lineHeight: 18 },
+    noRecordsText: { fontSize: TYPOGRAPHY.sizes.xs, fontFamily: TYPOGRAPHY.families.black, color: COLORS.slate700, textTransform: 'uppercase', letterSpacing: 1, marginTop: SPACING.md }
 });

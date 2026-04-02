@@ -7,16 +7,81 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFonts, MPLUSRounded1c_100Thin, MPLUSRounded1c_300Light, MPLUSRounded1c_400Regular, MPLUSRounded1c_500Medium, MPLUSRounded1c_700Bold, MPLUSRounded1c_800ExtraBold, MPLUSRounded1c_900Black } from '@expo-google-fonts/m-plus-rounded-1c';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import * as Linking from 'expo-linking';
+import { Platform } from 'react-native';
 
 import { OfflineBanner } from '../components/OfflineBanner';
 import { PermissionManager } from '../components/PermissionManager';
 import { LocationTracker } from '../components/LocationTracker';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+import { TechnicianAPI } from '../services/api';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
+// Configure notifications handler
+Notifications.setNotificationHandler({
+  handleNotification: async (_notification: Notifications.Notification) => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
+async function registerForPushNotificationsAsync() {
+  // Expo Go doesn't support remote notifications starting from SDK 53
+  if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
+    console.log('Skipping push notification registration: Remote notifications are not supported in Expo Go on SDK 53+. Use a development build.');
+    return;
+  }
+
+  let token;
+  if (Device.isDevice) {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== 'granted') {
+      console.warn('Failed to get push token for push notification!');
+      return;
+    }
+    token = (await Notifications.getExpoPushTokenAsync()).data;
+  } else {
+    console.log('Must use physical device for Push Notifications');
+  }
+
+  if (Platform.OS === 'android') {
+    Notifications.setNotificationChannelAsync('default', {
+      name: 'default',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FF231F7C',
+    });
+  }
+
+  return token;
+}
+
 function InitialLayout() {
-  const { user, loading } = useAuth();
+  const { user, loading, isAuthReady } = useAuth();
+  const [fontsLoaded, fontError] = useFonts({
+    MPLUSRounded1c_100Thin,
+    MPLUSRounded1c_300Light,
+    MPLUSRounded1c_400Regular,
+    MPLUSRounded1c_500Medium,
+    MPLUSRounded1c_700Bold,
+    MPLUSRounded1c_800ExtraBold,
+    MPLUSRounded1c_900Black,
+  });
+
   const segments = useSegments();
   const router = useRouter();
   const rootNavigationState = useRootNavigationState();
@@ -24,6 +89,7 @@ function InitialLayout() {
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [isOnboarded, setIsOnboarded] = useState(false);
 
+  // Check onboarding status
   useEffect(() => {
     const checkOnboarding = async () => {
       const value = await AsyncStorage.getItem('servicemate_onboarded');
@@ -33,8 +99,9 @@ function InitialLayout() {
     checkOnboarding();
   }, []);
 
+  // Handle splash screen and navigation
   useEffect(() => {
-    if (loading || !onboardingChecked || !rootNavigationState?.key) return;
+    if (loading || !onboardingChecked || !rootNavigationState?.key || !fontsLoaded) return;
 
     const hideSplash = async () => {
       try {
@@ -48,19 +115,56 @@ function InitialLayout() {
     const inAuthGroup = segments[0] === '(auth)';
 
     if (!user && !inAuthGroup) {
-      // Redirect based on onboarding status
       if (isOnboarded) {
         router.replace('/login');
       } else {
         router.replace('/splash');
       }
     } else if (user && inAuthGroup) {
-      // Redirect to dashboard if authenticated
       router.replace('/');
     }
-  }, [user, loading, segments, onboardingChecked, isOnboarded, rootNavigationState?.key]);
+  }, [user, loading, segments, onboardingChecked, isOnboarded, rootNavigationState?.key, fontsLoaded]);
 
-  if (loading || !onboardingChecked) return null;
+  // Handle Push Notifications
+  useEffect(() => {
+    if (isAuthReady && user) {
+      registerForPushNotificationsAsync().then(token => {
+        if (token) {
+          TechnicianAPI.registerPushToken(token, Platform.OS, Device.modelName || 'Unknown');
+        }
+      });
+
+      const subscription = Notifications.addNotificationReceivedListener(notification => {
+        console.log('[NOTIFICATION] Received:', notification);
+      });
+
+      const responseSubscription = Notifications.addNotificationResponseReceivedListener(response => {
+        console.log('[NOTIFICATION] Response:', response);
+      });
+
+      return () => {
+        subscription.remove();
+        responseSubscription.remove();
+      };
+    }
+  }, [isAuthReady, user]);
+
+  // Handle Deep Linking
+  useEffect(() => {
+    const handleDeepLink = (event: Linking.EventType) => {
+      console.log('[DEEP_LINK] Received URL:', event.url);
+    };
+
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    Linking.getInitialURL().then(url => {
+      if (url) console.log('[DEEP_LINK] Initial URL:', url);
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+  if (loading || !onboardingChecked || !fontsLoaded) return null;
 
   return (
     <>
@@ -68,7 +172,7 @@ function InitialLayout() {
       {user && !permissionsDone && (
         <PermissionManager onComplete={() => setPermissionsDone(true)} />
       )}
-      {user && permissionsDone && <LocationTracker />}
+      {user && permissionsDone && isAuthReady && <LocationTracker />}
       <Slot />
     </>
   );
@@ -77,10 +181,12 @@ function InitialLayout() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <StatusBar style="light" backgroundColor="#020617" />
-        <InitialLayout />
-      </AuthProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <StatusBar style="light" backgroundColor="#020617" />
+          <InitialLayout />
+        </AuthProvider>
+      </ErrorBoundary>
     </GestureHandlerRootView>
   );
 }

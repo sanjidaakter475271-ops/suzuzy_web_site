@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { User, Mail, Lock, ArrowLeft, Zap, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react-native';
 import { useAuth } from '../../lib/auth';
 import { MotiView, AnimatePresence } from 'moti';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
 
 export default function Register() {
   const router = useRouter();
@@ -53,30 +54,30 @@ export default function Register() {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="bg-slate-950">
-      <View className="flex-1 items-center justify-center p-4">
+    <ScrollView contentContainerStyle={styles.scrollContent} style={styles.container}>
+      <View style={styles.innerContainer}>
         {/* Background Overlay */}
-        <View className="absolute inset-0 bg-[#0a0f1c]" />
+        <View style={styles.overlay} />
 
         <MotiView
           from={{ opacity: 0, scale: 0.95, translateY: 20 }}
           animate={{ opacity: 1, scale: 1, translateY: 0 }}
           transition={{ type: 'timing', duration: 600 }}
-          className="w-full max-w-xl"
+          style={styles.cardWrapper}
         >
-          <View className="bg-[#0d1326] rounded-[40px] shadow-2xl overflow-hidden border border-slate-800/50">
-            <View className="p-8 md:p-12">
+          <View style={styles.card}>
+            <View style={styles.cardContent}>
               <TouchableOpacity
                 onPress={() => router.replace('/login')}
-                className="flex-row items-center mb-8"
+                style={styles.backButton}
               >
-                <ArrowLeft size={16} color="#64748b" />
-                <Text className="text-slate-500 text-xs font-bold uppercase tracking-widest ml-2">Return to Login</Text>
+                <ArrowLeft size={16} color={COLORS.slate500} />
+                <Text style={styles.backButtonText}>Return to Login</Text>
               </TouchableOpacity>
 
-              <View className="mb-10">
-                <Text className="text-3xl font-bold text-white mb-3">Create Profile</Text>
-                <Text className="text-slate-400 font-medium text-sm">Join the service network. Admin authorization required.</Text>
+              <View style={styles.header}>
+                <Text style={styles.title}>Create Profile</Text>
+                <Text style={styles.subtitle}>Join the service network. Admin authorization required.</Text>
 
                 <AnimatePresence>
                   {error && (
@@ -84,25 +85,28 @@ export default function Register() {
                       from={{ opacity: 0, height: 0, translateY: -10 }}
                       animate={{ opacity: 1, height: 'auto', translateY: 0 }}
                       exit={{ opacity: 0, height: 0, translateY: -10 }}
-                      className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex-row items-center space-x-3 overflow-hidden"
+                      style={styles.errorContainer}
                     >
-                      <AlertCircle size={18} color="#f87171" />
-                      <Text className="text-red-400 font-medium text-sm flex-1">{error}</Text>
+                      <AlertCircle size={18} color={COLORS.danger} />
+                      <Text style={styles.errorText}>{error}</Text>
                     </MotiView>
                   )}
                 </AnimatePresence>
               </View>
 
-              <View className="space-y-6">
+              <View style={styles.form}>
                 {/* Name Input */}
                 <View>
-                  <Text className="text-[10px] font-bold text-blue-500 mb-2 uppercase tracking-widest ml-1">FULL NAME</Text>
-                  <View className={`relative flex-row items-center bg-[#131b2f] border rounded-xl px-4 py-3 ${focusedField === 'name' ? 'border-blue-500' : 'border-[#1e293b]'}`}>
-                    <User size={18} color={focusedField === 'name' ? '#3b82f6' : '#64748b'} />
+                  <Text style={styles.inputLabel}>FULL NAME</Text>
+                  <View style={[
+                    styles.inputWrapper,
+                    focusedField === 'name' ? styles.inputWrapperFocused : null
+                  ]}>
+                    <User size={18} color={focusedField === 'name' ? COLORS.primary : COLORS.slate500} />
                     <TextInput
-                      className="flex-1 ml-3 text-white text-sm"
+                      style={styles.input}
                       placeholder="Technician Name"
-                      placeholderTextColor="#475569"
+                      placeholderTextColor={COLORS.slate600}
                       value={formData.name}
                       onChangeText={(val) => setFormData({ ...formData, name: val })}
                       onFocus={() => setFocusedField('name')}
@@ -112,14 +116,17 @@ export default function Register() {
                 </View>
 
                 {/* Email Input */}
-                <View className="mt-4">
-                  <Text className="text-[10px] font-bold text-blue-500 mb-2 uppercase tracking-widest ml-1">WORK EMAIL</Text>
-                  <View className={`relative flex-row items-center bg-[#131b2f] border rounded-xl px-4 py-3 ${focusedField === 'email' ? 'border-blue-500' : 'border-[#1e293b]'}`}>
-                    <Mail size={18} color={focusedField === 'email' ? '#3b82f6' : '#64748b'} />
+                <View style={styles.mt4}>
+                  <Text style={styles.inputLabel}>WORK EMAIL</Text>
+                  <View style={[
+                    styles.inputWrapper,
+                    focusedField === 'email' ? styles.inputWrapperFocused : null
+                  ]}>
+                    <Mail size={18} color={focusedField === 'email' ? COLORS.primary : COLORS.slate500} />
                     <TextInput
-                      className="flex-1 ml-3 text-white text-sm"
+                      style={styles.input}
                       placeholder="staff@showroom.com"
-                      placeholderTextColor="#475569"
+                      placeholderTextColor={COLORS.slate600}
                       keyboardType="email-address"
                       autoCapitalize="none"
                       value={formData.email}
@@ -131,14 +138,17 @@ export default function Register() {
                 </View>
 
                 {/* Password Input */}
-                <View className="mt-4">
-                  <Text className="text-[10px] font-bold text-blue-500 mb-2 uppercase tracking-widest ml-1">SECURE PASSCODE</Text>
-                  <View className={`relative flex-row items-center bg-[#131b2f] border rounded-xl px-4 py-3 ${focusedField === 'password' ? 'border-blue-500' : 'border-[#1e293b]'}`}>
-                    <Lock size={18} color={focusedField === 'password' ? '#3b82f6' : '#64748b'} />
+                <View style={styles.mt4}>
+                  <Text style={styles.inputLabel}>SECURE PASSCODE</Text>
+                  <View style={[
+                    styles.inputWrapper,
+                    focusedField === 'password' ? styles.inputWrapperFocused : null
+                  ]}>
+                    <Lock size={18} color={focusedField === 'password' ? COLORS.primary : COLORS.slate500} />
                     <TextInput
-                      className="flex-1 ml-3 text-white text-sm tracking-widest"
+                      style={[styles.input, styles.trackingWidest]}
                       placeholder="••••••••"
-                      placeholderTextColor="#475569"
+                      placeholderTextColor={COLORS.slate600}
                       secureTextEntry
                       value={formData.password}
                       onChangeText={(val) => setFormData({ ...formData, password: val })}
@@ -149,14 +159,17 @@ export default function Register() {
                 </View>
 
                 {/* Confirm Password Input */}
-                <View className="mt-4">
-                  <Text className="text-[10px] font-bold text-blue-500 mb-2 uppercase tracking-widest ml-1">CONFIRM PASSCODE</Text>
-                  <View className={`relative flex-row items-center bg-[#131b2f] border rounded-xl px-4 py-3 ${focusedField === 'confirm' ? 'border-blue-500' : 'border-[#1e293b]'}`}>
-                    <Lock size={18} color={focusedField === 'confirm' ? '#3b82f6' : '#64748b'} />
+                <View style={styles.mt4}>
+                  <Text style={styles.inputLabel}>CONFIRM PASSCODE</Text>
+                  <View style={[
+                    styles.inputWrapper,
+                    focusedField === 'confirm' ? styles.inputWrapperFocused : null
+                  ]}>
+                    <Lock size={18} color={focusedField === 'confirm' ? COLORS.primary : COLORS.slate500} />
                     <TextInput
-                      className="flex-1 ml-3 text-white text-sm tracking-widest"
+                      style={[styles.input, styles.trackingWidest]}
                       placeholder="••••••••"
-                      placeholderTextColor="#475569"
+                      placeholderTextColor={COLORS.slate600}
                       secureTextEntry
                       value={formData.confirmPassword}
                       onChangeText={(val) => setFormData({ ...formData, confirmPassword: val })}
@@ -166,10 +179,10 @@ export default function Register() {
                   </View>
                 </View>
 
-                <View className="mt-8 items-center">
-                  <View className="flex-row items-start space-x-3 bg-[#131b2f] p-4 rounded-2xl border border-[#1e293b] w-full mb-8">
-                    <CheckCircle2 size={16} color="#3b82f6" />
-                    <Text className="flex-1 text-slate-400 text-[11px] font-medium leading-relaxed ml-2">
+                <View style={styles.submitContainer}>
+                  <View style={styles.agreementBox}>
+                    <CheckCircle2 size={16} color={COLORS.primary} />
+                    <Text style={styles.agreementText}>
                       By registering, you agree to the workshop safety protocols and data privacy guidelines. Access will be reviewed by system administrators.
                     </Text>
                   </View>
@@ -177,14 +190,14 @@ export default function Register() {
                   <TouchableOpacity
                     onPress={handleSubmit}
                     disabled={loading}
-                    className="w-[90%] bg-blue-500 rounded-2xl py-4 items-center justify-center shadow-lg shadow-blue-500/20 active:opacity-80"
+                    style={styles.primaryButton}
                   >
                     {loading ? (
-                      <ActivityIndicator color="white" />
+                      <ActivityIndicator color={COLORS.white} />
                     ) : (
-                      <View className="flex-row items-center">
-                        <Text className="text-white font-bold tracking-widest text-[13px] uppercase mr-2">COMPLETE REGISTRATION</Text>
-                        <Zap size={16} color="white" fill="white" />
+                      <View style={styles.buttonInner}>
+                        <Text style={styles.primaryButtonText}>COMPLETE REGISTRATION</Text>
+                        <Zap size={16} color={COLORS.white} fill={COLORS.white} />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -193,12 +206,12 @@ export default function Register() {
             </View>
 
             {/* Footer */}
-            <View className="px-8 py-4 bg-[#0a0f1c] border-t border-[#1e293b] flex-row justify-between items-center">
-              <View className="flex-row items-center space-x-2">
-                <ShieldCheck size={14} color="#3b82f6" />
-                <Text className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2">Protocol V3 Secure</Text>
+            <View style={styles.footer}>
+              <View style={styles.footerProtocol}>
+                <ShieldCheck size={14} color={COLORS.primary} />
+                <Text style={styles.footerText}>Protocol V3 Secure</Text>
               </View>
-              <Text className="text-[10px] font-mono text-slate-500 uppercase">Encrypted Session</Text>
+              <Text style={styles.versionText}>Encrypted Session</Text>
             </View>
           </View>
         </MotiView>
@@ -206,3 +219,194 @@ export default function Register() {
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.slate950,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  innerContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.md,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.darkPage,
+  },
+  cardWrapper: {
+    width: '100%',
+    maxWidth: 600,
+  },
+  card: {
+    backgroundColor: COLORS.darkCard,
+    borderRadius: BORDER_RADIUS.xxl,
+    ...SHADOWS.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.darkBorder,
+  },
+  cardContent: {
+    padding: SPACING.xl,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+  },
+  backButtonText: {
+    color: COLORS.slate500,
+    fontSize: TYPOGRAPHY.sizes.xxs,
+    fontFamily: TYPOGRAPHY.families.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginLeft: SPACING.sm,
+  },
+  header: {
+    marginBottom: SPACING.xl,
+  },
+  title: {
+    fontSize: TYPOGRAPHY.sizes.xxxl,
+    fontFamily: TYPOGRAPHY.families.bold,
+    color: COLORS.white,
+    marginBottom: SPACING.sm,
+  },
+  subtitle: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    fontFamily: TYPOGRAPHY.families.medium,
+    color: COLORS.slate400,
+  },
+  errorContainer: {
+    marginTop: SPACING.lg,
+    padding: SPACING.md,
+    backgroundColor: COLORS.dangerBg,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+    borderRadius: BORDER_RADIUS.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    overflow: 'hidden',
+  },
+  errorText: {
+    color: 'rgba(248, 113, 113, 1)',
+    fontFamily: TYPOGRAPHY.families.medium,
+    fontSize: TYPOGRAPHY.sizes.sm,
+    flex: 1,
+  },
+  form: {
+    gap: SPACING.lg,
+  },
+  inputLabel: {
+    fontSize: TYPOGRAPHY.sizes.xxs,
+    fontFamily: TYPOGRAPHY.families.bold,
+    color: COLORS.primary,
+    marginBottom: SPACING.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginLeft: SPACING.xs,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.darkInput,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+  },
+  inputWrapperFocused: {
+    borderColor: COLORS.primary,
+  },
+  input: {
+    flex: 1,
+    marginLeft: SPACING.md,
+    color: COLORS.white,
+    fontSize: TYPOGRAPHY.sizes.sm,
+    fontFamily: TYPOGRAPHY.families.regular,
+  },
+  trackingWidest: {
+    letterSpacing: 4,
+  },
+  mt4: {
+    marginTop: SPACING.md,
+  },
+  submitContainer: {
+    marginTop: SPACING.xl,
+    alignItems: 'center',
+  },
+  agreementBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.darkInput,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    width: '100%',
+    marginBottom: SPACING.xl,
+  },
+  agreementText: {
+    flex: 1,
+    color: COLORS.slate400,
+    fontSize: TYPOGRAPHY.sizes.xxs,
+    fontFamily: TYPOGRAPHY.families.medium,
+    lineHeight: 18,
+    marginLeft: SPACING.sm,
+  },
+  primaryButton: {
+    width: '90%',
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingVertical: SPACING.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.md,
+  },
+  buttonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  primaryButtonText: {
+    color: COLORS.white,
+    fontFamily: TYPOGRAPHY.families.bold,
+    letterSpacing: 1.5,
+    fontSize: TYPOGRAPHY.sizes.sm,
+    textTransform: 'uppercase',
+    marginRight: SPACING.sm,
+  },
+  footer: {
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.lg,
+    backgroundColor: COLORS.darkPage,
+    borderTopWidth: 1,
+    borderTopColor: '#1e293b',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  footerProtocol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  footerText: {
+    fontSize: TYPOGRAPHY.sizes.xxs,
+    fontFamily: TYPOGRAPHY.families.bold,
+    color: COLORS.slate500,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginLeft: SPACING.sm,
+  },
+  versionText: {
+    fontSize: TYPOGRAPHY.sizes.xxs,
+    fontFamily: 'monospace',
+    color: COLORS.slate500,
+  },
+});
