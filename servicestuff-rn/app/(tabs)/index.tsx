@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, StyleSheet } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, Platform, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   Clock, CheckCircle, AlertCircle, Calendar, RefreshCw,
@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { DashboardSkeleton } from '../../components/Skeleton';
+import { MaterialCircularProgress } from '../../components/ui/Loading';
 import { TopBar } from '../../components/TopBar';
 import { TechnicianAPI } from '../../services/api';
 import { JobCard, DashboardStats, AttendanceStatus, JobStatus } from '../../types';
@@ -51,7 +52,7 @@ const ShiftTimer = React.memo(({ startTime }: { startTime: string | null }) => {
 
   return (
     <View style={styles.timerContainer}>
-      <Clock size={12} color={COLORS.slate200} />
+      <Clock size={12} color={COLORS.textTertiary} />
       <Text style={styles.timerText}>{elapsed}</Text>
     </View>
   );
@@ -80,7 +81,7 @@ const TaskCard = React.memo(({ item, onPress }: { item: JobCard, onPress: (id: s
 
       <View style={styles.taskFooter}>
         <View style={styles.taskDateContainer}>
-          <Calendar size={12} color={COLORS.slate500} />
+          <Calendar size={12} color={COLORS.textSecondary} />
           <Text style={styles.taskDateText}>{new Date(item.created_at).toLocaleDateString()}</Text>
         </View>
         <Text style={styles.taskOwner}>Owner: {item.vehicle?.customer_name || 'Unknown'}</Text>
@@ -164,7 +165,7 @@ export default function Dashboard() {
             cx="28"
             cy="28"
             r={radius}
-            stroke={COLORS.slate800}
+            stroke={COLORS.border}
             strokeWidth="4"
             fill="transparent"
           />
@@ -207,7 +208,7 @@ export default function Dashboard() {
         <View style={styles.widgetContainer}>
           <TouchableOpacity onPress={() => router.push('/attendance')}>
             <LinearGradient
-              colors={['rgba(59, 130, 246, 0.15)', 'rgba(79, 70, 229, 0.15)']}
+              colors={attendanceStatus?.currentState === 'SHIFT_ACTIVE' ? [COLORS.accent, COLORS.primary] : [COLORS.primaryLight, COLORS.primary]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.attendanceGradient}
@@ -234,7 +235,7 @@ export default function Dashboard() {
                       </>
                     ) : (
                       <View style={styles.idleContainer}>
-                        <Clock size={12} color={COLORS.slate400} />
+                        <Clock size={12} color="rgba(255,255,255,0.7)" />
                         <Text style={styles.idleText}>Session Idle</Text>
                       </View>
                     )}
@@ -266,7 +267,7 @@ export default function Dashboard() {
                 <Text style={styles.scannerTitle}>Scan VIN or Ticket</Text>
               </View>
             </View>
-            <ChevronRight size={18} color={COLORS.slate600} />
+            <ChevronRight size={18} color={COLORS.textTertiary} />
           </TouchableOpacity>
 
           {/* Pending */}
@@ -283,8 +284,11 @@ export default function Dashboard() {
             style={styles.statsCardSmall}
             onPress={() => router.push({ pathname: '/jobs', params: { status: JobStatus.IN_PROGRESS } })}
           >
-            <Text style={styles.statsLabelSmall}>Active</Text>
-            <Text style={[styles.statsValueSmall, { color: COLORS.primary }]}>{stats?.active || 0}</Text>
+            <View style={styles.statHeaderRow}>
+              <Text style={styles.statsLabelSmall}>Active</Text>
+              <View style={[styles.pulseDot, { backgroundColor: COLORS.accent }]} />
+            </View>
+            <Text style={[styles.statsValueSmall, { color: COLORS.accent }]}>{stats?.active || 0}</Text>
           </TouchableOpacity>
 
           {/* Efficiency Card */}
@@ -298,7 +302,7 @@ export default function Dashboard() {
             </View>
             <View style={styles.hoursContainer}>
               <Text style={styles.hoursLabel}>Work Hours</Text>
-              <Text style={styles.hoursValue}>{stats?.hours_worked || 0}h</Text>
+              <Text style={[styles.hoursValue, { color: COLORS.accent }]}>{stats?.hours_worked || 0}h</Text>
             </View>
           </View>
         </View>
@@ -321,8 +325,18 @@ export default function Dashboard() {
     </View>
   );
 
+  if (loading && tasks.length === 0) {
+    return (
+      <View style={styles.container}>
+        <TopBar title="Dashboard" />
+        <DashboardSkeleton />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
+      <View style={styles.overlay} />
       <TopBar title="Dashboard" />
       <FlatList
         data={tasks}
@@ -344,7 +358,6 @@ export default function Dashboard() {
             colors={[COLORS.primary]}
           />
         }
-        ListFooterComponent={loading ? <DashboardSkeleton /> : null}
       />
     </View>
   );
@@ -353,7 +366,11 @@ export default function Dashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.slate950,
+    backgroundColor: COLORS.pageBg,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.pageBg,
   },
   scrollContent: {
     paddingBottom: 24,
@@ -361,7 +378,7 @@ const styles = StyleSheet.create({
   timerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: COLORS.accentSurface,
     paddingHorizontal: SPACING.md,
     paddingVertical: 4,
     borderRadius: BORDER_RADIUS.full,
@@ -369,15 +386,15 @@ const styles = StyleSheet.create({
   timerText: {
     fontSize: TYPOGRAPHY.sizes.xxs,
     fontFamily: TYPOGRAPHY.families.bold,
-    color: '#dbeafe',
+    color: COLORS.accent,
     marginLeft: SPACING.sm,
   },
   taskCard: {
-    backgroundColor: COLORS.darkCard,
+    backgroundColor: 'rgba(30, 64, 175, 0.12)',
     padding: SPACING.xl,
     borderRadius: BORDER_RADIUS.xxl,
     borderWidth: 1,
-    borderColor: COLORS.darkBorder,
+    borderColor: 'rgba(30, 64, 175, 0.25)',
     marginBottom: SPACING.md,
     marginHorizontal: SPACING.md,
     ...SHADOWS.sm,
@@ -390,27 +407,29 @@ const styles = StyleSheet.create({
   },
   taskModel: {
     fontFamily: TYPOGRAPHY.families.bold,
-    color: COLORS.slate100,
+    color: COLORS.textPrimary,
     fontSize: TYPOGRAPHY.sizes.lg,
   },
   plateBadge: {
-    backgroundColor: COLORS.darkBorder,
+    backgroundColor: COLORS.cardBgAlt,
     alignSelf: 'flex-start',
     paddingHorizontal: SPACING.sm,
     paddingVertical: 2,
     borderRadius: BORDER_RADIUS.xs,
     marginBottom: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   plateText: {
     fontSize: TYPOGRAPHY.sizes.xxs,
     fontFamily: 'monospace',
-    color: COLORS.slate400,
+    color: COLORS.textSecondary,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   taskDescription: {
     fontSize: TYPOGRAPHY.sizes.md,
-    color: COLORS.slate400,
+    color: COLORS.textSecondary,
     fontFamily: TYPOGRAPHY.families.regular,
     marginBottom: SPACING.md,
   },
@@ -420,7 +439,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: SPACING.md,
     borderTopWidth: 1,
-    borderTopColor: COLORS.darkBorder,
+    borderTopColor: COLORS.divider,
   },
   taskDateContainer: {
     flexDirection: 'row',
@@ -428,14 +447,14 @@ const styles = StyleSheet.create({
   },
   taskDateText: {
     fontSize: TYPOGRAPHY.sizes.xs,
-    color: COLORS.slate500,
+    color: COLORS.textTertiary,
     fontFamily: TYPOGRAPHY.families.regular,
     marginLeft: SPACING.xs,
   },
   taskOwner: {
     fontSize: TYPOGRAPHY.sizes.xs,
     fontFamily: TYPOGRAPHY.families.medium,
-    color: COLORS.slate400,
+    color: COLORS.textSecondary,
   },
   headerContainer: {
     paddingHorizontal: SPACING.lg,
@@ -446,7 +465,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   headerSubtitle: {
-    color: COLORS.slate500,
+    color: COLORS.textSecondary,
     fontSize: TYPOGRAPHY.sizes.xxs,
     fontFamily: TYPOGRAPHY.families.bold,
     textTransform: 'uppercase',
@@ -455,17 +474,28 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: TYPOGRAPHY.sizes.xxl,
     fontFamily: TYPOGRAPHY.families.bold,
-    color: COLORS.white,
+    color: COLORS.textPrimary,
+  },
+  statHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  pulseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   refreshButton: {
     width: 40,
     height: 40,
-    backgroundColor: COLORS.slate900,
+    backgroundColor: COLORS.cardBg,
     borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.slate800,
+    borderColor: COLORS.border,
+    ...SHADOWS.sm,
   },
   widgetContainer: {
     paddingHorizontal: SPACING.md,
@@ -474,8 +504,7 @@ const styles = StyleSheet.create({
   attendanceGradient: {
     borderRadius: BORDER_RADIUS.xxl,
     padding: SPACING.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    ...SHADOWS.md,
   },
   attendanceContent: {
     flexDirection: 'row',
@@ -483,7 +512,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   workshopStatusLabel: {
-    color: COLORS.primaryLight,
+    color: "rgba(255,255,255,0.8)",
     fontSize: TYPOGRAPHY.sizes.xxs,
     fontFamily: TYPOGRAPHY.families.bold,
     textTransform: 'uppercase',
@@ -507,13 +536,13 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.sm,
     width: 8,
     height: 8,
-    backgroundColor: COLORS.success,
+    backgroundColor: COLORS.white,
     borderRadius: 4,
   },
   idleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: 'rgba(0,0,0,0.15)',
     paddingHorizontal: SPACING.md,
     paddingVertical: 4,
     borderRadius: BORDER_RADIUS.full,
@@ -521,18 +550,18 @@ const styles = StyleSheet.create({
   idleText: {
     fontSize: TYPOGRAPHY.sizes.xxs,
     fontFamily: TYPOGRAPHY.families.bold,
-    color: COLORS.slate400,
+    color: "rgba(255,255,255,0.8)",
     marginLeft: SPACING.sm,
   },
   qrContainer: {
     width: 56,
     height: 56,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: BORDER_RADIUS.lg,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   statsGrid: {
     paddingHorizontal: SPACING.md,
@@ -542,11 +571,11 @@ const styles = StyleSheet.create({
   },
   scannerCard: {
     width: '100%',
-    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    backgroundColor: COLORS.cardBg,
     padding: SPACING.xl,
     borderRadius: BORDER_RADIUS.xxl,
     borderWidth: 1,
-    borderColor: COLORS.darkBorder,
+    borderColor: COLORS.border,
     marginBottom: SPACING.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -560,7 +589,7 @@ const styles = StyleSheet.create({
   scannerIconContainer: {
     width: 48,
     height: 48,
-    backgroundColor: COLORS.infoBg,
+    backgroundColor: COLORS.primarySurface,
     borderRadius: BORDER_RADIUS.lg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -569,7 +598,7 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.md,
   },
   scannerLabel: {
-    color: COLORS.slate500,
+    color: COLORS.textSecondary,
     fontSize: TYPOGRAPHY.sizes.xxs,
     fontFamily: TYPOGRAPHY.families.bold,
     textTransform: 'uppercase',
@@ -578,20 +607,20 @@ const styles = StyleSheet.create({
   scannerTitle: {
     fontSize: TYPOGRAPHY.sizes.md,
     fontFamily: TYPOGRAPHY.families.bold,
-    color: COLORS.white,
+    color: COLORS.textPrimary,
   },
   statsCardSmall: {
     width: '48%',
-    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    backgroundColor: COLORS.cardBg,
     padding: SPACING.xl,
     borderRadius: BORDER_RADIUS.xxl,
     borderWidth: 1,
-    borderColor: COLORS.darkBorder,
+    borderColor: COLORS.border,
     marginBottom: SPACING.md,
     ...SHADOWS.sm,
   },
   statsLabelSmall: {
-    color: COLORS.slate500,
+    color: COLORS.textSecondary,
     fontSize: TYPOGRAPHY.sizes.xxs,
     fontFamily: TYPOGRAPHY.families.black,
     textTransform: 'uppercase',
@@ -606,15 +635,6 @@ const styles = StyleSheet.create({
   },
   efficiencyCard: {
     width: '100%',
-    backgroundColor: COLORS.darkCard,
-    padding: SPACING.lg,
-    borderRadius: BORDER_RADIUS.xxl,
-    borderWidth: 1,
-    borderColor: COLORS.darkBorder,
-    marginBottom: SPACING.lg,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     ...SHADOWS.sm,
   },
   efficiencyContent: {
@@ -640,13 +660,13 @@ const styles = StyleSheet.create({
   efficiencyScoreText: {
     fontSize: TYPOGRAPHY.sizes.xxs,
     fontFamily: TYPOGRAPHY.families.bold,
-    color: COLORS.slate300,
+    color: COLORS.textSecondary,
   },
   efficiencyTextContainer: {
     marginLeft: SPACING.md,
   },
   efficiencyLabel: {
-    color: COLORS.slate500,
+    color: COLORS.textSecondary,
     fontSize: TYPOGRAPHY.sizes.xxs,
     fontFamily: TYPOGRAPHY.families.bold,
     textTransform: 'uppercase',
@@ -660,7 +680,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   hoursLabel: {
-    color: COLORS.slate500,
+    color: COLORS.textSecondary,
     fontSize: TYPOGRAPHY.sizes.xxs,
     fontFamily: TYPOGRAPHY.families.bold,
     textTransform: 'uppercase',
@@ -669,7 +689,7 @@ const styles = StyleSheet.create({
   hoursValue: {
     fontSize: TYPOGRAPHY.sizes.lg,
     fontFamily: TYPOGRAPHY.families.bold,
-    color: COLORS.white,
+    color: COLORS.textPrimary,
   },
   listHeader: {
     paddingHorizontal: SPACING.lg,
@@ -681,7 +701,7 @@ const styles = StyleSheet.create({
   listTitle: {
     fontSize: TYPOGRAPHY.sizes.xl,
     fontFamily: TYPOGRAPHY.families.bold,
-    color: COLORS.white,
+    color: COLORS.textPrimary,
   },
   viewAllText: {
     color: COLORS.primary,
@@ -696,7 +716,7 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   emptyText: {
-    color: COLORS.slate400,
+    color: COLORS.textSecondary,
     marginTop: SPACING.sm,
     fontFamily: TYPOGRAPHY.families.medium,
   },

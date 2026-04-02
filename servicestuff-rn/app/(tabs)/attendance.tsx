@@ -4,7 +4,6 @@ import {
     Text,
     TouchableOpacity,
     ScrollView,
-    ActivityIndicator,
     Modal,
     Platform,
     StyleSheet,
@@ -37,7 +36,9 @@ import { LocationService } from '../../services/location';
 import { TechnicianAttendance, AttendanceStatus } from '../../types';
 import { TopBar } from '../../components/TopBar';
 import { BarcodeScannerComponent } from '../../components/BarcodeScanner';
+import { MaterialCircularProgress } from '../../components/ui/Loading';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
+import { AttendanceSkeleton } from '../../components/Skeleton';
 
 export default function Attendance() {
     const router = useRouter();
@@ -287,7 +288,7 @@ export default function Attendance() {
                         <TouchableOpacity
                             onPress={handleEndShift}
                             disabled={operationLoading}
-                            style={styles.largeButtonDark}
+                            style={styles.largeButtonOrange}
                         >
                             <Coffee size={32} color="white" />
                             <View>
@@ -323,14 +324,17 @@ export default function Attendance() {
         }
     };
 
-    if (loading) return (
-        <View style={{ flex: 1, backgroundColor: '#020617', alignItems: 'center', justifyContent: 'center' }}>
-            <ActivityIndicator size="large" color="#3b82f6" />
-        </View>
-    );
+    if (loading) {
+        return (
+            <View style={{ flex: 1, backgroundColor: COLORS.pageBg }}>
+                <TopBar title="Attendance" />
+                <AttendanceSkeleton />
+            </View>
+        );
+    }
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#020617' }}>
+        <View style={{ flex: 1, backgroundColor: COLORS.pageBg }}>
             {isScanning && (
                 <BarcodeScannerComponent
                     onScan={handleScan}
@@ -386,8 +390,8 @@ export default function Attendance() {
                             </Text>
                         </View>
                         <View style={styles.monthNav}>
-                            <TouchableOpacity onPress={handlePrevMonth} style={styles.navBtn}><ChevronLeft size={18} color={COLORS.white} /></TouchableOpacity>
-                            <TouchableOpacity onPress={handleNextMonth} style={[styles.navBtn, { transform: [{ rotate: '180deg' }] }]}><ChevronLeft size={18} color={COLORS.white} /></TouchableOpacity>
+                            <TouchableOpacity onPress={handlePrevMonth} style={styles.navBtn}><ChevronLeft size={18} color={COLORS.textPrimary} /></TouchableOpacity>
+                            <TouchableOpacity onPress={handleNextMonth} style={[styles.navBtn, { transform: [{ rotate: '180deg' }] }]}><ChevronLeft size={18} color={COLORS.textPrimary} /></TouchableOpacity>
                         </View>
                     </View>
 
@@ -424,10 +428,10 @@ export default function Attendance() {
 
                 {/* Legend */}
                 <View style={styles.legendContainer}>
-                    <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: '#f97316' }]} /><Text style={styles.legendText}>Attended</Text></View>
-                    <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: '#3b82f6' }]} /><Text style={styles.legendText}>Leave</Text></View>
-                    <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: '#eab308' }]} /><Text style={styles.legendText}>Sick Leave</Text></View>
-                    <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: '#1e293b' }]} /><Text style={styles.legendText}>Off Day</Text></View>
+                    <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: COLORS.accent }]} /><Text style={styles.legendText}>Attended</Text></View>
+                    <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: "#6366f1" }]} /><Text style={styles.legendText}>Leave</Text></View>
+                    <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: COLORS.warning }]} /><Text style={styles.legendText}>Sick Leave</Text></View>
+                    <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: COLORS.borderStrong }]} /><Text style={styles.legendText}>Off Day</Text></View>
                 </View>
             </ScrollView>
 
@@ -451,13 +455,13 @@ export default function Attendance() {
                                         </Text>
                                     </View>
                                     <TouchableOpacity onPress={() => setSelectedDate(null)} style={styles.modalClose}>
-                                        <X size={24} color="white" />
+                                        <X size={24} color={COLORS.textPrimary} />
                                     </TouchableOpacity>
                                 </View>
 
                                 {statsLoading ? (
                                     <View style={{ paddingVertical: 60, alignItems: 'center', gap: 24 }}>
-                                        <ActivityIndicator size="large" color="#f97316" />
+                                        <MaterialCircularProgress size={40} color="#ea580c" />
                                         <Text style={styles.modalSyncText}>Syncing Data...</Text>
                                     </View>
                                 ) : dayStats ? (
@@ -465,7 +469,7 @@ export default function Attendance() {
                                         <View style={{ flexDirection: 'row', gap: 24 }}>
                                             <View style={styles.modalStatItem}>
                                                 <Text style={styles.statLabel}>Hrs Worked</Text>
-                                                <Text style={styles.statValue}>{dayStats.hoursWorked}<Text style={{ fontSize: 12, color: '#64748b' }}>h</Text></Text>
+                                                <Text style={styles.statValue}>{dayStats.hoursWorked}<Text style={{ fontSize: 12, color: COLORS.textTertiary }}>h</Text></Text>
                                             </View>
                                             <View style={styles.modalStatItem}>
                                                 <Text style={styles.statLabel}>Jobs Closed</Text>
@@ -485,7 +489,7 @@ export default function Attendance() {
                                     </View>
                                 ) : (
                                     <View style={{ alignItems: 'center', paddingVertical: 60 }}>
-                                        <History size={48} color="#1e293b" />
+                                        <History size={48} color={COLORS.borderStrong} />
                                         <Text style={styles.noRecordsText}>No records found</Text>
                                     </View>
                                 )}
@@ -499,53 +503,53 @@ export default function Attendance() {
 }
 
 const styles = StyleSheet.create({
-    actionCard: { backgroundColor: COLORS.slate900, padding: SPACING.xl, borderRadius: BORDER_RADIUS.xxl, borderWidth: 2, borderColor: COLORS.darkBorder, overflow: 'hidden' },
-    accentGlow: { position: 'absolute', top: -100, right: -100, width: 250, height: 250, backgroundColor: 'rgba(249, 115, 22, 0.05)', borderRadius: 999 },
-    largeButtonOrange: { width: '100%', paddingVertical: 24, paddingHorizontal: 32, borderRadius: 40, backgroundColor: '#ea580c', flexDirection: 'row', alignItems: 'center', gap: 16 },
-    largeButtonBlue: { width: '100%', paddingVertical: 24, paddingHorizontal: 32, borderRadius: 40, backgroundColor: COLORS.primary, flexDirection: 'row', alignItems: 'center', gap: 16 },
-    largeButtonDark: { width: '100%', paddingVertical: 24, paddingHorizontal: 32, borderRadius: 40, backgroundColor: COLORS.slate800, flexDirection: 'row', alignItems: 'center', gap: 16 },
+    actionCard: { backgroundColor: COLORS.cardBg, padding: SPACING.xl, borderRadius: BORDER_RADIUS.xxl, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden', ...SHADOWS.md },
+    accentGlow: { position: 'absolute', top: -100, right: -100, width: 250, height: 250, backgroundColor: COLORS.primarySurface, borderRadius: 999, opacity: 0.5 },
+    largeButtonOrange: { width: '100%', paddingVertical: 24, paddingHorizontal: 32, borderRadius: 40, backgroundColor: COLORS.accent, flexDirection: 'row', alignItems: 'center', gap: 16, ...SHADOWS.md },
+    largeButtonBlue: { width: '100%', paddingVertical: 24, paddingHorizontal: 32, borderRadius: 40, backgroundColor: COLORS.primaryLight, flexDirection: 'row', alignItems: 'center', gap: 16, ...SHADOWS.md },
+    largeButtonDark: { width: '100%', paddingVertical: 24, paddingHorizontal: 32, borderRadius: 40, backgroundColor: COLORS.textPrimary, flexDirection: 'row', alignItems: 'center', gap: 16, ...SHADOWS.md },
     btnLabel: { color: 'rgba(255,255,255,0.8)', fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase', letterSpacing: 1 },
     btnTitle: { color: COLORS.white, fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.bold },
     secondaryBtn: { width: '100%', paddingVertical: SPACING.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-    secondaryBtnText: { color: COLORS.slate500, fontFamily: TYPOGRAPHY.families.bold, fontSize: TYPOGRAPHY.sizes.xxs, textTransform: 'uppercase', letterSpacing: 1 },
-    timerSub: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.warning, textTransform: 'uppercase', letterSpacing: 1, fontStyle: 'italic', marginBottom: SPACING.xs },
-    timerMain: { fontSize: 56, fontFamily: 'monospace', fontWeight: '900', color: COLORS.white },
+    secondaryBtnText: { color: COLORS.textSecondary, fontFamily: TYPOGRAPHY.families.bold, fontSize: TYPOGRAPHY.sizes.xxs, textTransform: 'uppercase', letterSpacing: 1 },
+    timerSub: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.accent, textTransform: 'uppercase', letterSpacing: 1, fontStyle: 'italic', marginBottom: SPACING.xs },
+    timerMain: { fontSize: 56, fontFamily: 'monospace', fontWeight: '900', color: COLORS.textPrimary },
     successIconBg: { width: 64, height: 64, backgroundColor: COLORS.successBg, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.md },
-    endedTitle: { fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.white, textTransform: 'uppercase' },
-    endedSub: { color: COLORS.slate500, fontFamily: TYPOGRAPHY.families.bold, fontSize: TYPOGRAPHY.sizes.md, marginTop: SPACING.xs },
-    miniStatCard: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.5)', padding: SPACING.md, borderRadius: BORDER_RADIUS.xl, borderWidth: 1, borderColor: COLORS.darkBorder },
-    miniStatLabel: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate500, textTransform: 'uppercase', letterSpacing: 1, marginBottom: SPACING.xs },
-    miniStatValue: { fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.white },
-    sectionHeader: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate500, textTransform: 'uppercase', letterSpacing: 2, fontStyle: 'italic', marginBottom: SPACING.xs },
-    monthTitle: { fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.white },
-    monthNav: { flexDirection: 'row', backgroundColor: COLORS.slate900, padding: 4, borderRadius: BORDER_RADIUS.sm, borderWidth: 1, borderColor: COLORS.darkBorder },
+    endedTitle: { fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textPrimary, textTransform: 'uppercase' },
+    endedSub: { color: COLORS.textSecondary, fontFamily: TYPOGRAPHY.families.bold, fontSize: TYPOGRAPHY.sizes.md, marginTop: SPACING.xs },
+    miniStatCard: { flex: 1, backgroundColor: COLORS.cardBg, padding: SPACING.md, borderRadius: BORDER_RADIUS.xl, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
+    miniStatLabel: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textTertiary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: SPACING.xs },
+    miniStatValue: { fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textPrimary },
+    sectionHeader: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: 2, fontStyle: 'italic', marginBottom: SPACING.xs },
+    monthTitle: { fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textPrimary },
+    monthNav: { flexDirection: 'row', backgroundColor: COLORS.cardBg, padding: 4, borderRadius: BORDER_RADIUS.sm, borderWidth: 1, borderColor: COLORS.border },
     navBtn: { padding: SPACING.sm, borderRadius: BORDER_RADIUS.xs },
-    calendarCard: { backgroundColor: 'rgba(15, 23, 42, 0.4)', padding: SPACING.lg, borderRadius: BORDER_RADIUS.xxl, borderWidth: 1, borderColor: COLORS.darkBorder },
-    dayHeader: { flex: 1, textAlign: 'center', fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate600 },
-    dayBtn: { flex: 1, backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: BORDER_RADIUS.sm, alignItems: 'center', justifyContent: 'center' },
-    dayBtnPresent: { backgroundColor: '#ea580c' },
+    calendarCard: { backgroundColor: COLORS.cardBg, padding: SPACING.lg, borderRadius: BORDER_RADIUS.xxl, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
+    dayHeader: { flex: 1, textAlign: 'center', fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textTertiary },
+    dayBtn: { flex: 1, backgroundColor: COLORS.pageBg, borderRadius: BORDER_RADIUS.sm, alignItems: 'center', justifyContent: 'center' },
+    dayBtnPresent: { backgroundColor: COLORS.accent },
     dayBtnLeave: { backgroundColor: COLORS.primary },
     dayBtnSick: { backgroundColor: COLORS.warning },
-    dayText: { fontSize: TYPOGRAPHY.sizes.sm, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate600 },
+    dayText: { fontSize: TYPOGRAPHY.sizes.sm, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textSecondary },
     dayTextActive: { color: COLORS.white },
-    legendContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md, backgroundColor: 'rgba(15, 23, 42, 0.3)', padding: SPACING.lg, borderRadius: BORDER_RADIUS.xl, marginTop: SPACING.lg, borderWidth: 1, borderColor: COLORS.darkBorder },
+    legendContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md, backgroundColor: COLORS.cardBgAlt, padding: SPACING.lg, borderRadius: BORDER_RADIUS.xl, marginTop: SPACING.lg, borderWidth: 1, borderColor: COLORS.border },
     legendItem: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
     dot: { width: 10, height: 10, borderRadius: 5 },
-    legendText: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate500, textTransform: 'uppercase', letterSpacing: 1 },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'flex-end' },
-    summaryModal: { backgroundColor: COLORS.slate900, padding: SPACING.xl, borderTopLeftRadius: BORDER_RADIUS.xxl, borderTopRightRadius: BORDER_RADIUS.xxl, overflow: 'hidden' },
-    modalBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 6, backgroundColor: '#ea580c' },
+    legendText: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: 1 },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.8)', justifyContent: 'flex-end' },
+    summaryModal: { backgroundColor: COLORS.cardBg, padding: SPACING.xl, borderTopLeftRadius: BORDER_RADIUS.xxl, borderTopRightRadius: BORDER_RADIUS.xxl, overflow: 'hidden' },
+    modalBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 6, backgroundColor: COLORS.accent },
     modalLabel: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.warning, textTransform: 'uppercase', letterSpacing: 2, fontStyle: 'italic', marginBottom: SPACING.xs },
-    modalDate: { fontSize: TYPOGRAPHY.sizes.xxxl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.white },
-    modalClose: { padding: SPACING.md, backgroundColor: COLORS.slate800, borderRadius: BORDER_RADIUS.full },
-    modalSyncText: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate600, textTransform: 'uppercase', letterSpacing: 3 },
-    modalStatItem: { flex: 1, backgroundColor: COLORS.slate800, padding: SPACING.lg, borderRadius: BORDER_RADIUS.xl },
-    statLabel: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.slate500, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase', marginBottom: SPACING.sm },
-    statValue: { fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.white },
-    qualityCard: { backgroundColor: 'rgba(234, 88, 12, 0.05)', padding: SPACING.lg, borderRadius: BORDER_RADIUS.xxl, borderWidth: 1, borderColor: 'rgba(234, 88, 12, 0.1)', alignItems: 'center', gap: SPACING.sm },
-    qualityLabel: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.warning, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase', letterSpacing: 2 },
-    qualityValue: { fontSize: TYPOGRAPHY.sizes.xxxl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.warning },
-    qualityTotal: { fontSize: TYPOGRAPHY.sizes.md, fontFamily: TYPOGRAPHY.families.bold, color: 'rgba(234, 88, 12, 0.3)' },
-    verifiedText: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.slate600, textAlign: 'center', fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase', lineHeight: 18 },
-    noRecordsText: { fontSize: TYPOGRAPHY.sizes.xs, fontFamily: TYPOGRAPHY.families.black, color: COLORS.slate700, textTransform: 'uppercase', letterSpacing: 1, marginTop: SPACING.md }
+    modalDate: { fontSize: TYPOGRAPHY.sizes.xxxl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textPrimary },
+    modalClose: { padding: SPACING.md, backgroundColor: COLORS.pageBg, borderRadius: BORDER_RADIUS.full },
+    modalSyncText: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textTertiary, textTransform: 'uppercase', letterSpacing: 3 },
+    modalStatItem: { flex: 1, backgroundColor: COLORS.cardBgAlt, padding: SPACING.lg, borderRadius: BORDER_RADIUS.xl, borderWidth: 1, borderColor: COLORS.border },
+    statLabel: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.textSecondary, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase', marginBottom: SPACING.sm },
+    statValue: { fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textPrimary },
+    qualityCard: { backgroundColor: COLORS.primarySurface, padding: SPACING.lg, borderRadius: BORDER_RADIUS.xxl, borderWidth: 1, borderColor: COLORS.primary, alignItems: 'center', gap: SPACING.sm },
+    qualityLabel: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.primary, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase', letterSpacing: 2 },
+    qualityValue: { fontSize: TYPOGRAPHY.sizes.xxxl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.primary },
+    qualityTotal: { fontSize: TYPOGRAPHY.sizes.md, fontFamily: TYPOGRAPHY.families.bold, color: 'rgba(30, 64, 175, 0.3)' },
+    verifiedText: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.textTertiary, textAlign: 'center', fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase', lineHeight: 18 },
+    noRecordsText: { fontSize: TYPOGRAPHY.sizes.xs, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textTertiary, textTransform: 'uppercase', letterSpacing: 1, marginTop: SPACING.md }
 });

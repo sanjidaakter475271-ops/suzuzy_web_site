@@ -4,13 +4,13 @@ import {
     Text,
     TouchableOpacity,
     ScrollView,
-    ActivityIndicator,
     TextInput,
     Alert,
     Platform,
     StyleSheet,
     Dimensions,
-    Modal
+    Modal,
+    ActivityIndicator
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -49,6 +49,7 @@ import { SocketService } from '../../services/socket';
 import { DetailSkeleton } from '../../components/Skeleton';
 import { diagnoseIssue } from '../../services/geminiService';
 import { StatusBadge } from '../../components/ui/StatusBadge';
+import { MaterialCircularProgress } from '../../components/ui/Loading';
 import { JobStatus } from '../../types';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
 
@@ -367,14 +368,14 @@ export default function JobCardDetail() {
     };
 
     if (loading && !job) return (
-        <View style={{ flex: 1, backgroundColor: '#020617', paddingTop: 60 }}>
+        <View style={{ flex: 1, backgroundColor: COLORS.pageBg, paddingTop: 60 }}>
             <DetailSkeleton />
         </View>
     );
 
     if (!job) return (
-        <View style={{ flex: 1, backgroundColor: '#020617', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ color: 'white' }}>Job not found.</Text>
+        <View style={{ flex: 1, backgroundColor: COLORS.pageBg, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: COLORS.textPrimary }}>Job not found.</Text>
         </View>
     );
 
@@ -399,17 +400,17 @@ export default function JobCardDetail() {
 
                 <View style={{ flexDirection: 'row', gap: 16, marginTop: 24 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <UserIcon size={16} color="#64748b" />
+                        <UserIcon size={16} color={COLORS.textSecondary} />
                         <Text style={styles.infoText}>{job.vehicle?.customer_name}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Clock size={16} color="#64748b" />
+                        <Clock size={16} color={COLORS.textSecondary} />
                         <Text style={styles.infoText}>{new Date(job.created_at).toLocaleDateString()}</Text>
                     </View>
                 </View>
 
                 <View style={styles.detailSection}>
-                    <Text style={styles.sectionHeader}><Info size={12} color="#64748b" /> VEHICLE DETAILS</Text>
+                    <Text style={styles.sectionHeader}><Info size={12} color={COLORS.textTertiary} /> VEHICLE DETAILS</Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
                         <View style={{ width: '50%', marginBottom: 12 }}>
                             <Text style={styles.label}>Engine</Text>
@@ -442,7 +443,7 @@ export default function JobCardDetail() {
                                     flexDirection: 'row',
                                     alignItems: 'center',
                                     gap: 6,
-                                    backgroundColor: COLORS.infoBg,
+                                    backgroundColor: COLORS.primarySurface,
                                     paddingHorizontal: 12,
                                     paddingVertical: 6,
                                     borderRadius: BORDER_RADIUS.md
@@ -480,7 +481,7 @@ export default function JobCardDetail() {
                                             onPress={() => handleChecklistToggle(item)}
                                             style={[styles.checkbox, item.is_completed && styles.checkboxActive]}
                                         >
-                                            <CheckSquare size={20} color={item.is_completed ? '#10b981' : '#475569'} />
+                                            <CheckSquare size={20} color={item.is_completed ? COLORS.success : COLORS.textTertiary} />
                                         </TouchableOpacity>
                                         <View style={{ flex: 1 }}>
                                             <Text style={[styles.checkItemName, item.is_completed && styles.checkItemNameDone]}>
@@ -503,7 +504,7 @@ export default function JobCardDetail() {
                                         onPress={() => handleChecklistPhoto(item)}
                                         style={[styles.cameraBtn, (item as any).photo_url && styles.cameraBtnActive]}
                                     >
-                                        <Camera size={20} color={(item as any).photo_url ? '#3b82f6' : '#64748b'} />
+                                        <Camera size={20} color={(item as any).photo_url ? COLORS.primary : COLORS.textTertiary} />
                                     </TouchableOpacity>
                                 </View>
 
@@ -532,13 +533,13 @@ export default function JobCardDetail() {
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#020617' }}>
+        <View style={{ flex: 1, backgroundColor: COLORS.pageBg }}>
             <TopBar title={`Job #${job.service_number || id?.slice(0, 8)}`} showBack onBack={() => router.back()} />
 
             {!isOnline && (
                 <View style={styles.offlineBanner}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <WifiOff size={14} color="#f59e0b" />
+                        <WifiOff size={14} color={COLORS.warning} />
                         <Text style={styles.offlineText}>Offline Mode</Text>
                     </View>
                     <Text style={styles.offlineSubtext}>Changes will sync when online</Text>
@@ -554,7 +555,7 @@ export default function JobCardDetail() {
                             onPress={() => setActiveTab(tab.id as Tab)}
                             style={[styles.tabButton, activeTab === tab.id && styles.tabButtonActive]}
                         >
-                            <tab.icon size={20} color={activeTab === tab.id ? '#3b82f6' : '#64748b'} />
+                            <tab.icon size={20} color={activeTab === tab.id ? COLORS.primary : COLORS.textTertiary} />
                             <Text style={[styles.tabLabel, activeTab === tab.id && styles.tabLabelActive]}>{tab.label}</Text>
                             {activeTab === tab.id && <MotiView style={styles.tabIndicator} />}
                         </TouchableOpacity>
@@ -571,7 +572,7 @@ export default function JobCardDetail() {
                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                             <Text style={styles.sectionTitle}>Parts & Requisitions</Text>
                             <TouchableOpacity onPress={() => setShowPartsSelector(true)} style={styles.addPartBtn}>
-                                <Plus size={14} color="#3b82f6" />
+                                <Plus size={14} color={COLORS.primary} />
                                 <Text style={styles.addPartBtnText}>Add Part</Text>
                             </TouchableOpacity>
                         </View>
@@ -580,7 +581,7 @@ export default function JobCardDetail() {
                         {job.parts?.map(part => (
                             <View key={part.id} style={styles.partItem}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                                    <View style={styles.issuedIcon}><CheckCircle2 size={16} color="#3b82f6" /></View>
+                                    <View style={styles.issuedIcon}><CheckCircle2 size={16} color={COLORS.primary} /></View>
                                     <View>
                                         <Text style={styles.partName}>{part.part_name || 'Generic Part'}</Text>
                                         <Text style={styles.partMeta}>Quantity: {part.quantity} • Issued</Text>
@@ -594,7 +595,7 @@ export default function JobCardDetail() {
                         {requisitions.map(req => (
                             <TouchableOpacity key={req.id} onPress={() => handleOpenQuickAdjust(req)} style={styles.partItem}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                                    <View style={[styles.issuedIcon, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}><Clock size={16} color="#f59e0b" /></View>
+                                    <View style={[styles.issuedIcon, { backgroundColor: COLORS.warningBg }]}><Clock size={16} color={COLORS.warning} /></View>
                                     <View>
                                         <Text style={styles.partName}>{req.productName || 'Generic Part'}</Text>
                                         <Text style={styles.partMeta}>Quantity: {req.quantity} • {req.status}</Text>
@@ -627,7 +628,7 @@ export default function JobCardDetail() {
                             </View>
                         ))}
                         <TouchableOpacity onPress={handlePhotoUpload} style={styles.addPhotoBtn}>
-                            <Camera size={32} color="#475569" />
+                            <Camera size={32} color={COLORS.textTertiary} />
                             <Text style={styles.addPhotoText}>Add Photo</Text>
                         </TouchableOpacity>
                     </View>
@@ -644,7 +645,7 @@ export default function JobCardDetail() {
                             <TextInput
                                 style={styles.noteInput}
                                 placeholder="Add a note..."
-                                placeholderTextColor="#475569"
+                                placeholderTextColor={COLORS.textTertiary}
                                 value={newNote}
                                 onChangeText={setNewNote}
                                 multiline
@@ -667,7 +668,7 @@ export default function JobCardDetail() {
                 ) : job.status === 'in_progress' ? (
                     <View style={{ flexDirection: 'row', gap: 12 }}>
                         <TouchableOpacity onPress={() => handleStatusUpdate('paused')} style={styles.pauseAction}>
-                            <PauseCircle size={24} color="#f59e0b" />
+                            <PauseCircle size={24} color={COLORS.warning} />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => handleStatusUpdate('qc_pending')} style={styles.primaryAction}>
                             <CheckCircle2 size={20} color="white" />
@@ -676,11 +677,11 @@ export default function JobCardDetail() {
                     </View>
                 ) : job.status === 'qc_pending' ? (
                     <View style={styles.waitingBadge}>
-                        <Clock size={20} color="#f59e0b" />
+                        <Clock size={20} color={COLORS.warning} />
                         <Text style={styles.waitingText}>Awaiting QC Review...</Text>
                     </View>
                 ) : job.status === 'qc_passed' ? (
-                    <TouchableOpacity onPress={() => handleStatusUpdate('completed')} style={[styles.primaryAction, { backgroundColor: '#10b981' }]}>
+                    <TouchableOpacity onPress={() => handleStatusUpdate('completed')} style={[styles.primaryAction, { backgroundColor: COLORS.success }]}>
                         <CheckCircle2 size={20} color="white" />
                         <Text style={styles.actionLabel}>Mark Complete</Text>
                     </TouchableOpacity>
@@ -695,21 +696,21 @@ export default function JobCardDetail() {
                             <TouchableOpacity style={{ flex: 1 }} onPress={() => setAdjustingPart(null)} />
                             <MotiView from={{ translateY: 100, opacity: 0 }} animate={{ translateY: 0, opacity: 1 }} style={styles.quickAdjustModal}>
                                 <View style={styles.modalHeader}>
-                                    <View style={styles.modalIcon}><Package size={28} color="#3b82f6" /></View>
+                                    <View style={styles.modalIcon}><Package size={28} color={COLORS.primary} /></View>
                                     <Text style={styles.modalTitle}>{adjustingPart.productName || adjustingPart.part_name}</Text>
                                     <Text style={styles.modalSku}>{productForAdjustment?.sku || 'NO SKU'}</Text>
                                 </View>
 
                                 <View style={styles.qtyContainer}>
                                     <TouchableOpacity onPress={() => handleUpdateQuantity(adjustingPart.quantity - 1)} style={styles.qtyBtn}>
-                                        <Trash2 size={24} color={adjustingPart.quantity === 1 ? '#f43f5e' : '#475569'} />
+                                        <Trash2 size={24} color={adjustingPart.quantity === 1 ? COLORS.danger : COLORS.textTertiary} />
                                     </TouchableOpacity>
                                     <View style={{ alignItems: 'center' }}>
                                         <Text style={styles.qtyValue}>{adjustingPart.quantity}</Text>
                                         <Text style={styles.qtyLabel}>Quantity</Text>
                                     </View>
                                     <TouchableOpacity onPress={() => handleUpdateQuantity(adjustingPart.quantity + 1)} style={styles.qtyBtn}>
-                                        <Plus size={24} color="#475569" />
+                                        <Plus size={24} color={COLORS.textTertiary} />
                                     </TouchableOpacity>
                                 </View>
 
@@ -742,28 +743,28 @@ export default function JobCardDetail() {
                         <View style={styles.modalBar} />
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                                <View style={{ padding: 10, backgroundColor: 'rgba(59, 130, 246, 0.1)', borderRadius: 12 }}>
-                                    <Sparkles size={24} color="#3b82f6" />
+                                <View style={{ padding: 10, backgroundColor: COLORS.primarySurface, borderRadius: 12 }}>
+                                    <Sparkles size={24} color={COLORS.primary} />
                                 </View>
                                 <View>
-                                    <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>AI Smart Diagnosis</Text>
-                                    <Text style={{ color: '#64748b', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Powered by Gemini</Text>
+                                    <Text style={{ color: COLORS.textPrimary, fontSize: 18, fontWeight: 'bold' }}>AI Smart Diagnosis</Text>
+                                    <Text style={{ color: COLORS.textTertiary, fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Powered by Gemini</Text>
                                 </View>
                             </View>
                             <TouchableOpacity onPress={() => setShowDiagnosisModal(false)} style={styles.modalClose}>
-                                <X size={20} color="white" />
+                                <X size={20} color={COLORS.textPrimary} />
                             </TouchableOpacity>
                         </View>
 
                         <ScrollView style={{ maxHeight: 400 }}>
                             {diagnosisLoading ? (
                                 <View style={{ paddingVertical: 40, alignItems: 'center', gap: 16 }}>
-                                    <ActivityIndicator size="large" color="#3b82f6" />
-                                    <Text style={{ color: '#64748b', fontSize: 12, fontWeight: '500' }}>Analyzing issue symptoms...</Text>
+                                    <ActivityIndicator size="large" color={COLORS.primary} />
+                                    <Text style={{ color: COLORS.textSecondary, fontSize: 12, fontWeight: '500' }}>Analyzing issue symptoms...</Text>
                                 </View>
                             ) : (
-                                <View style={{ backgroundColor: 'rgba(0,0,0,0.2)', padding: 20, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
-                                    <Text style={{ color: '#cbd5e1', fontSize: 14, lineHeight: 22 }}>
+                                <View style={{ backgroundColor: COLORS.cardBgAlt, padding: 20, borderRadius: 24, borderWidth: 1, borderColor: COLORS.border }}>
+                                    <Text style={{ color: COLORS.textSecondary, fontSize: 14, lineHeight: 22 }}>
                                         {diagnosis}
                                     </Text>
                                 </View>
@@ -786,86 +787,87 @@ export default function JobCardDetail() {
 }
 
 const styles = StyleSheet.create({
-    card: { backgroundColor: COLORS.slate900, borderRadius: BORDER_RADIUS.xxl, padding: SPACING.xl, borderWidth: 1, borderColor: COLORS.darkBorder },
-    vehicleName: { fontSize: TYPOGRAPHY.sizes.xxl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.white, textTransform: 'uppercase' },
-    plateNumber: { fontSize: TYPOGRAPHY.sizes.md, color: COLORS.primaryLight, fontFamily: 'monospace', marginTop: SPACING.xs },
+    card: { backgroundColor: COLORS.cardBg, borderRadius: BORDER_RADIUS.xxl, padding: SPACING.xl, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
+    vehicleName: { fontSize: TYPOGRAPHY.sizes.xxl, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textPrimary, textTransform: 'uppercase' },
+    plateNumber: { fontSize: TYPOGRAPHY.sizes.md, color: COLORS.primary, fontFamily: 'monospace', marginTop: SPACING.xs },
     statusBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: BORDER_RADIUS.full, borderWidth: 1 },
     statusText: { fontSize: 10, fontFamily: TYPOGRAPHY.families.black, textTransform: 'uppercase' },
-    infoText: { fontSize: TYPOGRAPHY.sizes.md, color: COLORS.slate400, fontFamily: TYPOGRAPHY.families.regular },
-    detailSection: { marginTop: SPACING.xl, padding: SPACING.md, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: BORDER_RADIUS.lg },
-    sectionHeader: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate500, textTransform: 'uppercase', marginBottom: SPACING.md, letterSpacing: 1 },
-    label: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.slate500, textTransform: 'uppercase', fontFamily: TYPOGRAPHY.families.bold },
-    value: { fontSize: TYPOGRAPHY.sizes.md, color: COLORS.slate200, fontFamily: TYPOGRAPHY.families.bold, marginTop: 2 },
-    issueSection: { marginTop: SPACING.md, padding: SPACING.md, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: BORDER_RADIUS.lg },
-    issueBody: { fontSize: TYPOGRAPHY.sizes.md, color: COLORS.slate300, lineHeight: 22, fontFamily: TYPOGRAPHY.families.regular },
+    infoText: { fontSize: TYPOGRAPHY.sizes.md, color: COLORS.textSecondary, fontFamily: TYPOGRAPHY.families.regular },
+    detailSection: { marginTop: SPACING.xl, padding: SPACING.md, backgroundColor: COLORS.cardBgAlt, borderRadius: BORDER_RADIUS.lg, borderWidth: 1, borderColor: COLORS.border },
+    sectionHeader: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textTertiary, textTransform: 'uppercase', marginBottom: SPACING.md, letterSpacing: 1 },
+    label: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.textTertiary, textTransform: 'uppercase', fontFamily: TYPOGRAPHY.families.bold },
+    value: { fontSize: TYPOGRAPHY.sizes.md, color: COLORS.textPrimary, fontFamily: TYPOGRAPHY.families.bold, marginTop: 2 },
+    issueSection: { marginTop: SPACING.md, padding: SPACING.md, backgroundColor: COLORS.cardBgAlt, borderRadius: BORDER_RADIUS.lg, borderWidth: 1, borderColor: COLORS.border },
+    issueBody: { fontSize: TYPOGRAPHY.sizes.md, color: COLORS.textSecondary, lineHeight: 22, fontFamily: TYPOGRAPHY.families.regular },
     offlineBanner: { backgroundColor: COLORS.warningBg, paddingVertical: 8, paddingHorizontal: SPACING.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     offlineText: { color: COLORS.warning, fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase' },
-    offlineSubtext: { color: 'rgba(234, 179, 8, 0.6)', fontSize: 9, fontStyle: 'italic', fontFamily: TYPOGRAPHY.families.medium },
-    tabContainer: { height: 60, borderBottomWidth: 1, borderBottomColor: COLORS.darkBorder, backgroundColor: COLORS.slate900 },
+    offlineSubtext: { color: 'rgba(217, 119, 6, 0.6)', fontSize: 9, fontStyle: 'italic', fontFamily: TYPOGRAPHY.families.medium },
+    tabContainer: { height: 60, borderBottomWidth: 1, borderBottomColor: COLORS.border, backgroundColor: COLORS.cardBg },
     tabButton: { minWidth: 80, paddingHorizontal: SPACING.md, justifyContent: 'center', alignItems: 'center', gap: 4 },
     tabButtonActive: {},
-    tabLabel: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate500 },
+    tabLabel: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textTertiary },
     tabLabelActive: { color: COLORS.primary },
     tabIndicator: { position: 'absolute', bottom: 0, left: 16, right: 16, height: 2, backgroundColor: COLORS.primary },
-    categoryHeader: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.black, color: COLORS.slate500, textTransform: 'uppercase', marginBottom: SPACING.md, paddingHorizontal: SPACING.sm, letterSpacing: 2 },
-    checkItemCard: { backgroundColor: 'rgba(15, 23, 42, 0.5)', padding: SPACING.md, borderRadius: BORDER_RADIUS.xl, marginBottom: SPACING.sm, gap: SPACING.lg },
-    checkbox: { padding: SPACING.sm, borderRadius: BORDER_RADIUS.md, backgroundColor: COLORS.slate900 },
-    checkboxActive: { backgroundColor: COLORS.successBg },
-    checkItemName: { fontSize: TYPOGRAPHY.sizes.lg, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.slate100 },
-    checkItemNameDone: { color: COLORS.slate500, textDecorationLine: 'line-through' },
+    categoryHeader: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textTertiary, textTransform: 'uppercase', marginBottom: SPACING.md, paddingHorizontal: SPACING.sm, letterSpacing: 2 },
+    searchResult: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(30, 64, 175, 0.15)', padding: SPACING.md, borderRadius: BORDER_RADIUS.lg, marginBottom: SPACING.sm, borderWidth: 1, borderColor: 'rgba(30, 64, 175, 0.3)' },
+    checkItemCard: { backgroundColor: COLORS.cardBg, padding: SPACING.md, borderRadius: BORDER_RADIUS.xl, marginBottom: SPACING.sm, gap: SPACING.lg, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
+    checkbox: { padding: SPACING.sm, borderRadius: BORDER_RADIUS.md, backgroundColor: COLORS.cardBgAlt, borderWidth: 1, borderColor: COLORS.border },
+    checkboxActive: { backgroundColor: COLORS.successBg, borderColor: COLORS.success + '20' },
+    checkItemName: { fontSize: TYPOGRAPHY.sizes.lg, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textPrimary },
+    checkItemNameDone: { color: COLORS.textTertiary, textDecorationLine: 'line-through' },
     checkItemImage: { width: 48, height: 48, borderRadius: BORDER_RADIUS.sm },
-    evidenceText: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.slate500, fontFamily: TYPOGRAPHY.families.bold },
-    cameraBtn: { padding: 10, borderRadius: BORDER_RADIUS.md, backgroundColor: COLORS.slate900 },
-    cameraBtnActive: { backgroundColor: COLORS.infoBg },
-    conditionRow: { flexDirection: 'row', gap: SPACING.sm, backgroundColor: 'rgba(0,0,0,0.3)', padding: 4, borderRadius: BORDER_RADIUS.lg },
+    evidenceText: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.textTertiary, fontFamily: TYPOGRAPHY.families.bold },
+    cameraBtn: { padding: 10, borderRadius: BORDER_RADIUS.md, backgroundColor: COLORS.cardBgAlt, borderWidth: 1, borderColor: COLORS.border },
+    cameraBtnActive: { backgroundColor: COLORS.primarySurface, borderColor: COLORS.primary + '20' },
+    conditionRow: { flexDirection: 'row', gap: SPACING.sm, backgroundColor: COLORS.pageBg, padding: 4, borderRadius: BORDER_RADIUS.lg },
     conditionBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: BORDER_RADIUS.md },
-    conditionText: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.black, color: COLORS.slate600, textTransform: 'uppercase' },
+    conditionText: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textTertiary, textTransform: 'uppercase' },
     conditionTextActive: { color: COLORS.white },
     conditionBtn_ok: { backgroundColor: COLORS.success },
     conditionBtn_fair: { backgroundColor: COLORS.warning },
     conditionBtn_bad: { backgroundColor: COLORS.danger },
-    conditionBtn_na: { backgroundColor: COLORS.slate700 },
-    sectionTitle: { fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.white },
-    addPartBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.infoBg, paddingHorizontal: 12, paddingVertical: 6, borderRadius: BORDER_RADIUS.full },
+    conditionBtn_na: { backgroundColor: COLORS.slate400 },
+    sectionTitle: { fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textPrimary },
+    addPartBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.primarySurface, paddingHorizontal: 12, paddingVertical: 6, borderRadius: BORDER_RADIUS.full },
     addPartBtnText: { color: COLORS.primary, fontSize: TYPOGRAPHY.sizes.xs, fontFamily: TYPOGRAPHY.families.bold },
-    partItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: SPACING.md, backgroundColor: 'rgba(15, 23, 42, 0.4)', borderRadius: BORDER_RADIUS.xl, marginBottom: SPACING.sm },
-    partName: { color: COLORS.slate100, fontFamily: TYPOGRAPHY.families.bold, fontSize: TYPOGRAPHY.sizes.sm },
-    partMeta: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.slate500, marginTop: 2, fontFamily: TYPOGRAPHY.families.medium },
-    partPrice: { color: COLORS.slate300, fontFamily: TYPOGRAPHY.families.bold },
-    issuedIcon: { width: 32, height: 32, borderRadius: BORDER_RADIUS.sm, backgroundColor: COLORS.infoBg, alignItems: 'center', justifyContent: 'center' },
+    partItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: SPACING.md, backgroundColor: COLORS.primarySurface, borderRadius: BORDER_RADIUS.xl, marginBottom: SPACING.sm, borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.3)', ...SHADOWS.sm },
+    partName: { color: COLORS.textPrimary, fontFamily: TYPOGRAPHY.families.bold, fontSize: TYPOGRAPHY.sizes.sm },
+    partMeta: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.textSecondary, marginTop: 2, fontFamily: TYPOGRAPHY.families.medium },
+    partPrice: { color: COLORS.textPrimary, fontFamily: TYPOGRAPHY.families.bold },
+    issuedIcon: { width: 32, height: 32, borderRadius: BORDER_RADIUS.sm, backgroundColor: COLORS.primarySurface, alignItems: 'center', justifyContent: 'center' },
     reqBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: BORDER_RADIUS.full, marginTop: 4 },
     reqBadge_approved: { backgroundColor: COLORS.successBg },
-    reqBadgeText: { fontSize: 8, fontFamily: TYPOGRAPHY.families.black, color: COLORS.white, textTransform: 'uppercase' },
+    reqBadgeText: { fontSize: 8, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textPrimary, textTransform: 'uppercase' },
     photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-    photoContainer: { width: (Dimensions.get('window').width - 44) / 2, aspectRatio: 1, borderRadius: BORDER_RADIUS.lg, overflow: 'hidden' },
+    photoContainer: { width: (Dimensions.get('window').width - 44) / 2, aspectRatio: 1, borderRadius: BORDER_RADIUS.lg, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border },
     jobPhoto: { width: '100%', height: '100%' },
     photoTag: { position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: BORDER_RADIUS.xs },
     photoTagText: { color: COLORS.white, fontSize: 10, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase' },
-    addPhotoBtn: { width: (Dimensions.get('window').width - 44) / 2, aspectRatio: 1, borderRadius: BORDER_RADIUS.lg, borderStyle: 'dashed', borderWidth: 2, borderColor: COLORS.slate800, alignItems: 'center', justifyContent: 'center' },
-    addPhotoText: { color: COLORS.slate500, fontSize: TYPOGRAPHY.sizes.xs, marginTop: 8, fontFamily: TYPOGRAPHY.families.medium },
-    notesCard: { backgroundColor: 'rgba(15, 23, 42, 0.5)', padding: SPACING.md, borderRadius: BORDER_RADIUS.lg, borderWidth: 1, borderColor: COLORS.slate800 },
-    notesBody: { color: COLORS.slate300, fontSize: TYPOGRAPHY.sizes.md, lineHeight: 22, fontFamily: TYPOGRAPHY.families.regular },
+    addPhotoBtn: { width: (Dimensions.get('window').width - 44) / 2, aspectRatio: 1, borderRadius: BORDER_RADIUS.lg, borderStyle: 'dashed', borderWidth: 2, borderColor: COLORS.borderStrong, alignItems: 'center', justifyContent: 'center' },
+    addPhotoText: { color: COLORS.textTertiary, fontSize: TYPOGRAPHY.sizes.xs, marginTop: 8, fontFamily: TYPOGRAPHY.families.medium },
+    notesCard: { backgroundColor: COLORS.cardBg, padding: SPACING.md, borderRadius: BORDER_RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
+    notesBody: { color: COLORS.textSecondary, fontSize: TYPOGRAPHY.sizes.md, lineHeight: 22, fontFamily: TYPOGRAPHY.families.regular },
     noteInputContainer: { flexDirection: 'row', gap: 12, alignItems: 'flex-end' },
-    noteInput: { flex: 1, backgroundColor: COLORS.slate900, borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, color: COLORS.white, fontSize: TYPOGRAPHY.sizes.md, minHeight: 50, fontFamily: TYPOGRAPHY.families.regular },
-    sendNoteBtn: { backgroundColor: COLORS.primary, width: 50, height: 50, borderRadius: BORDER_RADIUS.lg, alignItems: 'center', justifyContent: 'center' },
+    noteInput: { flex: 1, backgroundColor: COLORS.inputBg, borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, color: COLORS.textPrimary, fontSize: TYPOGRAPHY.sizes.md, minHeight: 50, fontFamily: TYPOGRAPHY.families.regular, borderWidth: 1, borderColor: COLORS.border },
+    sendNoteBtn: { backgroundColor: COLORS.primary, width: 50, height: 50, borderRadius: BORDER_RADIUS.lg, alignItems: 'center', justifyContent: 'center', ...SHADOWS.sm },
     actionBar: { position: 'absolute', bottom: 24, left: 16, right: 16, height: 70 },
-    primaryAction: { flex: 1, backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.xl, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, ...SHADOWS.md },
-    pauseAction: { width: 70, height: 70, backgroundColor: COLORS.warningBg, borderRadius: BORDER_RADIUS.xl, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(234, 179, 8, 0.3)' },
+    primaryAction: { flex: 1, backgroundColor: COLORS.accent, borderRadius: BORDER_RADIUS.xl, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, ...SHADOWS.md },
+    pauseAction: { width: 70, height: 70, backgroundColor: COLORS.cardBg, borderRadius: BORDER_RADIUS.xl, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
     actionLabel: { color: COLORS.white, fontFamily: TYPOGRAPHY.families.bold, fontSize: TYPOGRAPHY.sizes.lg },
-    waitingBadge: { flex: 1, backgroundColor: COLORS.warningBg, borderRadius: BORDER_RADIUS.xl, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, borderWidth: 1, borderColor: 'rgba(234, 179, 8, 0.3)' },
+    waitingBadge: { flex: 1, backgroundColor: COLORS.warningBg, borderRadius: BORDER_RADIUS.xl, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, borderWidth: 1, borderColor: COLORS.warning + '20' },
     waitingText: { color: COLORS.warning, fontFamily: TYPOGRAPHY.families.bold, fontSize: TYPOGRAPHY.sizes.lg },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
-    quickAdjustModal: { backgroundColor: COLORS.slate900, padding: SPACING.xl, borderTopLeftRadius: BORDER_RADIUS.xxl, borderTopRightRadius: BORDER_RADIUS.xxl, alignItems: 'center' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.8)', justifyContent: 'flex-end' },
+    quickAdjustModal: { backgroundColor: '#0f1c3d', padding: SPACING.xl, borderTopLeftRadius: BORDER_RADIUS.xxl, borderTopRightRadius: BORDER_RADIUS.xxl, alignItems: 'center', borderWidth: 1, borderTopColor: 'rgba(59, 130, 246, 0.5)' },
     modalHeader: { alignItems: 'center', marginBottom: SPACING.xl },
-    modalIcon: { width: 64, height: 64, backgroundColor: COLORS.slate950, borderRadius: BORDER_RADIUS.xl, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.md },
-    modalTitle: { color: COLORS.white, fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.bold },
-    modalSku: { color: COLORS.slate500, fontSize: TYPOGRAPHY.sizes.xs, fontFamily: TYPOGRAPHY.families.bold, marginTop: 4 },
+    modalIcon: { width: 64, height: 64, backgroundColor: COLORS.cardBgAlt, borderRadius: BORDER_RADIUS.xl, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
+    modalTitle: { color: COLORS.textPrimary, fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.bold },
+    modalSku: { color: COLORS.textTertiary, fontSize: TYPOGRAPHY.sizes.xs, fontFamily: TYPOGRAPHY.families.bold, marginTop: 4 },
     qtyContainer: { flexDirection: 'row', alignItems: 'center', gap: 40, marginBottom: SPACING.xl },
-    qtyBtn: { width: 56, height: 56, backgroundColor: COLORS.slate950, borderRadius: BORDER_RADIUS.xl, alignItems: 'center', justifyContent: 'center' },
-    qtyValue: { fontSize: 48, fontFamily: TYPOGRAPHY.families.black, color: COLORS.white },
-    qtyLabel: { color: COLORS.slate500, fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase' },
-    modalDoneBtn: { backgroundColor: COLORS.slate950, width: '100%', padding: 20, borderRadius: BORDER_RADIUS.xl, alignItems: 'center' },
+    qtyBtn: { width: 56, height: 56, backgroundColor: COLORS.cardBgAlt, borderRadius: BORDER_RADIUS.xl, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+    qtyValue: { fontSize: 48, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textPrimary },
+    qtyLabel: { color: COLORS.textTertiary, fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase' },
+    modalDoneBtn: { backgroundColor: COLORS.primary, width: '100%', padding: 20, borderRadius: BORDER_RADIUS.xl, alignItems: 'center' },
     modalDoneText: { color: COLORS.white, fontFamily: TYPOGRAPHY.families.bold, letterSpacing: 2 },
     modalBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: COLORS.primary },
-    modalClose: { padding: 10, backgroundColor: COLORS.slate950, borderRadius: BORDER_RADIUS.md }
+    modalClose: { padding: 10, backgroundColor: COLORS.cardBgAlt, borderRadius: BORDER_RADIUS.md, borderWidth: 1, borderColor: COLORS.border }
 });

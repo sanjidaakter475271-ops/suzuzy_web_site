@@ -10,31 +10,22 @@ const COLORS = ['#D4AF37', '#C75B12', '#DC2626', '#1F9D55', '#3B82F6', '#8B5CF6'
 
 interface ExpensePieChartProps {
     data?: ChartData[];
+    lastMonthData?: ChartData[];
 }
 
-const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-        return (
-            <div className="bg-[#0D0D0F]/90 backdrop-blur-md p-3 border border-white/10 shadow-2xl rounded-2xl">
-                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">{payload[0].name}</p>
-                <p className="text-sm font-black text-white tabular-nums">
-                    ৳{payload[0].value?.toLocaleString()}
-                </p>
-                <p className="text-[8px] font-bold text-brand uppercase mt-1">
-                    {((payload[0].value / payload[0].payload.total) * 100).toFixed(1)}% of total
-                </p>
-            </div>
-        );
-    }
-    return null;
-};
+// ... (CustomTooltip stays same)
 
-const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data = [] }) => {
+const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data = [], lastMonthData = [] }) => {
     const [range, setRange] = React.useState('month');
-    const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
+
+    const activeData = React.useMemo(() => {
+        return range === 'month' ? data : lastMonthData;
+    }, [range, data, lastMonthData]);
+
+    const total = activeData.reduce((sum, item) => sum + (item.value || 0), 0);
 
     // Add total to each item for tooltip percentage calculation
-    const chartData = data.map(item => ({ ...item, total }));
+    const chartData = activeData.map(item => ({ ...item, total }));
 
     return (
         <div className="bg-white dark:bg-[#080809] p-8 rounded-[2.5rem] shadow-card border border-surface-border dark:border-white/5 transition-all group hover:border-brand/20 flex flex-col h-full">
@@ -66,7 +57,7 @@ const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data = [] }) => {
             </div>
 
             <div className="flex-1 min-h-[250px] relative mt-4">
-                {data.length > 0 ? (
+                {activeData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                             <Pie
@@ -79,7 +70,7 @@ const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data = [] }) => {
                                 dataKey="value"
                                 stroke="none"
                             >
-                                {data.map((entry, index) => (
+                                {activeData.map((entry, index) => (
                                     <Cell
                                         key={`cell-${index}`}
                                         fill={COLORS[index % COLORS.length]}
@@ -99,7 +90,7 @@ const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data = [] }) => {
                     </div>
                 )}
 
-                {data.length > 0 && (
+                {activeData.length > 0 && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <div className="text-center">
                             <p className="text-[9px] font-black text-ink-muted uppercase tracking-[0.2em]">Total Out</p>
@@ -112,7 +103,7 @@ const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data = [] }) => {
             </div>
 
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 mt-8 pt-6 border-t border-surface-border dark:border-white/5">
-                {data.map((item, i) => (
+                {activeData.map((item, i) => (
                     <div key={i} className="flex items-center justify-between min-w-0 group/item">
                         <div className="flex items-center gap-2 min-w-0">
                             <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }}></div>

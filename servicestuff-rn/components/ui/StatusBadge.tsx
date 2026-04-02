@@ -79,13 +79,14 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
       case 'text-primary': return COLORS.primary;
       case 'text-warning': return COLORS.warning;
       case 'text-danger': return COLORS.danger;
-      default: return COLORS.slate400;
+      default: return COLORS.textTertiary;
     }
   };
 
   return (
     <View
       className={`flex-row items-center rounded-full border ${config.bgColor} ${config.borderColor} ${paddingClasses}`}
+      style={{ backgroundColor: config.bgColor.includes('/') ? undefined : config.bgColor }}
     >
       <Icon size={iconSize} color={getIconColor(config.color)} strokeWidth={3} />
       <Text

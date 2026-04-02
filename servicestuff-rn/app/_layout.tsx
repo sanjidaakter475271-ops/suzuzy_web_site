@@ -12,16 +12,31 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import * as Linking from 'expo-linking';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
+import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { OfflineBanner } from '../components/OfflineBanner';
 import { PermissionManager } from '../components/PermissionManager';
 import { LocationTracker } from '../components/LocationTracker';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { TechnicianAPI } from '../services/api';
+import { COLORS } from '../constants/theme';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+const NavTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: COLORS.pageBg,
+    card: COLORS.cardBg,
+    text: COLORS.textPrimary,
+    border: COLORS.border,
+    primary: COLORS.primary,
+  },
+};
 
 // Configure notifications handler
 Notifications.setNotificationHandler({
@@ -166,27 +181,36 @@ function InitialLayout() {
 
   if (loading || !onboardingChecked || !fontsLoaded) return null;
 
+  const inAuthGroup = segments[0] === '(auth)';
+
   return (
-    <>
-      <OfflineBanner />
-      {user && !permissionsDone && (
-        <PermissionManager onComplete={() => setPermissionsDone(true)} />
-      )}
-      {user && permissionsDone && isAuthReady && <LocationTracker />}
-      <Slot />
-    </>
+    <ThemeProvider value={inAuthGroup ? { ...NavTheme, colors: { ...NavTheme.colors, background: "#020617" } } : NavTheme}>
+      <View style={{ flex: 1, backgroundColor: inAuthGroup ? "#020617" : COLORS.pageBg }}>
+        <StatusBar
+          style={inAuthGroup ? "light" : "dark"}
+          backgroundColor={inAuthGroup ? "#020617" : COLORS.pageBg}
+        />
+        <OfflineBanner />
+        {user && !permissionsDone && (
+          <PermissionManager onComplete={() => setPermissionsDone(true)} />
+        )}
+        {user && permissionsDone && isAuthReady && <LocationTracker />}
+        <Slot />
+      </View>
+    </ThemeProvider>
   );
 }
 
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ErrorBoundary>
-        <AuthProvider>
-          <StatusBar style="light" backgroundColor="#020617" />
-          <InitialLayout />
-        </AuthProvider>
-      </ErrorBoundary>
+      <SafeAreaProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <InitialLayout />
+          </AuthProvider>
+        </ErrorBoundary>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

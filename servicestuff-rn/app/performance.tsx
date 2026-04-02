@@ -20,6 +20,8 @@ import { TechnicianAPI } from '../services/api';
 import { DashboardStats } from '../types';
 import { TopBar } from '../components/TopBar';
 import { OfflineService } from '../services/offline';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { PerformanceSkeleton } from '../components/Skeleton';
 
 const TargetProgress = ({ label, current, target, color }: { label: string, current: number, target: number, color: string }) => {
     const percentage = Math.min((current / target) * 100, 100);
@@ -79,9 +81,9 @@ export default function Performance() {
     }, []);
 
     const badges = [
-        { id: 1, name: 'Speed Demon', icon: <Flame color="#f97316" size={24} />, desc: 'Finished 5 jobs under estimated time', unlocked: true },
-        { id: 2, name: 'Precision Pro', icon: <Target color="#3b82f6" size={24} />, desc: 'Zero QC failures this month', unlocked: true },
-        { id: 3, name: 'Customer Hero', icon: <Award color="#f59e0b" size={24} />, desc: 'Maintain 4.8+ rating', unlocked: false },
+        { id: 1, name: 'Speed Demon', icon: <Flame color={COLORS.primary} size={24} />, desc: 'Finished 5 jobs under estimated time', unlocked: true },
+        { id: 2, name: 'Precision Pro', icon: <Target color={COLORS.primary} size={24} />, desc: 'Zero QC failures this month', unlocked: true },
+        { id: 3, name: 'Customer Hero', icon: <Award color={COLORS.warning} size={24} />, desc: 'Maintain 4.8+ rating', unlocked: false },
     ];
 
     const renderEfficiencyCircle = () => {
@@ -97,7 +99,7 @@ export default function Performance() {
                         cx="65"
                         cy="65"
                         r={radius}
-                        stroke="#1e293b"
+                        stroke={COLORS.divider}
                         strokeWidth="8"
                         fill="transparent"
                     />
@@ -105,7 +107,7 @@ export default function Performance() {
                         cx="65"
                         cy="65"
                         r={radius}
-                        stroke="#3b82f6"
+                        stroke={COLORS.accent}
                         strokeWidth="8"
                         fill="transparent"
                         strokeDasharray={circumference}
@@ -114,7 +116,7 @@ export default function Performance() {
                     />
                 </Svg>
                 <View style={styles.heroScoreContainer}>
-                    <Text style={styles.heroScoreText}>{score}%</Text>
+                    <Text style={[styles.heroScoreText, { color: COLORS.accent }]}>{score}%</Text>
                 </View>
             </View>
         );
@@ -122,22 +124,20 @@ export default function Performance() {
 
     if (loading) {
         return (
-            <View style={{ flex: 1, backgroundColor: '#020617' }}>
+            <View style={{ flex: 1, backgroundColor: COLORS.pageBg }}>
                 <TopBar title="Performance" />
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <ActivityIndicator size="large" color="#3b82f6" />
-                </View>
+                <PerformanceSkeleton />
             </View>
         );
     }
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#020617' }}>
+        <View style={{ flex: 1, backgroundColor: COLORS.pageBg }}>
             <TopBar title="Performance" showBack onBack={() => router.back()} />
 
             {!isOnline && (
                 <View style={styles.offlineBanner}>
-                    <WifiOff size={14} color="#f59e0b" />
+                    <WifiOff size={14} color={COLORS.warning} />
                     <Text style={styles.offlineText}>Offline - Showing Cached Progress</Text>
                 </View>
             )}
@@ -149,7 +149,7 @@ export default function Performance() {
                     <Text style={styles.heroLabel}>Overall Efficiency</Text>
                     {renderEfficiencyCircle()}
                     <View style={styles.heroComparison}>
-                        <TrendingUp size={16} color="#10b981" />
+                        <TrendingUp size={16} color={COLORS.success} />
                         <Text style={styles.comparisonText}>+4% vs last week</Text>
                     </View>
                 </View>
@@ -157,7 +157,7 @@ export default function Performance() {
                 {/* Activity Chart */}
                 <View style={styles.chartCard}>
                     <View style={styles.cardHeader}>
-                        <Flame size={18} color="#f97316" />
+                        <Flame size={18} color={COLORS.primary} />
                         <Text style={styles.cardTitle}>Activity History</Text>
                     </View>
 
@@ -184,15 +184,15 @@ export default function Performance() {
                 {/* KPI Grid */}
                 <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
                     <View style={styles.kpiCard}>
-                        <View style={[styles.kpiIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.2)' }]}>
-                            <Clock size={20} color="#3b82f6" />
+                        <View style={[styles.kpiIcon, { backgroundColor: COLORS.primarySurface, borderColor: COLORS.primary + '20' }]}>
+                            <Clock size={20} color={COLORS.primary} />
                         </View>
                         <Text style={styles.kpiValue}>{stats?.hours_worked || 0}</Text>
                         <Text style={styles.kpiLabel}>Hours Logged</Text>
                     </View>
                     <View style={styles.kpiCard}>
-                        <View style={[styles.kpiIcon, { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.2)' }]}>
-                            <CheckCircle size={20} color="#10b981" />
+                        <View style={[styles.kpiIcon, { backgroundColor: COLORS.successBg, borderColor: COLORS.success + '20' }]}>
+                            <CheckCircle size={20} color={COLORS.success} />
                         </View>
                         <Text style={styles.kpiValue}>{stats?.completed || 0}</Text>
                         <Text style={styles.kpiLabel}>Jobs Completed</Text>
@@ -202,18 +202,18 @@ export default function Performance() {
                 {/* Targets */}
                 <View style={styles.sectionCard}>
                     <View style={[styles.cardHeader, { marginBottom: 20 }]}>
-                        <Target size={18} color="#f43f5e" />
+                        <Target size={18} color={COLORS.danger} />
                         <Text style={styles.cardTitle}>Weekly Targets</Text>
                     </View>
-                    <TargetProgress label="Total Jobs" current={stats?.completed || 0} target={20} color="#3b82f6" />
+                    <TargetProgress label="Total Jobs" current={stats?.completed || 0} target={20} color={COLORS.primary} />
                     <TargetProgress label="Work Hours" current={stats?.hours_worked || 0} target={40} color="#6366f1" />
-                    <TargetProgress label="Efficiency" current={stats?.efficiency_score || 0} target={90} color="#10b981" />
+                    <TargetProgress label="Efficiency" current={stats?.efficiency_score || 0} target={90} color={COLORS.success} />
                 </View>
 
                 {/* Achievements */}
                 <View style={{ marginTop: 24 }}>
                     <View style={[styles.cardHeader, { marginBottom: 16, paddingHorizontal: 8 }]}>
-                        <Trophy size={16} color="#f59e0b" />
+                        <Trophy size={16} color={COLORS.warning} />
                         <Text style={styles.sectionTitle}>Achievements</Text>
                     </View>
                     <View style={{ gap: 12 }}>
@@ -225,7 +225,7 @@ export default function Performance() {
                                     !badge.unlocked && { opacity: 0.5 }
                                 ]}
                             >
-                                <View style={[styles.badgeIconBg, !badge.unlocked && { backgroundColor: '#020617', borderColor: '#1e293b' }]}>
+                                <View style={[styles.badgeIconBg, !badge.unlocked && { backgroundColor: COLORS.cardBgAlt, borderColor: COLORS.border }]}>
                                     {badge.icon}
                                 </View>
                                 <View style={{ flex: 1 }}>
@@ -233,9 +233,9 @@ export default function Performance() {
                                     <Text style={styles.badgeDesc}>{badge.desc}</Text>
                                 </View>
                                 {badge.unlocked ? (
-                                    <CheckCircle size={16} color="#10b981" />
+                                    <CheckCircle size={16} color={COLORS.success} />
                                 ) : (
-                                    <Zap size={16} color="#1e293b" />
+                                    <Zap size={16} color={COLORS.divider} />
                                 )}
                             </View>
                         ))}
@@ -247,36 +247,36 @@ export default function Performance() {
 }
 
 const styles = StyleSheet.create({
-    offlineBanner: { backgroundColor: 'rgba(245, 158, 11, 0.1)', borderBottomWidth: 1, borderBottomColor: 'rgba(245, 158, 11, 0.2)', paddingVertical: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-    offlineText: { fontSize: 10, fontWeight: 'bold', color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 1 },
-    heroCard: { backgroundColor: '#0f172a', borderRadius: 32, padding: 32, alignItems: 'center', borderWidth: 1, borderColor: '#1e293b', overflow: 'hidden' },
-    heroLine: { position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: '#3b82f6', opacity: 0.5 },
-    heroLabel: { fontSize: 10, fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 16 },
+    offlineBanner: { backgroundColor: 'rgba(234, 179, 8, 0.1)', borderBottomWidth: 1, borderBottomColor: 'rgba(234, 179, 8, 0.2)', paddingVertical: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+    offlineText: { fontSize: 10, fontWeight: 'bold', color: COLORS.warning, textTransform: 'uppercase', letterSpacing: 1 },
+    heroCard: { backgroundColor: COLORS.cardBg, borderRadius: 32, padding: 32, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
+    heroLine: { position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: COLORS.primary, opacity: 0.5 },
+    heroLabel: { fontSize: 10, fontWeight: 'bold', color: COLORS.textTertiary, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 16 },
     heroCircleContainer: { position: 'relative', width: 130, height: 130, alignItems: 'center', justifyContent: 'center' },
     heroScoreContainer: { position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' },
-    heroScoreText: { fontSize: 32, fontWeight: 'bold', color: 'white' },
+    heroScoreText: { fontSize: 32, fontWeight: 'bold', color: COLORS.textPrimary },
     heroComparison: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24 },
-    comparisonText: { fontSize: 13, fontWeight: 'bold', color: '#10b981' },
-    chartCard: { backgroundColor: '#0f172a', borderRadius: 32, padding: 24, marginVertical: 24, borderWidth: 1, borderColor: '#1e293b' },
+    comparisonText: { fontSize: 13, fontWeight: 'bold', color: COLORS.success },
+    chartCard: { backgroundColor: COLORS.cardBg, borderRadius: 32, padding: 24, marginVertical: 24, borderWidth: 1, borderColor: COLORS.border },
     cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    cardTitle: { fontSize: 14, fontWeight: 'bold', color: 'white' },
+    cardTitle: { fontSize: 14, fontWeight: 'bold', color: COLORS.textPrimary },
     chartContainer: { flexDirection: 'row', height: 100, alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 32, gap: 12 },
     chartBarGroup: { flex: 1, alignItems: 'center', gap: 8 },
-    chartBarBg: { width: '100%', height: '100%', backgroundColor: '#020617', borderRadius: 99, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-    chartBarFill: { width: '100%', backgroundColor: '#3b82f6', borderRadius: 99 },
-    chartDayText: { fontSize: 10, fontWeight: 'bold', color: '#475569' },
-    kpiCard: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', borderRadius: 24, padding: 20, borderWidth: 1, borderColor: '#1e293b' },
+    chartBarBg: { width: '100%', height: '100%', backgroundColor: COLORS.pageBg, borderRadius: 99, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+    chartBarFill: { width: '100%', backgroundColor: COLORS.primary, borderRadius: 99 },
+    chartDayText: { fontSize: 10, fontWeight: 'bold', color: COLORS.textSecondary },
+    kpiCard: { flex: 1, backgroundColor: COLORS.cardBgAlt, borderRadius: 24, padding: 20, borderWidth: 1, borderColor: COLORS.border },
     kpiIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginBottom: 16 },
-    kpiValue: { fontSize: 24, fontWeight: 'bold', color: 'white' },
-    kpiLabel: { fontSize: 10, fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginTop: 4 },
-    sectionCard: { backgroundColor: '#0f172a', borderRadius: 32, padding: 24, borderWidth: 1, borderColor: '#1e293b' },
-    targetLabel: { fontSize: 12, color: '#94a3b8', fontWeight: 'bold' },
-    targetValue: { fontSize: 12, color: '#cbd5e1', fontWeight: 'bold' },
-    progressBarBg: { height: 8, backgroundColor: '#020617', borderRadius: 4, overflow: 'hidden' },
+    kpiValue: { fontSize: 24, fontWeight: 'bold', color: COLORS.textPrimary },
+    kpiLabel: { fontSize: 10, fontWeight: 'bold', color: COLORS.textTertiary, textTransform: 'uppercase', marginTop: 4 },
+    sectionCard: { backgroundColor: COLORS.cardBg, borderRadius: 32, padding: 24, borderWidth: 1, borderColor: COLORS.border },
+    targetLabel: { fontSize: 12, color: COLORS.textSecondary, fontWeight: 'bold' },
+    targetValue: { fontSize: 12, color: COLORS.textPrimary, fontWeight: 'bold' },
+    progressBarBg: { height: 8, backgroundColor: COLORS.pageBg, borderRadius: 4, overflow: 'hidden' },
     progressBarFill: { height: '100%', borderRadius: 4 },
-    sectionTitle: { fontSize: 10, fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: 2 },
-    badgeCard: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: 'rgba(15, 23, 42, 0.4)', padding: 16, borderRadius: 24, borderWidth: 1, borderColor: '#1e293b' },
-    badgeIconBg: { width: 48, height: 48, backgroundColor: '#0f172a', borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#334155' },
-    badgeName: { fontSize: 14, fontWeight: 'bold', color: '#f1f5f9' },
-    badgeDesc: { fontSize: 11, color: '#64748b', marginTop: 2 }
+    sectionTitle: { fontSize: 10, fontWeight: '900', color: COLORS.textTertiary, textTransform: 'uppercase', letterSpacing: 2 },
+    badgeCard: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: COLORS.cardBgAlt, padding: 16, borderRadius: 24, borderWidth: 1, borderColor: COLORS.border },
+    badgeIconBg: { width: 48, height: 48, backgroundColor: COLORS.cardBg, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.borderStrong },
+    badgeName: { fontSize: 14, fontWeight: 'bold', color: COLORS.textPrimary },
+    badgeDesc: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 }
 });

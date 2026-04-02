@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
     User as UserIcon,
@@ -18,7 +18,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { TechnicianAPI } from '../../services/api';
 import { useAuth } from '../../lib/auth';
 import { TopBar } from '../../components/TopBar';
+import { MaterialCircularProgress } from '../../components/ui/Loading';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
+import { ProfileSkeleton } from '../../components/Skeleton';
 
 const MenuItem = ({ icon, label, sub, onClick }: { icon: React.ReactNode, label: string, sub: string, onClick?: () => void }) => (
     <TouchableOpacity
@@ -35,7 +37,7 @@ const MenuItem = ({ icon, label, sub, onClick }: { icon: React.ReactNode, label:
                 <Text style={styles.menuSub}>{sub}</Text>
             </View>
         </View>
-        <ChevronRight size={18} color={COLORS.slate700} />
+        <ChevronRight size={18} color={COLORS.textTertiary} />
     </TouchableOpacity>
 );
 
@@ -87,22 +89,22 @@ export default function Profile() {
 
     if (loading) {
         return (
-            <View style={{ flex: 1, backgroundColor: COLORS.slate950 }}>
+            <View style={{ flex: 1, backgroundColor: COLORS.pageBg }}>
                 <TopBar title="Profile" />
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <ActivityIndicator size="large" color={COLORS.primary} />
-                </View>
+                <ProfileSkeleton />
             </View>
         );
     }
 
     return (
-        <View style={{ flex: 1, backgroundColor: COLORS.slate950 }}>
+        <View style={{ flex: 1, backgroundColor: COLORS.pageBg }}>
             <TopBar title="Profile" />
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: SPACING.md, paddingBottom: 100 }}>
                 {/* Header Card */}
                 <LinearGradient
-                    colors={['rgba(37, 99, 235, 0.15)', 'rgba(67, 56, 202, 0.15)']}
+                    colors={[COLORS.primaryLight, COLORS.primary]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
                     style={styles.headerCard}
                 >
                     <View style={styles.avatarGlow} />
@@ -128,7 +130,7 @@ export default function Profile() {
                     {profile?.dealer && (
                         <View style={styles.dealerInfo}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                                <Store size={12} color={COLORS.primaryLight} />
+                                <Store size={12} color="rgba(255,255,255,0.7)" />
                                 <Text style={styles.dealerLabel}>Official Dealer</Text>
                             </View>
                             <Text style={styles.dealerName}>{profile.dealer.name}</Text>
@@ -168,7 +170,7 @@ export default function Profile() {
                         onClick={() => router.push('/work-history')}
                     />
                     <MenuItem
-                        icon={<Settings color={COLORS.slate500} size={20} />}
+                        icon={<Settings color={COLORS.textTertiary} size={20} />}
                         label="Account Settings"
                         sub="Security & Preferences"
                         onClick={() => router.push('/settings')}
@@ -192,11 +194,10 @@ const styles = StyleSheet.create({
     headerCard: {
         padding: SPACING.xl,
         borderRadius: BORDER_RADIUS.xxl,
-        borderWidth: 1,
-        borderColor: COLORS.darkBorder,
         alignItems: 'center',
         overflow: 'hidden',
-        position: 'relative'
+        position: 'relative',
+        ...SHADOWS.md
     },
     avatarGlow: {
         position: 'absolute',
@@ -204,14 +205,14 @@ const styles = StyleSheet.create({
         right: -100,
         width: 200,
         height: 200,
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         borderRadius: 999
     },
     avatarContainer: {
         width: 96,
         height: 96,
         borderRadius: BORDER_RADIUS.lg,
-        backgroundColor: 'rgba(59, 130, 246, 0.3)',
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
         padding: 4,
         marginBottom: SPACING.md
     },
@@ -219,12 +220,10 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
         borderRadius: BORDER_RADIUS.md,
-        backgroundColor: COLORS.slate900,
+        backgroundColor: COLORS.white,
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: COLORS.darkBorder
     },
     avatarImage: {
         width: '100%',
@@ -238,33 +237,29 @@ const styles = StyleSheet.create({
         marginBottom: SPACING.sm
     },
     roleBadge: {
-        backgroundColor: COLORS.infoBg,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
         paddingHorizontal: 12,
         paddingVertical: 4,
         borderRadius: BORDER_RADIUS.full,
-        borderWidth: 1,
-        borderColor: 'rgba(59, 130, 246, 0.2)',
         marginBottom: SPACING.md
     },
     roleText: {
         fontSize: TYPOGRAPHY.sizes.xxs,
         fontFamily: TYPOGRAPHY.families.black,
-        color: COLORS.primaryLight,
+        color: COLORS.white,
         textTransform: 'uppercase',
         letterSpacing: 1
     },
     idBadge: {
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         paddingHorizontal: 16,
         paddingVertical: 6,
         borderRadius: BORDER_RADIUS.full,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)'
     },
     idText: {
         fontSize: 9,
         fontFamily: TYPOGRAPHY.families.black,
-        color: COLORS.slate400,
+        color: 'rgba(255, 255, 255, 0.6)',
         textTransform: 'uppercase',
         letterSpacing: 2
     },
@@ -272,14 +267,14 @@ const styles = StyleSheet.create({
         marginTop: SPACING.lg,
         paddingTop: SPACING.lg,
         borderTopWidth: 1,
-        borderTopColor: COLORS.darkBorder,
+        borderTopColor: 'rgba(255, 255, 255, 0.1)',
         width: '100%',
         alignItems: 'center'
     },
     dealerLabel: {
         fontSize: TYPOGRAPHY.sizes.xxs,
         fontFamily: TYPOGRAPHY.families.bold,
-        color: COLORS.primaryLight,
+        color: 'rgba(255, 255, 255, 0.7)',
         textTransform: 'uppercase',
         letterSpacing: 1
     },
@@ -295,41 +290,43 @@ const styles = StyleSheet.create({
     },
     statCard: {
         flex: 1,
-        backgroundColor: 'rgba(15, 23, 42, 0.4)',
+        backgroundColor: COLORS.cardBg,
         padding: SPACING.md,
         borderRadius: BORDER_RADIUS.xl,
         borderWidth: 1,
-        borderColor: COLORS.darkBorder,
+        borderColor: COLORS.border,
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        ...SHADOWS.sm
     },
     statIconContainer: {
         marginBottom: SPACING.sm,
         padding: SPACING.sm,
-        backgroundColor: COLORS.infoBg,
+        backgroundColor: COLORS.cardBgAlt,
         borderRadius: BORDER_RADIUS.lg
     },
     statValue: {
         fontSize: TYPOGRAPHY.sizes.xl,
         fontFamily: TYPOGRAPHY.families.bold,
-        color: COLORS.white,
+        color: COLORS.textPrimary,
         fontStyle: 'italic'
     },
     statLabel: {
         fontSize: 8,
         fontFamily: TYPOGRAPHY.families.black,
-        color: COLORS.slate500,
+        color: COLORS.textTertiary,
         textTransform: 'uppercase',
         marginTop: 4,
         letterSpacing: 1
     },
     menuContainer: {
-        backgroundColor: 'rgba(15, 23, 42, 0.4)',
+        backgroundColor: COLORS.cardBg,
         borderRadius: BORDER_RADIUS.xxl,
         overflow: 'hidden',
         marginTop: SPACING.lg,
         borderWidth: 1,
-        borderColor: COLORS.darkBorder
+        borderColor: COLORS.border,
+        ...SHADOWS.sm
     },
     menuItem: {
         flexDirection: 'row',
@@ -338,23 +335,23 @@ const styles = StyleSheet.create({
         paddingHorizontal: SPACING.lg,
         paddingVertical: 20,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.darkBorder
+        borderBottomColor: COLORS.divider
     },
     menuIconContainer: {
         padding: 10,
-        backgroundColor: COLORS.slate950,
+        backgroundColor: COLORS.cardBgAlt,
         borderRadius: BORDER_RADIUS.lg,
         borderWidth: 1,
-        borderColor: COLORS.darkBorder
+        borderColor: COLORS.border
     },
     menuLabel: {
         fontSize: TYPOGRAPHY.sizes.sm,
         fontFamily: TYPOGRAPHY.families.bold,
-        color: COLORS.slate100
+        color: COLORS.textPrimary
     },
     menuSub: {
         fontSize: TYPOGRAPHY.sizes.xxs,
-        color: COLORS.slate500,
+        color: COLORS.textSecondary,
         textTransform: 'uppercase',
         marginTop: 2,
         letterSpacing: 0.5,
@@ -362,16 +359,17 @@ const styles = StyleSheet.create({
     },
     logoutBtn: {
         width: '100%',
-        backgroundColor: COLORS.dangerBg,
+        backgroundColor: COLORS.cardBg,
         borderWidth: 1,
-        borderColor: 'rgba(239, 68, 68, 0.2)',
+        borderColor: COLORS.border,
         paddingVertical: 20,
         borderRadius: BORDER_RADIUS.xxl,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 12,
-        marginTop: SPACING.xl
+        marginTop: SPACING.xl,
+        ...SHADOWS.sm
     },
     logoutBtnText: {
         color: COLORS.danger,

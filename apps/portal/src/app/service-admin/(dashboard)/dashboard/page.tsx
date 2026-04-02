@@ -248,7 +248,10 @@ export default function DashboardPage() {
                     <RevenueChart data={data?.revenueData} />
                 </div>
                 <div>
-                    <ExpensePieChart data={data?.expenseBreakdown} />
+                    <ExpensePieChart
+                        data={data?.expenseBreakdown}
+                        lastMonthData={data?.lastMonthBreakdown}
+                    />
                 </div>
             </div>
 

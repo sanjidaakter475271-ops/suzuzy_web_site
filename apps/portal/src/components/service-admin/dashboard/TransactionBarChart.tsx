@@ -33,10 +33,19 @@ interface TransactionBarChartProps {
 }
 
 const TransactionBarChart: React.FC<TransactionBarChartProps> = ({ data = [] }) => {
-    const [range, setRange] = React.useState('weekly');
+    const [range, setRange] = React.useState('monthly');
+
+    const filteredData = React.useMemo(() => {
+        if (!data || data.length === 0) return [];
+        // For monthly vs weekly, since our data is monthly,
+        // we'll just show fewer months for 'weekly' as a mock filter
+        // unless we update the API to support real weekly buckets.
+        const count = range === 'monthly' ? 12 : 4;
+        return data.slice(-count);
+    }, [data, range]);
 
     return (
-        <div className="bg-white dark:bg-[#080809] p-8 rounded-[2.5rem] shadow-card border border-surface-border dark:border-white/5 transition-all group hover:border-brand/20">
+        <div className="bg-white dark:bg-[#080809] p-8 rounded-[2.5rem] shadow-card border border-surface-border dark:border-white/5 transition-all group hover:border-brand/20 h-full flex flex-col">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                 <div>
                     <h3 className="text-lg font-black text-ink-heading dark:text-white uppercase tracking-tight italic">Financial <span className="text-brand">Velocity</span></h3>
@@ -64,10 +73,10 @@ const TransactionBarChart: React.FC<TransactionBarChartProps> = ({ data = [] }) 
                 </div>
             </div>
 
-            <div className="h-64 w-full">
-                {data.length > 0 ? (
+            <div className="flex-1 min-h-[250px] w-full">
+                {filteredData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={data} barGap={8} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                        <BarChart data={filteredData} barGap={8} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff" strokeOpacity={0.03} />
                             <XAxis
                                 dataKey="name"

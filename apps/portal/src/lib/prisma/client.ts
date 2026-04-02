@@ -14,9 +14,9 @@ function createPrismaClient(): PrismaClient {
     // Explicit Pool configuration for better control and stability in production
     const pool = new pg.Pool({
         connectionString,
-        max: 20, // Limit connections to prevent overwhelming the DB
+        max: 10, // Reduced from 20 to stay within Supabase limits when multiple instances run
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000, // Faster timeout for better UX
     });
 
     pool.on('error', (err) => {

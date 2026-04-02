@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { WifiOff, X } from 'lucide-react-native';
 import { MotiView, AnimatePresence } from 'moti';
 import NetInfo from '@react-native-community/netinfo';
+import { COLORS } from '../constants/theme';
 
 export const OfflineBanner: React.FC = () => {
     const [isOffline, setIsOffline] = useState(false);
@@ -44,7 +45,7 @@ export const OfflineBanner: React.FC = () => {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: '#f59e0b',
+        backgroundColor: COLORS.warning,
         paddingHorizontal: 16,
         paddingVertical: 8,
         width: '100%',
@@ -53,19 +54,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         elevation: 5,
-        shadowColor: '#000',
+        shadowColor: COLORS.textPrimary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4
     },
     text: {
-        color: 'white',
+        color: COLORS.white,
         fontSize: 12,
         fontWeight: 'bold'
     },
     closeBtn: {
         padding: 4,
-        backgroundColor: 'rgba(0,0,0,0.1)',
+        backgroundColor: 'rgba(255,255,255,0.2)',
         borderRadius: 99
     }
 });

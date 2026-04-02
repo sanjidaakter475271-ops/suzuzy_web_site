@@ -54,6 +54,7 @@ interface APIResponse {
         customerRequests: CustomerRequest[];
         revenueData: ChartData[];
         expenseBreakdown: ChartData[];
+        lastMonthBreakdown?: ChartData[];
         transactionVolume: ChartData[];
         workshopPulse: WorkshopPulse;
         recentTransactions: Transaction[];
@@ -110,6 +111,7 @@ export interface DashboardStats {
     customerRequests: CustomerRequest[];
     revenueData: ChartData[];
     expenseBreakdown: ChartData[];
+    lastMonthBreakdown?: ChartData[];
     transactionVolume: ChartData[];
     workshopPulse: WorkshopPulse;
     recentTransactions: Transaction[];
@@ -154,6 +156,7 @@ export function useDashboardStats() {
                 customerRequests: apiData.customerRequests,
                 revenueData: apiData.revenueData,
                 expenseBreakdown: apiData.expenseBreakdown,
+                lastMonthBreakdown: apiData.lastMonthBreakdown,
                 transactionVolume: apiData.transactionVolume,
                 workshopPulse: apiData.workshopPulse,
                 recentTransactions: apiData.recentTransactions,

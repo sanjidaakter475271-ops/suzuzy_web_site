@@ -3,7 +3,6 @@ import {
     View,
     Text,
     TouchableOpacity,
-    ActivityIndicator,
     StyleSheet,
     Platform,
     Alert
@@ -23,6 +22,9 @@ import { TopBar } from '../components/TopBar';
 import { SocketService } from '../services/socket';
 import { Notification } from '../types';
 import { TechnicianAPI } from '../services/api';
+import { MaterialCircularProgress } from '../components/ui/Loading';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { NotificationSkeleton } from '../components/Skeleton';
 
 export default function Notifications() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -115,10 +117,10 @@ export default function Notifications() {
 
     const getTypeStyles = (type: string) => {
         switch (type) {
-            case 'success': return { bg: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: 'rgba(16, 185, 129, 0.2)' };
-            case 'error': return { bg: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', border: 'rgba(244, 63, 94, 0.2)' };
-            case 'warning': return { bg: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', border: 'rgba(245, 158, 11, 0.2)' };
-            default: return { bg: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: 'rgba(59, 130, 246, 0.2)' };
+            case 'success': return { bg: COLORS.successBg, color: COLORS.success, border: COLORS.success + '20' };
+            case 'error': return { bg: COLORS.dangerBg, color: COLORS.danger, border: COLORS.danger + '20' };
+            case 'warning': return { bg: COLORS.warningBg, color: COLORS.warning, border: COLORS.warning + '20' };
+            default: return { bg: COLORS.primarySurface, color: COLORS.primary, border: COLORS.primary + '20' };
         }
     };
 
@@ -164,7 +166,7 @@ export default function Notifications() {
                             <Text style={styles.notifMessage}>{item.message}</Text>
 
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}>
-                                <Clock size={10} color="#475569" />
+                                <Clock size={10} color={COLORS.textTertiary} />
                                 <Text style={styles.timestamp}>
                                     {item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
                                 </Text>
@@ -176,7 +178,7 @@ export default function Notifications() {
                         onPress={() => deleteNotification(item.id)}
                         style={styles.deleteBtn}
                     >
-                        <Trash2 size={16} color="#475569" />
+                        <Trash2 size={16} color={COLORS.textTertiary} />
                     </TouchableOpacity>
                 </TouchableOpacity>
             </MotiView>
@@ -184,7 +186,7 @@ export default function Notifications() {
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#020617' }}>
+        <View style={{ flex: 1, backgroundColor: COLORS.pageBg }}>
             <TopBar title="Notifications" />
 
             <View style={{ flex: 1 }}>
@@ -198,9 +200,7 @@ export default function Notifications() {
                 </View>
 
                 {loading && notifications.length === 0 ? (
-                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                        <ActivityIndicator size="large" color="#3b82f6" />
-                    </View>
+                    <NotificationSkeleton />
                 ) : (
                     <FlashList
                         data={notifications}
@@ -210,7 +210,7 @@ export default function Notifications() {
                         contentContainerStyle={{ padding: 16 }}
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
-                                <View style={styles.emptyIconBg}><BellOff size={48} color="#1e293b" /></View>
+                                <View style={styles.emptyIconBg}><BellOff size={48} color={COLORS.borderStrong} /></View>
                                 <Text style={styles.emptyTitle}>No Notifications</Text>
                                 <Text style={styles.emptySub}>You're all caught up!</Text>
                             </View>
@@ -222,7 +222,7 @@ export default function Notifications() {
             {/* Push Promo */}
             <View style={styles.promoCard}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                    <View style={styles.promoIconBg}><Bell size={24} color="white" /></View>
+                    <View style={styles.promoIconBg}><Bell size={24} color={COLORS.white} /></View>
                     <View style={{ flex: 1 }}>
                         <Text style={styles.promoTitle}>Push Notifications</Text>
                         <Text style={styles.promoSub}>Get live job alerts even when the app is closed.</Text>
@@ -238,28 +238,28 @@ export default function Notifications() {
 
 const styles = StyleSheet.create({
     sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16 },
-    sectionTitle: { fontSize: 10, fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: 2 },
-    clearAllText: { fontSize: 10, fontWeight: '900', color: '#f43f5e', textTransform: 'uppercase' },
-    notifCard: { backgroundColor: 'rgba(15, 23, 42, 0.4)', borderRadius: 24, padding: 20, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden' },
-    notifRead: { opacity: 0.8 },
-    notifUnread: { backgroundColor: 'rgba(15, 23, 42, 0.8)', borderColor: 'rgba(59, 130, 246, 0.2)' },
-    unreadDot: { position: 'absolute', top: 16, right: 16, width: 8, height: 8, borderRadius: 4, backgroundColor: '#3b82f6' },
+    sectionTitle: { fontSize: 10, fontWeight: '900', color: COLORS.textTertiary, textTransform: 'uppercase', letterSpacing: 2 },
+    clearAllText: { fontSize: 10, fontWeight: '900', color: COLORS.danger, textTransform: 'uppercase' },
+    notifCard: { backgroundColor: COLORS.cardBg, borderRadius: 24, padding: 20, marginBottom: 12, borderWidth: 1, borderColor: COLORS.border, position: 'relative', overflow: 'hidden', ...SHADOWS.sm },
+    notifRead: { opacity: 0.8, backgroundColor: COLORS.cardBgAlt },
+    notifUnread: { backgroundColor: COLORS.cardBg, borderColor: COLORS.primary + '20' },
+    unreadDot: { position: 'absolute', top: 16, right: 16, width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.primary },
     iconContainer: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
     notifTitle: { fontSize: 14, fontWeight: 'bold' },
-    textDim: { color: '#cbd5e1' },
-    textBright: { color: 'white' },
-    notifMessage: { fontSize: 12, color: '#64748b', marginTop: 4, lineHeight: 18 },
-    timestamp: { fontSize: 9, fontWeight: '900', color: '#475569', textTransform: 'uppercase' },
+    textDim: { color: COLORS.textSecondary },
+    textBright: { color: COLORS.textPrimary },
+    notifMessage: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4, lineHeight: 18 },
+    timestamp: { fontSize: 9, fontWeight: '900', color: COLORS.textTertiary, textTransform: 'uppercase' },
     deleteBtn: { position: 'absolute', bottom: 12, right: 12, padding: 8 },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 100 },
-    emptyIconBg: { width: 80, height: 80, backgroundColor: '#0f172a', borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 24, borderWidth: 1, borderColor: '#1e293b' },
-    emptyTitle: { fontSize: 14, fontWeight: '900', color: '#1e293b', textTransform: 'uppercase', letterSpacing: 2 },
-    emptySub: { fontSize: 12, color: '#1e293b', marginTop: 4, fontWeight: 'bold' },
-    promoCard: { margin: 16, marginBottom: Platform.OS === 'ios' ? 40 : 24, backgroundColor: 'rgba(37, 99, 235, 0.1)', borderRadius: 32, padding: 20, borderWidth: 1, borderColor: 'rgba(37, 99, 235, 0.2)' },
-    promoIconBg: { width: 48, height: 48, backgroundColor: '#2563eb', borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-    promoTitle: { fontSize: 14, fontWeight: 'bold', color: 'white' },
-    promoSub: { fontSize: 12, color: 'rgba(191, 219, 254, 0.6)', marginTop: 2 },
-    promoBtn: { width: '100%', backgroundColor: '#2563eb', paddingVertical: 12, borderRadius: 12, alignItems: 'center', marginTop: 16 },
-    promoBtnText: { color: 'white', fontWeight: 'bold', fontSize: 12 }
+    emptyIconBg: { width: 80, height: 80, backgroundColor: COLORS.cardBgAlt, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 24, borderWidth: 1, borderColor: COLORS.border },
+    emptyTitle: { fontSize: 14, fontWeight: '900', color: COLORS.textTertiary, textTransform: 'uppercase', letterSpacing: 2 },
+    emptySub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4, fontWeight: 'bold' },
+    promoCard: { margin: 16, marginBottom: Platform.OS === 'ios' ? 40 : 24, backgroundColor: COLORS.primarySurface, borderRadius: 32, padding: 20, borderWidth: 1, borderColor: COLORS.primary + '20' },
+    promoIconBg: { width: 48, height: 48, backgroundColor: COLORS.primary, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+    promoTitle: { fontSize: 14, fontWeight: 'bold', color: COLORS.textPrimary },
+    promoSub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+    promoBtn: { width: '100%', backgroundColor: COLORS.primary, paddingVertical: 12, borderRadius: 12, alignItems: 'center', marginTop: 16 },
+    promoBtnText: { color: COLORS.white, fontWeight: 'bold', fontSize: 12 }
 });
 

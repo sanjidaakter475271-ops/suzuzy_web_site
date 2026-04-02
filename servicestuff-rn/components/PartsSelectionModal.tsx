@@ -24,6 +24,7 @@ import { FlashList } from '@shopify/flash-list';
 import { TechnicianAPI } from '../services/api';
 import { Category, ProductDetail } from '../types';
 import { RequisitionCart } from './RequisitionCart';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
 
 interface PartsSelectionModalProps {
     jobId: string;
@@ -138,7 +139,7 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 {step === 'products' ? (
                     <TouchableOpacity onPress={() => setStep('category')} style={{ padding: 8, marginLeft: -8 }}>
-                        <ArrowLeft size={24} color="#94a3b8" />
+                        <ArrowLeft size={24} color={COLORS.textTertiary} />
                     </TouchableOpacity>
                 ) : (
                     <View style={{ width: 32 }} />
@@ -158,14 +159,14 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
                         onPress={() => setStep('cart')}
                         style={styles.cartButton}
                     >
-                        <ShoppingCart size={20} color="#3b82f6" />
+                        <ShoppingCart size={20} color={COLORS.primary} />
                         <View style={styles.cartBadge}>
                             <Text style={styles.cartBadgeText}>{cart.length}</Text>
                         </View>
                     </TouchableOpacity>
                 )}
                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                    <X size={20} color="#94a3b8" />
+                    <X size={20} color={COLORS.textTertiary} />
                 </TouchableOpacity>
             </View>
         </View>
@@ -186,11 +187,11 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
                         {step === 'products' && (
                             <View style={styles.searchBarContainer}>
                                 <View style={styles.searchBar}>
-                                    <Search size={18} color="#64748b" />
+                                    <Search size={18} color={COLORS.textTertiary} />
                                     <TextInput
                                         style={styles.searchInput}
                                         placeholder="Search by part name or SKU..."
-                                        placeholderTextColor="#475569"
+                                        placeholderTextColor={COLORS.textTertiary}
                                         value={searchQuery}
                                         onChangeText={setSearchQuery}
                                     />
@@ -201,7 +202,7 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
                         <View style={{ flex: 1 }}>
                             {loading && products.length === 0 ? (
                                 <View style={styles.loadingContainer}>
-                                    <ActivityIndicator size="large" color="#3b82f6" />
+                                    <ActivityIndicator size="large" color={COLORS.primary} />
                                     <Text style={styles.loadingText}>Loading Catalog...</Text>
                                 </View>
                             ) : step === 'category' ? (
@@ -224,7 +225,7 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
                                                 activeOpacity={0.8}
                                             >
                                                 <View style={styles.categoryIconContainer}>
-                                                    <Layers color="#475569" size={32} />
+                                                    <Layers color={COLORS.textSecondary} size={32} />
                                                 </View>
                                                 <Text style={styles.categoryName}>{item.name}</Text>
                                             </TouchableOpacity>
@@ -250,7 +251,7 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
                                                     {item.image_url ? (
                                                         <Image source={{ uri: item.image_url }} style={styles.productImage} />
                                                     ) : (
-                                                        <Package color="#1e293b" size={32} />
+                                                        <Package color={COLORS.borderStrong} size={32} />
                                                     )}
                                                 </View>
                                                 <View style={{ flex: 1, marginLeft: 16 }}>
@@ -261,7 +262,7 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
                                                         </View>
                                                         <View style={{ alignItems: 'flex-end' }}>
                                                             <Text style={styles.productPrice}>৳{item.base_price.toLocaleString()}</Text>
-                                                            <Text style={[styles.stockText, { color: item.stock_quantity > 0 ? '#10b981' : '#f43f5e' }]}>
+                                                            <Text style={[styles.stockText, { color: item.stock_quantity > 0 ? COLORS.success : COLORS.danger }]}>
                                                                 {item.stock_quantity > 0 ? `${item.stock_quantity} in stock` : 'Out of stock'}
                                                             </Text>
                                                         </View>
@@ -322,7 +323,7 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#020617',
+        backgroundColor: COLORS.pageBg,
     },
     header: {
         padding: 24,
@@ -331,19 +332,20 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(30, 41, 59, 0.5)',
-        backgroundColor: '#0f172a',
+        borderBottomColor: COLORS.border,
+        backgroundColor: COLORS.cardBg,
+        ...SHADOWS.sm,
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: '900',
-        color: 'white',
+        color: COLORS.textPrimary,
         textTransform: 'uppercase',
         letterSpacing: 1,
     },
     headerStep: {
         fontSize: 10,
-        color: '#3b82f6',
+        color: COLORS.primary,
         fontWeight: 'bold',
         textTransform: 'uppercase',
         letterSpacing: 2,
@@ -351,9 +353,9 @@ const styles = StyleSheet.create({
     },
     cartButton: {
         padding: 10,
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        backgroundColor: COLORS.primarySurface,
         borderWidth: 1,
-        borderColor: 'rgba(59, 130, 246, 0.2)',
+        borderColor: COLORS.primary + '20',
         borderRadius: 16,
         position: 'relative',
     },
@@ -361,14 +363,14 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: -4,
         right: -4,
-        backgroundColor: '#f43f5e',
+        backgroundColor: COLORS.danger,
         minWidth: 18,
         height: 18,
         borderRadius: 9,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 2,
-        borderColor: '#0f172a',
+        borderColor: COLORS.cardBg,
     },
     cartBadgeText: {
         color: 'white',
@@ -377,29 +379,32 @@ const styles = StyleSheet.create({
     },
     closeButton: {
         padding: 10,
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: COLORS.pageBg,
         borderRadius: 16,
+        borderWidth: 1,
+        borderColor: COLORS.border,
     },
     searchBarContainer: {
         padding: 16,
-        backgroundColor: 'rgba(15, 23, 42, 0.3)',
+        backgroundColor: COLORS.pageBg,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+        borderBottomColor: COLORS.border,
     },
     searchBar: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#020617',
+        backgroundColor: COLORS.cardBg,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: COLORS.border,
         borderRadius: 16,
         paddingHorizontal: 16,
         height: 52,
+        ...SHADOWS.sm,
     },
     searchInput: {
         flex: 1,
         marginLeft: 12,
-        color: 'white',
+        color: COLORS.textPrimary,
         fontSize: 14,
         fontWeight: '500',
     },
@@ -410,7 +415,7 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         marginTop: 16,
-        color: '#64748b',
+        color: COLORS.textTertiary,
         fontSize: 12,
         fontWeight: 'bold',
         textTransform: 'uppercase',
@@ -418,47 +423,49 @@ const styles = StyleSheet.create({
     },
     categoryCard: {
         aspectRatio: 1,
-        backgroundColor: 'rgba(15, 23, 42, 0.4)',
+        backgroundColor: COLORS.cardBg,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
+        borderColor: COLORS.border,
         borderRadius: 32,
         alignItems: 'center',
         justifyContent: 'center',
         padding: 16,
+        ...SHADOWS.sm,
     },
     categoryIconContainer: {
         width: 64,
         height: 64,
-        backgroundColor: '#020617',
+        backgroundColor: COLORS.cardBgAlt,
         borderRadius: 24,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
+        borderColor: COLORS.border,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 16,
     },
     categoryName: {
-        color: '#cbd5e1',
+        color: COLORS.textSecondary,
         fontWeight: 'bold',
         textAlign: 'center',
         fontSize: 13,
     },
     productCard: {
         flexDirection: 'row',
-        backgroundColor: 'rgba(15, 23, 42, 0.4)',
+        backgroundColor: COLORS.cardBg,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
+        borderColor: COLORS.border,
         borderRadius: 24,
         padding: 16,
         marginBottom: 12,
+        ...SHADOWS.sm,
     },
     productImageContainer: {
         width: 80,
         height: 80,
-        backgroundColor: '#020617',
+        backgroundColor: COLORS.cardBgAlt,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
+        borderColor: COLORS.border,
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
@@ -469,7 +476,7 @@ const styles = StyleSheet.create({
         resizeMode: 'cover',
     },
     productName: {
-        color: '#f1f5f9',
+        color: COLORS.textPrimary,
         fontWeight: '900',
         textTransform: 'uppercase',
         fontSize: 12,
@@ -477,7 +484,7 @@ const styles = StyleSheet.create({
     },
     productBrand: {
         fontSize: 10,
-        color: '#64748b',
+        color: COLORS.textTertiary,
         fontWeight: 'bold',
         textTransform: 'uppercase',
         marginTop: 4,
@@ -485,7 +492,7 @@ const styles = StyleSheet.create({
     productPrice: {
         fontSize: 14,
         fontWeight: '900',
-        color: '#3b82f6',
+        color: COLORS.primary,
     },
     stockText: {
         fontSize: 9,
@@ -495,14 +502,10 @@ const styles = StyleSheet.create({
     cartControls: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#2563eb',
+        backgroundColor: COLORS.primary,
         borderRadius: 12,
         padding: 4,
-        elevation: 8,
-        shadowColor: '#2563eb',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        ...SHADOWS.md,
     },
     cartControlBtn: {
         width: 28,
@@ -510,7 +513,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
     },
     cartControlText: {
         color: 'white',
@@ -524,15 +527,15 @@ const styles = StyleSheet.create({
         fontSize: 13,
     },
     addBtn: {
-        backgroundColor: '#020617',
+        backgroundColor: COLORS.cardBgAlt,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: COLORS.border,
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 12,
     },
     addBtnText: {
-        color: '#94a3b8',
+        color: COLORS.textSecondary,
         fontSize: 10,
         fontWeight: '900',
         textTransform: 'uppercase',

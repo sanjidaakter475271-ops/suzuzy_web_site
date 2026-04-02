@@ -112,20 +112,20 @@ export async function getDashboardStats(user: any) {
         }));
 
 
-        // 3. Charts Data (Real Transaction Data)
-        const sixMonthsAgo = startOfMonth(subMonths(new Date(), 5));
+        // 3. Charts Data (Last 12 Months)
+        const oneYearAgo = startOfMonth(subMonths(new Date(), 11));
         const transactions = await prisma.payment_transactions.findMany({
             where: {
                 ...scopeWhere,
-                created_at: { gte: sixMonthsAgo },
+                created_at: { gte: oneYearAgo },
                 status: 'completed'
             },
             orderBy: { created_at: 'asc' }
         });
 
         const revenueMap = new Map<string, { income: number, expense: number }>();
-        // Initialize last 6 months
-        for (let i = 5; i >= 0; i--) {
+        // Initialize last 12 months
+        for (let i = 11; i >= 0; i--) {
             const m = format(subMonths(new Date(), i), 'MMM');
             revenueMap.set(m, { income: 0, expense: 0 });
         }
@@ -151,29 +151,42 @@ export async function getDashboardStats(user: any) {
             expense: data.expense
         }));
 
-        // Expense Breakdown (Real Data)
-        const expenses = await prisma.expenses.findMany({
-            where: {
-                ...scopeWhere,
-                expense_date: { gte: startOfMonth(new Date()) }
-            },
-            include: {
-                expense_categories: true
-            }
-        });
+        // Expense Breakdown (Current vs Last Month)
+        const [currentExpenses, lastMonthExpenses] = await Promise.all([
+            prisma.expenses.findMany({
+                where: {
+                    ...scopeWhere,
+                    expense_date: { gte: startOfMonth(new Date()) }
+                },
+                include: { expense_categories: true }
+            }),
+            prisma.expenses.findMany({
+                where: {
+                    ...scopeWhere,
+                    expense_date: {
+                        gte: startOfMonth(subMonths(new Date(), 1)),
+                        lt: startOfMonth(new Date())
+                    }
+                },
+                include: { expense_categories: true }
+            })
+        ]);
 
-        const expenseMap = new Map<string, number>();
-        expenses.forEach(exp => {
-            const catName = exp.expense_categories?.name || 'Uncategorized';
-            const current = expenseMap.get(catName) || 0;
-            expenseMap.set(catName, current + Number(exp.amount));
-        });
+        const mapExpenses = (exps: any[]) => {
+            const map = new Map<string, number>();
+            exps.forEach(exp => {
+                const catName = exp.expense_categories?.name || 'Uncategorized';
+                map.set(catName, (map.get(catName) || 0) + Number(exp.amount));
+            });
+            return Array.from(map.entries()).map(([name, value], index) => ({
+                name,
+                value,
+                color: ['#D4AF37', '#C75B12', '#DC2626', '#1F9D55', '#3B82F6'][index % 5]
+            }));
+        };
 
-        const expenseBreakdown = Array.from(expenseMap.entries()).map(([name, value], index) => ({
-            name,
-            value,
-            color: ['#D4AF37', '#C75B12', '#DC2626', '#1F9D55', '#3B82F6'][index % 5]
-        }));
+        const expenseBreakdown = mapExpenses(currentExpenses);
+        const lastMonthBreakdown = mapExpenses(lastMonthExpenses);
 
 
         // 4. Workshop Pulse

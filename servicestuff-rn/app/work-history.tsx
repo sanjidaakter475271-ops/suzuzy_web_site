@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
     Search,
@@ -15,6 +15,8 @@ import { FlashList } from '@shopify/flash-list';
 import { TechnicianAPI } from '../services/api';
 import { JobCard, JobStatus } from '../types';
 import { TopBar } from '../components/TopBar';
+import { JobCardSkeleton } from '../components/Skeleton';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
 
 const formatDate = (dateStr?: string) => {
     if (!dateStr) return 'N/A';
@@ -42,7 +44,7 @@ const HistoryCard = React.memo(({ job, onClick, isInitialMount }: {
         >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, flex: 1 }}>
                 <View style={styles.briefcaseBg}>
-                    <Briefcase size={22} color="#475569" />
+                    <Briefcase size={22} color={COLORS.textSecondary} />
                 </View>
                 <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -59,14 +61,14 @@ const HistoryCard = React.memo(({ job, onClick, isInitialMount }: {
                             <Text style={styles.verifiedText}>Verified</Text>
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Timer size={12} color="#334155" />
+                            <Timer size={12} color={COLORS.textTertiary} />
                             <Text style={styles.taskCountText}>{job.tasks?.length || 0} Tasks</Text>
                         </View>
                     </View>
                 </View>
             </View>
             <View style={styles.arrowBg}>
-                <ChevronRight size={18} color="#3b82f6" />
+                <ChevronRight size={18} color={COLORS.primary} />
             </View>
         </TouchableOpacity>
     </MotiView>
@@ -118,17 +120,17 @@ export default function WorkHistory() {
     }, [jobs, debouncedSearchTerm]);
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#020617' }}>
+        <View style={{ flex: 1, backgroundColor: COLORS.pageBg }}>
             <TopBar title="Work History" showBack onBack={() => router.back()} />
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
                 {/* Search Bar */}
                 <View style={styles.searchContainer}>
-                    <Search size={18} color="#64748b" style={styles.searchIcon} />
+                    <Search size={18} color={COLORS.textTertiary} style={styles.searchIcon} />
                     <TextInput
                         style={styles.searchInput}
                         placeholder="Search ticket or vehicle model..."
-                        placeholderTextColor="#475569"
+                        placeholderTextColor={COLORS.textTertiary}
                         value={searchTerm}
                         onChangeText={setSearchTerm}
                     />
@@ -139,7 +141,7 @@ export default function WorkHistory() {
                     <View style={styles.bannerGlow} />
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, position: 'relative', zIndex: 10 }}>
                         <View style={styles.historyIconBg}>
-                            <History size={24} color="white" />
+                            <History size={24} color={COLORS.white} />
                         </View>
                         <View>
                             <Text style={styles.bannerLabel}>Lifetime Experience</Text>
@@ -154,15 +156,17 @@ export default function WorkHistory() {
                 {/* List Header */}
                 <View style={styles.listHeader}>
                     <Text style={styles.listTitle}>Execution Logs</Text>
-                    <Filter size={14} color="#334155" />
+                    <Filter size={14} color={COLORS.textTertiary} />
                 </View>
 
                 {/* List Content */}
                 <View style={{ minHeight: 400 }}>
                     {loading ? (
-                        <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color="#3b82f6" />
-                            <Text style={styles.loadingText}>Synchronizing Archive...</Text>
+                        <View style={{ gap: 16 }}>
+                            <JobCardSkeleton />
+                            <JobCardSkeleton />
+                            <JobCardSkeleton />
+                            <JobCardSkeleton />
                         </View>
                     ) : (
                         <FlashList
@@ -180,7 +184,7 @@ export default function WorkHistory() {
                             ListEmptyComponent={
                                 <View style={styles.emptyContainer}>
                                     <View style={styles.emptyIconBg}>
-                                        <Briefcase size={40} color="#1e293b" />
+                                        <Briefcase size={40} color={COLORS.borderStrong} />
                                     </View>
                                     <View style={{ alignItems: 'center' }}>
                                         <Text style={styles.emptyTitle}>No Records Found</Text>
@@ -197,33 +201,33 @@ export default function WorkHistory() {
 }
 
 const styles = StyleSheet.create({
-    searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(15, 23, 42, 0.5)', borderRadius: 20, borderWidth: 1, borderColor: '#1e293b', paddingHorizontal: 16, height: 56, marginBottom: 16 },
+    searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cardBg, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 16, height: 56, marginBottom: 16, ...SHADOWS.sm },
     searchIcon: { marginRight: 12 },
-    searchInput: { flex: 1, color: 'white', fontSize: 14 },
-    banner: { backgroundColor: 'rgba(79, 70, 229, 0.1)', borderRadius: 32, padding: 24, overflow: 'hidden', marginBottom: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-    bannerGlow: { position: 'absolute', top: -50, right: -50, width: 150, height: 150, backgroundColor: 'rgba(59, 130, 246, 0.1)', borderRadius: 999 },
-    historyIconBg: { width: 56, height: 56, borderRadius: 18, backgroundColor: '#2563eb', alignItems: 'center', justifyContent: 'center', shadowColor: '#2563eb', shadowOpacity: 0.4, shadowRadius: 10, elevation: 5 },
-    bannerLabel: { fontSize: 10, fontWeight: '900', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 },
-    bannerValue: { fontSize: 32, fontWeight: '900', color: 'white', fontStyle: 'italic' },
-    bannerSubLabel: { fontSize: 10, fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 },
+    searchInput: { flex: 1, color: COLORS.textPrimary, fontSize: 14 },
+    banner: { backgroundColor: COLORS.primary, borderRadius: 32, padding: 24, overflow: 'hidden', marginBottom: 24, borderWidth: 1, borderColor: COLORS.primaryDark, ...SHADOWS.md },
+    bannerGlow: { position: 'absolute', top: -50, right: -50, width: 150, height: 150, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 999 },
+    historyIconBg: { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(255, 255, 255, 0.2)', alignItems: 'center', justifyContent: 'center' },
+    bannerLabel: { fontSize: 10, fontWeight: '900', color: 'rgba(255, 255, 255, 0.7)', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 },
+    bannerValue: { fontSize: 32, fontWeight: '900', color: COLORS.white, fontStyle: 'italic' },
+    bannerSubLabel: { fontSize: 10, fontWeight: 'bold', color: 'rgba(255, 255, 255, 0.7)', textTransform: 'uppercase', letterSpacing: 1 },
     listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 8, marginBottom: 16 },
-    listTitle: { fontSize: 10, fontWeight: '900', color: '#475569', textTransform: 'uppercase', letterSpacing: 3 },
+    listTitle: { fontSize: 10, fontWeight: '900', color: COLORS.textTertiary, textTransform: 'uppercase', letterSpacing: 3 },
     loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 100, gap: 16 },
-    loadingText: { fontSize: 10, fontWeight: '900', color: 'rgba(59, 130, 246, 0.5)', textTransform: 'uppercase', letterSpacing: 2 },
-    historyCard: { backgroundColor: 'rgba(15, 23, 42, 0.4)', borderRadius: 28, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    briefcaseBg: { width: 52, height: 52, borderRadius: 18, backgroundColor: '#020617', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#1e293b' },
-    ticketBadge: { backgroundColor: 'rgba(59, 130, 246, 0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.1)' },
-    ticketText: { fontSize: 10, fontWeight: 'bold', color: '#3b82f6', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
-    dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#334155' },
-    dateText: { fontSize: 10, fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' },
-    modelName: { fontSize: 16, fontWeight: '900', color: 'white' },
-    verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(16, 185, 129, 0.05)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.1)' },
-    verifiedDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#10b981' },
-    verifiedText: { fontSize: 9, fontWeight: '900', color: '#10b981', textTransform: 'uppercase' },
-    taskCountText: { fontSize: 9, fontWeight: '900', color: '#475569', textTransform: 'uppercase' },
-    arrowBg: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#020617', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-    emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 80, opacity: 0.3 },
-    emptyIconBg: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#0f172a', alignItems: 'center', justifyContent: 'center', marginBottom: 24, borderWidth: 1, borderColor: '#1e293b' },
-    emptyTitle: { fontSize: 12, fontWeight: '900', color: '#475569', textTransform: 'uppercase', letterSpacing: 2 },
-    emptySub: { fontSize: 11, color: '#475569', marginTop: 4 }
+    loadingText: { fontSize: 10, fontWeight: '900', color: COLORS.textTertiary, textTransform: 'uppercase', letterSpacing: 2 },
+    historyCard: { backgroundColor: COLORS.cardBg, borderRadius: 28, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: COLORS.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', ...SHADOWS.sm },
+    briefcaseBg: { width: 52, height: 52, borderRadius: 18, backgroundColor: COLORS.cardBgAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+    ticketBadge: { backgroundColor: COLORS.primarySurface, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: COLORS.primary + '20' },
+    ticketText: { fontSize: 10, fontWeight: 'bold', color: COLORS.primary, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
+    dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: COLORS.borderStrong },
+    dateText: { fontSize: 10, fontWeight: 'bold', color: COLORS.textTertiary, textTransform: 'uppercase' },
+    modelName: { fontSize: 16, fontWeight: '900', color: COLORS.textPrimary },
+    verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.successBg, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, borderWidth: 1, borderColor: COLORS.success + '10' },
+    verifiedDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: COLORS.success },
+    verifiedText: { fontSize: 9, fontWeight: '900', color: COLORS.success, textTransform: 'uppercase' },
+    taskCountText: { fontSize: 9, fontWeight: '900', color: COLORS.textTertiary, textTransform: 'uppercase' },
+    arrowBg: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.cardBgAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+    emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 80, opacity: 0.5 },
+    emptyIconBg: { width: 80, height: 80, backgroundColor: COLORS.cardBgAlt, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 24, borderWidth: 1, borderColor: COLORS.border },
+    emptyTitle: { fontSize: 12, fontWeight: '900', color: COLORS.textTertiary, textTransform: 'uppercase', letterSpacing: 2 },
+    emptySub: { fontSize: 11, color: COLORS.textTertiary, marginTop: 4 }
 });

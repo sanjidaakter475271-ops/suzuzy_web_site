@@ -100,9 +100,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
         <View
             style={{
                 paddingTop: insets.top,
-                backgroundColor: COLORS.slate900,
+                backgroundColor: COLORS.headerBg,
                 borderBottomWidth: 1,
-                borderBottomColor: COLORS.darkBorder,
+                borderBottomColor: COLORS.primaryDark,
             }}
         >
             <View style={{ height: 60, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.md }}>
@@ -112,9 +112,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
                         style={{ padding: SPACING.sm, marginRight: SPACING.sm, borderRadius: 12 }}
                     >
                         {(onBack || showBack) ? (
-                            <ChevronLeft size={22} color={COLORS.primary} strokeWidth={2.5} />
+                            <ChevronLeft size={22} color={COLORS.textOnHeader} strokeWidth={2.5} />
                         ) : (
-                            <Home size={20} color={isHome ? COLORS.primary : COLORS.slate500} />
+                            <Home size={20} color={isHome ? COLORS.textOnHeader : "rgba(255,255,255,0.6)"} />
                         )}
                     </TouchableOpacity>
 
@@ -122,11 +122,12 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
                         <Text style={{
                             fontSize: isHome ? 10 : 14,
                             fontWeight: isHome ? '900' : 'bold',
-                            color: isHome ? COLORS.primaryLight : COLORS.slate500,
+                            color: COLORS.textOnHeader,
                             textTransform: isHome ? 'uppercase' : 'none',
                             letterSpacing: isHome ? 2 : 0,
                             fontStyle: isHome ? 'italic' : 'normal',
                             fontFamily: isHome ? TYPOGRAPHY.families.black : TYPOGRAPHY.families.bold,
+                            opacity: isHome ? 0.9 : 1,
                         }}>
                             Workshop
                         </Text>
@@ -134,13 +135,13 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
                         {breadcrumbs ? (
                             breadcrumbs.map((bc, idx) => (
                                 <React.Fragment key={idx}>
-                                    <ChevronRight size={12} color={COLORS.slate700} style={{ marginHorizontal: 4 }} />
+                                    <ChevronRight size={12} color="rgba(255,255,255,0.4)" style={{ marginHorizontal: 4 }} />
                                     <Text
                                         numberOfLines={1}
                                         style={{
                                             fontSize: 14,
                                             fontWeight: '800',
-                                            color: idx === breadcrumbs.length - 1 ? COLORS.slate200 : COLORS.primary,
+                                            color: idx === breadcrumbs.length - 1 ? COLORS.white : "rgba(255,255,255,0.8)",
                                             fontFamily: TYPOGRAPHY.families.bold,
                                         }}
                                     >
@@ -151,13 +152,13 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
                         ) : (
                             !isHome && (
                                 <>
-                                    <ChevronRight size={14} color={COLORS.slate700} style={{ marginHorizontal: 4 }} />
+                                    <ChevronRight size={14} color="rgba(255,255,255,0.4)" style={{ marginHorizontal: 4 }} />
                                     <Text
                                         numberOfLines={1}
                                         style={{
                                             fontSize: 14,
                                             fontWeight: '900',
-                                            color: COLORS.primaryLight,
+                                            color: COLORS.white,
                                             fontFamily: TYPOGRAPHY.families.bold,
                                         }}
                                     >
@@ -174,12 +175,12 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
                     style={{
                         padding: 10,
                         borderRadius: 999,
-                        backgroundColor: isNotifications ? COLORS.infoBg : 'transparent',
+                        backgroundColor: isNotifications ? 'rgba(255,255,255,0.1)' : 'transparent',
                         borderWidth: isNotifications ? 1 : 0,
-                        borderColor: COLORS.darkBorder
+                        borderColor: 'rgba(255,255,255,0.2)'
                     }}
                 >
-                    <Bell size={24} color={isNotifications ? COLORS.primary : COLORS.slate500} />
+                    <Bell size={24} color={COLORS.textOnHeader} />
                     {hasUnread && (
                         <View style={{
                             position: 'absolute',
@@ -190,7 +191,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
                             backgroundColor: COLORS.danger,
                             borderRadius: 5,
                             borderWidth: 2,
-                            borderColor: COLORS.slate900
+                            borderColor: COLORS.headerBg
                         }} />
                     )}
                 </TouchableOpacity>

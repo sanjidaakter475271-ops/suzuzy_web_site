@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView, Platform, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Platform, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { KeyRound, Mail, ArrowRight, ShieldCheck, Zap, Fingerprint, AlertCircle } from 'lucide-react-native';
 import { useAuth } from '../../lib/auth';
 import { MotiView, AnimatePresence } from 'moti';
 import { BiometricService } from '../../services/biometric';
+import { MaterialCircularProgress } from '../../components/ui/Loading';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
 
 export default function Login() {
@@ -120,7 +121,7 @@ export default function Login() {
               style={styles.biometricOverlay}
             >
               <View style={styles.biometricOverlayContent}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
+                <MaterialCircularProgress size={48} />
                 <Text style={styles.biometricOverlayText}>Biometric Authentication...</Text>
               </View>
             </MotiView>
@@ -225,7 +226,7 @@ export default function Login() {
                     style={styles.primaryButton}
                   >
                     {loading && !hasBiometrics ? (
-                      <ActivityIndicator color={COLORS.white} />
+                      <MaterialCircularProgress size={24} color={COLORS.white} />
                     ) : (
                       <View style={styles.buttonInner}>
                         <Text style={styles.primaryButtonText}>INITIALIZE SESSION</Text>
@@ -241,7 +242,7 @@ export default function Login() {
                       style={styles.secondaryButton}
                     >
                       {loading ? (
-                        <ActivityIndicator color={COLORS.primary} />
+                        <MaterialCircularProgress size={24} color={COLORS.primary} />
                       ) : (
                         <View style={styles.buttonInner}>
                           <Fingerprint size={16} color={COLORS.primary} />

@@ -1,0 +1,333 @@
+# Premium Light Theme Redesign: Deep Blue & Ash
+
+Complete color scheme migration from dark mode to a premium light theme with deep blue accents and ash/grey backgrounds. Also includes realtime server hardening for always-on connectivity.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Auth Screens (Login, Register, Splash, Welcome):** These currently have dramatic dark gradients that create a strong first impression. We have two options:
+> 1. **Keep dark auth screens** — Login/splash stays dark/dramatic, main app is light. This creates a nice contrast.
+> 2. **Full light everywhere** — Auth screens also become light with deep blue accents.
+>
+> **Which do you prefer?**
+
+> [!IMPORTANT]
+> **TopBar (Header) Color:** Two premium options:
+> 1. **Deep Navy Blue header** (`#1e3a8a`) with white text — Bold, authoritative, like a banking app.
+> 2. **White header** with deep blue text/icons — Clean, minimalist, like Apple's design.
+>
+> **Recommendation:** Deep navy header for a more distinctive, branded feel. Which do you prefer?
+
+---
+
+## Color Palette: "Royal Blue & Ash"
+
+### Current (Dark Theme) → New (Light Theme)
+
+| Element | Current | New |
+|---|---|---|
+| **Page Background** | `#020617` (near black) | `#F0F2F5` (cool ash grey) |
+| **Card Background** | `#0d1326` / `#0a0f1c` | `#FFFFFF` (white) |
+| **Card Alt/Nested** | `rgba(15,23,42,0.4)` | `#F8FAFC` (off-white) |
+| **Header/TopBar** | `#0f172a` (slate-900) | `#1e3a8a` (deep navy blue) |
+| **Tab Bar** | `#0f172a` (slate-900) | `#FFFFFF` (white) |
+| **Input Background** | `#131b2f` | `#F1F5F9` (cool grey) |
+| **Primary Text** | `#FFFFFF` (white) | `#0f172a` (dark navy) |
+| **Secondary Text** | `#94a3b8` (slate-400) | `#475569` (slate-600) |
+| **Tertiary Text** | `#64748b` (slate-500) | `#94a3b8` (slate-400) |
+| **Border** | `#1e293b` / `rgba(30,41,59,0.5)` | `#E2E8F0` (slate-200) |
+| **Border Strong** | - | `#CBD5E1` (slate-300) |
+| **Primary Accent** | `#3b82f6` (blue-500) | `#1e40af` (blue-800, deeper) |
+| **Primary Light** | `#60a5fa` | `#3b82f6` (blue-500) |
+| **Primary Surface** | `rgba(59,130,246,0.1)` | `#DBEAFE` (blue-100) |
+| **Success** | `#22c55e` | `#16a34a` (green-600, darker for readability) |
+| **Warning** | `#eab308` | `#d97706` (amber-600, richer) |
+| **Danger** | `#ef4444` | `#dc2626` (red-600) |
+| **StatusBar** | `style="light"` (white icons) | `style="dark"` (dark icons) |
+
+### Visual Design Principles
+- **White cards** floating on ash grey background with subtle shadows → depth
+- **Deep navy header** creates strong visual anchor at top
+- **Consistent 1px borders** in `#E2E8F0` for subtle card definition
+- **Shadows** replace colored borders as the primary depth mechanism
+- **Status colors** are deeper/richer for readability on white backgrounds
+
+---
+
+## Proposed Changes
+
+### Phase 1: Foundation (4 files)
+
+---
+
+#### [MODIFY] [theme.ts](file:///d:/suzuzy_web_site/servicestuff-rn/constants/theme.ts)
+
+Redefine ALL color tokens. Add new semantic keys for the light theme while keeping backwards-compatible key names:
+
+```diff
+ // Brand Colors
+-primary: "#3b82f6",
+-primaryDark: "#2563eb",
+-primaryLight: "#60a5fa",
++primary: "#1e40af",
++primaryDark: "#1e3a8a",
++primaryLight: "#3b82f6",
+
++// Semantic - Page & Surface
++pageBg: "#F0F2F5",
++cardBg: "#FFFFFF",
++cardBgAlt: "#F8FAFC",
++headerBg: "#1e3a8a",
++tabBarBg: "#FFFFFF",
++inputBg: "#F1F5F9",
++primarySurface: "#DBEAFE",
+
++// Semantic - Text
++textPrimary: "#0f172a",
++textSecondary: "#475569",
++textTertiary: "#94a3b8",
++textOnHeader: "#FFFFFF",
++textOnPrimary: "#FFFFFF",
+
++// Semantic - Border
++border: "#E2E8F0",
++borderStrong: "#CBD5E1",
++divider: "#F1F5F9",
+
+ // Status Colors (adjusted for light bg readability)
+-success: "#22c55e",
+-warning: "#eab308",
+-danger: "#ef4444",
++success: "#16a34a",
++warning: "#d97706",
++danger: "#dc2626",
+```
+
+Also update SHADOWS to use proper light-mode elevation:
+```
+sm: { shadowColor: "#94a3b8", shadowOpacity: 0.15, elevation: 2 }
+md: { shadowColor: "#64748b", shadowOpacity: 0.12, elevation: 4 }
+lg: { shadowColor: "#1e3a8a", shadowOpacity: 0.08, elevation: 8 }
+```
+
+#### [MODIFY] [_layout.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/app/_layout.tsx) (Root)
+
+- Change `StatusBar style` from `"light"` to `"dark"` and `backgroundColor` to `COLORS.pageBg`
+
+#### [MODIFY] [_layout.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/app/(tabs)/_layout.tsx) (Tabs)
+
+- Tab bar: `backgroundColor: COLORS.tabBarBg` (white)
+- Tab bar border: `borderTopColor: COLORS.border`
+- Active tint: `COLORS.primary` (deep blue)
+- Inactive tint: `COLORS.textTertiary` (ash grey)
+
+#### [MODIFY] [TopBar.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/components/TopBar.tsx)
+
+- Background: `COLORS.headerBg` (deep navy blue)
+- Text/icons: `COLORS.textOnHeader` (white)
+- Border bottom: `COLORS.primaryDark`
+- Bell icon: white, notification dot stays red
+
+---
+
+### Phase 2: Main Tab Screens (5 files)
+
+Each screen follows the same pattern:
+- `backgroundColor: '#020617'` → `COLORS.pageBg`
+- Card backgrounds → `COLORS.cardBg` with shadow
+- Text `color: COLORS.white` → `COLORS.textPrimary`
+- Text `color: COLORS.slate500` → `COLORS.textSecondary`
+- Border `#1e293b` → `COLORS.border`
+- All `rgba(15,23,42,...)` → `COLORS.cardBgAlt` or `COLORS.cardBg`
+
+---
+
+#### [MODIFY] [index.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/app/(tabs)/index.tsx) (Dashboard)
+
+- Page bg → ash grey
+- Stat cards → white with shadow
+- Job list items → white cards on ash
+- Accent gradient spots → subtle blue tints
+- Chart/progress colors remain vibrant
+
+#### [MODIFY] [attendance.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/app/(tabs)/attendance.tsx)
+
+- Action card → white bg with subtle blue border
+- Calendar → white card, day buttons use light tints
+- Timer text → dark on light
+- Clock-in/out buttons → keep bold colors (orange, blue)
+
+#### [MODIFY] [jobs.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/app/(tabs)/jobs.tsx)
+
+- Job list → white cards on ash bg
+- Filter tabs → light bg with blue active indicator
+- Status badges → work on light bg (already fixed)
+
+#### [MODIFY] [profile.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/app/(tabs)/profile.tsx)
+
+- Header gradient → subtle blue gradient on white
+- Avatar container → white with blue accent border
+- Menu items → white bg, dark text
+- Stats → white cards with colored icons
+
+#### [MODIFY] [settings.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/app/(tabs)/settings.tsx)
+
+- Setting groups → white cards
+- Toggle switches → blue active
+- Input fields → light grey bg
+- Modals → white bg
+
+---
+
+### Phase 3: Sub-Screens (5 files)
+
+#### [MODIFY] [job/[id].tsx](file:///d:/suzuzy_web_site/servicestuff-rn/app/job/[id].tsx)
+
+- Detail view bg → ash
+- Info cards → white
+- Checklist items → white with borders
+- Action buttons → keep blue/green/orange accents
+
+#### [MODIFY] [notifications.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/app/notifications.tsx)
+
+- Notification list → white cards on ash
+- Unread indicator → blue dot
+- Read items → slightly grey bg
+
+#### [MODIFY] [parts-request.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/app/parts-request.tsx)
+
+- Part items → white cards
+- Quantity badges → light bg with border
+- Category icons → blue tinted bg
+
+#### [MODIFY] [performance.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/app/performance.tsx)
+
+- Charts → colored bars on white bg
+- Progress bars → light grey track, blue fill
+- Badge cards → white with colored accents
+
+#### [MODIFY] [work-history.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/app/work-history.tsx)
+
+- History items → white cards on ash
+- Date headers → dark text on light
+- Stats summary → white card with blue accent
+
+---
+
+### Phase 4: Auth Screens (5 files)
+
+> [!NOTE]
+> Auth screens can optionally KEEP the dark dramatic style for a strong first impression. If the user wants full light mode, apply the same pattern as above.
+
+#### [MODIFY] [login.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/app/(auth)/login.tsx)
+#### [MODIFY] [register.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/app/(auth)/register.tsx)
+#### [MODIFY] [splash.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/app/(auth)/splash.tsx)
+#### [MODIFY] [welcome.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/app/(auth)/welcome.tsx)
+#### [MODIFY] [_layout.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/app/(auth)/_layout.tsx)
+
+---
+
+### Phase 5: Components (9 files)
+
+#### [MODIFY] [ErrorBoundary.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/components/ErrorBoundary.tsx)
+- Error screen bg → ash, error card → white with red accent
+
+#### [MODIFY] [OfflineBanner.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/components/OfflineBanner.tsx)
+- Banner → amber/warning bg on light
+
+#### [MODIFY] [PermissionManager.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/components/PermissionManager.tsx)
+- Overlay → light bg, permission card → white
+
+#### [MODIFY] [PartsSelectionModal.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/components/PartsSelectionModal.tsx)
+- Modal → white bg, search input → light grey
+
+#### [MODIFY] [RequisitionCart.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/components/RequisitionCart.tsx)
+- Cart items → white cards
+
+#### [MODIFY] [Skeleton.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/components/Skeleton.tsx)
+- Skeleton shimmer → light grey pulse on white
+
+#### [MODIFY] [MyJobCard.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/components/MyJobCard.tsx)
+- Card → white bg with shadow
+
+#### [MODIFY] [StatusBadge.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/components/ui/StatusBadge.tsx)
+- Badge backgrounds → lighter tints for light mode
+
+#### [NO CHANGE] [BarcodeScanner.tsx](file:///d:/suzuzy_web_site/servicestuff-rn/components/BarcodeScanner.tsx)
+- Camera overlay MUST remain dark for visibility
+
+---
+
+### Phase 6: Realtime Server Hardening (1 file)
+
+#### [MODIFY] [socket.ts](file:///d:/suzuzy_web_site/servicestuff-rn/services/socket.ts)
+
+Make the realtime connection "always on":
+
+1. **Infinite reconnection:**
+```diff
+-reconnectionAttempts: 10,
+-reconnectionDelay: 2000,
++reconnectionAttempts: Infinity,
++reconnectionDelay: 1000,
++reconnectionDelayMax: 30000,
+```
+
+2. **AppState awareness** — Reconnect when app comes to foreground:
+```typescript
+import { AppState } from 'react-native';
+
+// In connect():
+AppState.addEventListener('change', (state) => {
+  if (state === 'active' && this.currentStaffId && !this.socket?.connected) {
+    this.reconnect();
+  }
+});
+```
+
+3. **Periodic health check** — Ping every 30s, reconnect if dead:
+```typescript
+private healthCheckInterval: NodeJS.Timeout | null = null;
+
+startHealthCheck() {
+  this.healthCheckInterval = setInterval(() => {
+    if (this.currentStaffId && !this.socket?.connected) {
+      this.reconnect();
+    }
+  }, 30000);
+}
+```
+
+4. **Network listener** — Reconnect when internet comes back:
+```typescript
+import NetInfo from '@react-native-community/netinfo';
+
+NetInfo.addEventListener(state => {
+  if (state.isConnected && this.currentStaffId && !this.socket?.connected) {
+    this.reconnect();
+  }
+});
+```
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> 1. **Auth screen style:** Keep dark/dramatic auth screens OR go fully light?
+> 2. **TopBar style:** Deep navy blue header OR white header with blue accents?
+> 3. **Accent color intensity:** Should action buttons (Clock In, Start Shift) keep their bold orange/blue, or should they be more muted for the light theme?
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- Run `npx tsc --noEmit` after each phase to ensure no type errors
+- Visual check each screen on both Android and iOS simulators
+
+### Manual Verification
+- Test in bright daylight conditions (the primary use case for technicians)
+- Verify text contrast ratios meet WCAG AA (4.5:1 for normal text)
+- Check socket reconnection by toggling airplane mode on/off
+- Verify the app reconnects socket when brought from background to foreground

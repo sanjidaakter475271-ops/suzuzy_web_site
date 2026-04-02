@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { User, Mail, Lock, ArrowLeft, Zap, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react-native';
 import { useAuth } from '../../lib/auth';
 import { MotiView, AnimatePresence } from 'moti';
+import { MaterialCircularProgress } from '../../components/ui/Loading';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
 
 export default function Register() {
@@ -193,7 +194,7 @@ export default function Register() {
                     style={styles.primaryButton}
                   >
                     {loading ? (
-                      <ActivityIndicator color={COLORS.white} />
+                      <MaterialCircularProgress size={24} color={COLORS.white} />
                     ) : (
                       <View style={styles.buttonInner}>
                         <Text style={styles.primaryButtonText}>COMPLETE REGISTRATION</Text>

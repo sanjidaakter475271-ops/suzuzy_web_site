@@ -83,7 +83,7 @@ export class ErrorBoundary extends Component<Props, State> {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.slate950,
+    backgroundColor: COLORS.pageBg,
   },
   content: {
     flex: 1,
@@ -103,14 +103,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: TYPOGRAPHY.sizes.xxl,
     fontFamily: TYPOGRAPHY.families.bold,
-    color: COLORS.white,
+    color: COLORS.textPrimary,
     marginBottom: SPACING.md,
     textAlign: 'center',
   },
   message: {
     fontSize: TYPOGRAPHY.sizes.md,
     fontFamily: TYPOGRAPHY.families.regular,
-    color: COLORS.slate400,
+    color: COLORS.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: SPACING.xl,
@@ -118,10 +118,10 @@ const styles = StyleSheet.create({
   errorBox: {
     width: '100%',
     padding: SPACING.md,
-    backgroundColor: COLORS.slate900,
+    backgroundColor: COLORS.cardBgAlt,
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.slate800,
+    borderColor: COLORS.border,
     marginBottom: SPACING.xl,
   },
   errorText: {
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.slate800,
+    borderColor: COLORS.border,
     gap: SPACING.sm,
   },
   buttonText: {

@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react-native';
 import { MotiView } from 'moti';
 import { JobCard } from '../types';
 import { StatusBadge } from './ui/StatusBadge';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
 
 interface MyJobCardProps {
     job: JobCard;
@@ -19,15 +20,15 @@ const MyJobCard = React.memo(({ job, onClick, isInitialMount }: MyJobCardProps) 
     >
         <TouchableOpacity
             onPress={() => onClick(job.id)}
-            style={{ backgroundColor: 'rgba(15, 23, 42, 0.4)', borderColor: 'rgba(30, 41, 59, 1)', borderWidth: 1, padding: 16, borderRadius: 24, marginBottom: 16 }}
+            style={{ backgroundColor: 'rgba(30, 64, 175, 0.12)', borderColor: 'rgba(30, 64, 175, 0.25)', borderWidth: 1, padding: 16, borderRadius: 24, marginBottom: 16, ...SHADOWS.sm }}
             activeOpacity={0.8}
         >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                 <View>
-                    <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
+                    <Text style={{ fontSize: 10, fontWeight: 'bold', color: COLORS.textTertiary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
                         {job.ticket?.ticket_number || 'ST-0000'}
                     </Text>
-                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#f1f5f9' }}>
+                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: COLORS.textPrimary }}>
                         {job.vehicle?.model_name || 'Vehicle'}
                     </Text>
                 </View>
@@ -35,28 +36,28 @@ const MyJobCard = React.memo(({ job, onClick, isInitialMount }: MyJobCardProps) 
             </View>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-                <View style={{ backgroundColor: '#1e293b', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#334155', marginRight: 8 }}>
-                    <Text style={{ fontSize: 10, color: '#cbd5e1', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                <View style={{ backgroundColor: COLORS.cardBgAlt, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: COLORS.border, marginRight: 8 }}>
+                    <Text style={{ fontSize: 10, color: COLORS.textSecondary, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
                         {job.vehicle?.license_plate || 'N/A'}
                     </Text>
                 </View>
-                <Text style={{ fontSize: 10, color: '#64748b' }}>
+                <Text style={{ fontSize: 10, color: COLORS.textTertiary }}>
                     {job.vehicle?.color || 'N/A'}
                 </Text>
             </View>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(30, 41, 59, 0.5)' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.divider }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#1e293b', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#334155' }}>
-                        <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#94a3b8' }}>
+                    <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.cardBgAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border }}>
+                        <Text style={{ fontSize: 10, fontWeight: 'bold', color: COLORS.textSecondary }}>
                             {job.vehicle?.customer_name?.charAt(0) || '?'}
                         </Text>
                     </View>
-                    <Text style={{ fontSize: 12, color: '#94a3b8', marginLeft: 8 }}>
+                    <Text style={{ fontSize: 12, color: COLORS.textSecondary, marginLeft: 8 }}>
                         {job.vehicle?.customer_name || 'Anonymous'}
                     </Text>
                 </View>
-                <ChevronRight size={16} color="#475569" />
+                <ChevronRight size={16} color={COLORS.textTertiary} />
             </View>
         </TouchableOpacity>
     </MotiView>

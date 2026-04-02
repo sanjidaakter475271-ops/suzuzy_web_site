@@ -13,6 +13,7 @@ import { TechnicianAPI } from '../../services/api';
 import { JobCard, JobStatus, RoutePath } from '../../types';
 import { OfflineService } from '../../services/offline';
 import { SocketService } from '../../services/socket';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
 
 export default function MyJobs() {
     const router = useRouter();
@@ -122,7 +123,7 @@ export default function MyJobs() {
     }, []);
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#020617' }}>
+        <View style={{ flex: 1, backgroundColor: COLORS.pageBg }}>
             <TopBar title="My Jobs" />
 
             <AnimatePresence>
@@ -131,10 +132,10 @@ export default function MyJobs() {
                         from={{ height: 0, opacity: 0 }}
                         animate={{ height: 40, opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', borderBottomWidth: 1, borderBottomColor: 'rgba(245, 158, 11, 0.2)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                        style={{ backgroundColor: COLORS.warningBg, borderBottomWidth: 1, borderBottomColor: COLORS.warning + '20', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                     >
-                        <WifiOff size={14} color="#f59e0b" />
-                        <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 1 }}>Offline Mode - Showing Cached Data</Text>
+                        <WifiOff size={14} color={COLORS.warning} />
+                        <Text style={{ fontSize: 10, fontWeight: 'bold', color: COLORS.warning, textTransform: 'uppercase', letterSpacing: 1 }}>Offline Mode - Showing Cached Data</Text>
                     </MotiView>
                 )}
             </AnimatePresence>
@@ -142,28 +143,28 @@ export default function MyJobs() {
             <View style={{ padding: 16, gap: 16 }}>
                 {/* Search Bar */}
                 <View style={{ position: 'relative' }}>
-                    <Search style={{ position: 'absolute', left: 12, top: 14, zIndex: 10 }} size={18} color="#64748b" />
+                    <Search style={{ position: 'absolute', left: 12, top: 14, zIndex: 10 }} size={18} color={COLORS.textTertiary} />
                     <TextInput
                         placeholder="Search by model, plate, or ticket..."
-                        placeholderTextColor="#475569"
+                        placeholderTextColor={COLORS.textTertiary}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                         style={{
-                            backgroundColor: '#0f172a',
+                            backgroundColor: COLORS.inputBg,
                             borderWidth: 1,
-                            borderColor: 'rgba(30, 41, 59, 0.5)',
+                            borderColor: COLORS.border,
                             borderRadius: 12,
                             paddingVertical: 12,
                             paddingLeft: 40,
                             paddingRight: 16,
-                            color: 'white',
+                            color: COLORS.textPrimary,
                             fontSize: 14
                         }}
                     />
                 </View>
 
                 {/* Tabs */}
-                <View style={{ flexDirection: 'row', backgroundColor: 'rgba(15, 23, 42, 0.5)', padding: 4, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(30, 41, 59, 0.5)' }}>
+                <View style={{ flexDirection: 'row', backgroundColor: COLORS.cardBg, padding: 4, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm }}>
                     {tabs.map(tab => (
                         <TouchableOpacity
                             key={tab.id}
@@ -173,10 +174,10 @@ export default function MyJobs() {
                                 paddingVertical: 8,
                                 alignItems: 'center',
                                 borderRadius: 8,
-                                backgroundColor: activeTab === tab.id ? '#2563eb' : 'transparent',
+                                backgroundColor: activeTab === tab.id ? COLORS.primary : 'transparent',
                             }}
                         >
-                            <Text style={{ fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1, color: activeTab === tab.id ? 'white' : '#64748b' }}>
+                            <Text style={{ fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1, color: activeTab === tab.id ? COLORS.white : COLORS.textTertiary }}>
                                 {tab.label}
                             </Text>
                         </TouchableOpacity>
@@ -208,21 +209,21 @@ export default function MyJobs() {
                         estimatedItemSize={140}
                         keyExtractor={(item) => item.id}
                         refreshControl={
-                            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />
+                            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
                         }
                         ListEmptyComponent={
                             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 16 }}>
-                                <View style={{ width: 64, height: 64, backgroundColor: '#0f172a', borderRadius: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#1e293b' }}>
-                                    <Briefcase size={32} color="#334155" />
+                                <View style={{ width: 64, height: 64, backgroundColor: COLORS.cardBgAlt, borderRadius: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border }}>
+                                    <Briefcase size={32} color={COLORS.textTertiary} />
                                 </View>
                                 <View style={{ alignItems: 'center' }}>
-                                    <Text style={{ color: '#e2e8f0', fontWeight: 'bold', fontSize: 16 }}>No Jobs Found</Text>
-                                    <Text style={{ color: '#64748b', fontSize: 14, textAlign: 'center', paddingHorizontal: 40, marginTop: 4 }}>
+                                    <Text style={{ color: COLORS.textPrimary, fontWeight: 'bold', fontSize: 16 }}>No Jobs Found</Text>
+                                    <Text style={{ color: COLORS.textSecondary, fontSize: 14, textAlign: 'center', paddingHorizontal: 40, marginTop: 4 }}>
                                         {searchQuery ? "No jobs match your search criteria." : "You don't have any jobs assigned to you yet."}
                                     </Text>
                                 </View>
                                 <TouchableOpacity onPress={() => { setSearchQuery(''); setActiveTab('all'); }}>
-                                    <Text style={{ color: '#3b82f6', fontSize: 14, fontWeight: 'bold' }}>Clear filters</Text>
+                                    <Text style={{ color: COLORS.primary, fontSize: 14, fontWeight: 'bold' }}>Clear filters</Text>
                                 </TouchableOpacity>
                             </View>
                         }

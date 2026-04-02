@@ -1,5 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import * as SecureStore from 'expo-secure-store';
+import { AppState, AppStateStatus } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
 import { ENV } from '../lib/env';
 
 const SOCKET_URL = ENV.REALTIME_URL;
@@ -15,14 +17,67 @@ export class SocketService {
     private socket: Socket | null = null;
     private eventQueue: QueuedEvent[] = [];
     private currentStaffId: string | null = null;
+    private healthCheckInterval: NodeJS.Timeout | null = null;
+    private appStateSubscription: any = null;
+    private netInfoUnsubscribe: any = null;
 
-    private constructor() { }
+    private constructor() {
+        this.setupAppStateListener();
+        this.setupNetworkListener();
+        this.startHealthCheck();
+    }
 
     static getInstance(): SocketService {
         if (!SocketService.instance) {
             SocketService.instance = new SocketService();
         }
         return SocketService.instance;
+    }
+
+    private setupAppStateListener() {
+        if (this.appStateSubscription) return;
+
+        this.appStateSubscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+            if (nextAppState === 'active') {
+                console.log('[SOCKET] App came to foreground, verifying connection...');
+                if (this.currentStaffId && (!this.socket || !this.socket.connected)) {
+                    this.connect(this.currentStaffId);
+                } else if (this.socket?.connected) {
+                    // Manual ping to ensure line is alive
+                    console.log('[SOCKET] Pinging server for health check...');
+                    this.socket.emit('heartbeat:manual', { timestamp: Date.now() });
+                }
+            } else if (nextAppState === 'background') {
+                console.log('[SOCKET] App in background, maintaining socket heartbeat.');
+            }
+        });
+    }
+
+    private setupNetworkListener() {
+        if (this.netInfoUnsubscribe) return;
+
+        this.netInfoUnsubscribe = NetInfo.addEventListener(state => {
+            if (state.isConnected && this.currentStaffId && (!this.socket || !this.socket.connected)) {
+                console.log('[SOCKET] Network restored, attempting reconnection...');
+                this.connect(this.currentStaffId);
+            }
+        });
+    }
+
+    private startHealthCheck() {
+        if (this.healthCheckInterval) clearInterval(this.healthCheckInterval);
+
+        this.healthCheckInterval = setInterval(() => {
+            if (this.currentStaffId) {
+                if (!this.socket || !this.socket.connected) {
+                    console.log('[SOCKET] Health check: socket disconnected, retrying...');
+                    this.connect(this.currentStaffId);
+                } else {
+                    // Every 2 cycles, do a manual heartbeat emit to keep connection warm
+                    this.socket.emit('heartbeat:keepalive', { staffId: this.currentStaffId });
+                }
+            }
+        }, 15000); // Check every 15 seconds for stability
     }
 
     async connect(staffId: string) {
@@ -38,21 +93,25 @@ export class SocketService {
 
         // If socket exists but disconnected, try to update auth and connect
         if (this.socket) {
+            console.log('[SOCKET] Connecting existing instance...');
             this.socket.auth = { token };
             this.socket.connect();
             return;
         }
 
+        console.log('[SOCKET] Initializing new connection to:', SOCKET_URL);
         this.socket = io(SOCKET_URL, {
             auth: { token },
             transports: ['websocket'],
             reconnection: true,
-            reconnectionAttempts: 10,
-            reconnectionDelay: 2000,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 500,
+            reconnectionDelayMax: 5000, // Very aggressive reconnection
+            timeout: 10000,
         });
 
         this.socket.on('connect', () => {
-            console.log('Socket connected:', this.socket?.id);
+            console.log('Socket connected successfully! ID:', this.socket?.id);
             if (this.currentStaffId) {
                 this.socket?.emit('join:technician', this.currentStaffId);
             }
@@ -61,6 +120,11 @@ export class SocketService {
 
         this.socket.on('disconnect', (reason) => {
             console.log('Socket disconnected:', reason);
+            if (reason === 'io server disconnect' || reason === 'transport close' || reason === 'ping timeout') {
+                // Unexpected disconnection, attempt manual recovery
+                console.log('[SOCKET] Attempting immediate manual reconnection...');
+                this.socket?.connect();
+            }
         });
 
         this.socket.on('connect_error', (err) => {

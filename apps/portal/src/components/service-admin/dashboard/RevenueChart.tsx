@@ -43,6 +43,12 @@ interface RevenueChartProps {
 const RevenueChart: React.FC<RevenueChartProps> = ({ data = [] }) => {
     const [range, setRange] = React.useState('6m');
 
+    const filteredData = React.useMemo(() => {
+        if (!data || data.length === 0) return [];
+        const count = range === '1y' ? 12 : range === '6m' ? 6 : 3;
+        return data.slice(-count);
+    }, [data, range]);
+
     return (
         <div className="bg-white dark:bg-[#080809] p-8 rounded-[2.5rem] shadow-card border border-surface-border dark:border-white/5 transition-all group hover:border-brand/20 h-full flex flex-col">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
@@ -74,9 +80,9 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ data = [] }) => {
             </div>
 
             <div className="flex-1 min-h-[300px] w-full">
-                {data.length > 0 ? (
+                {filteredData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <AreaChart data={filteredData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#C75B12" stopOpacity={0.2} />

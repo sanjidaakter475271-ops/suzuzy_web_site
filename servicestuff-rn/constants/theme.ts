@@ -1,8 +1,8 @@
 export const COLORS = {
   // Brand Colors
-  primary: "#3b82f6",
-  primaryDark: "#2563eb",
-  primaryLight: "#60a5fa",
+  primary: "#1e40af",
+  primaryDark: "#1e3a8a",
+  primaryLight: "#3b82f6",
 
   // Neutral Colors
   white: "#ffffff",
@@ -18,7 +18,28 @@ export const COLORS = {
   slate900: "#0f172a",
   slate950: "#020617",
 
-  // Status Colors
+  // Semantic - Page & Surface
+  pageBg: "#020617",
+  cardBg: "#0d1326",
+  cardBgAlt: "rgba(15, 23, 42, 0.4)",
+  headerBg: "#0f172a",
+  tabBarBg: "#0f172a",
+  inputBg: "#131b2f",
+  primarySurface: "rgba(30, 58, 138, 0.2)",
+
+  // Semantic - Text
+  textPrimary: "#FFFFFF",
+  textSecondary: "#94a3b8",
+  textTertiary: "#64748b",
+  textOnHeader: "#FFFFFF",
+  textOnPrimary: "#FFFFFF",
+
+  // Semantic - Border
+  border: "#1e293b",
+  borderStrong: "#334155",
+  divider: "rgba(30, 41, 59, 0.5)",
+
+  // Status Colors (adjusted for dark bg readability)
   success: "#22c55e",
   successBg: "rgba(34, 197, 94, 0.1)",
   warning: "#eab308",
@@ -33,6 +54,10 @@ export const COLORS = {
   darkCard: "#0d1326",
   darkInput: "#131b2f",
   darkBorder: "rgba(30, 41, 59, 0.5)",
+
+  // Accent Color (Premium Orange)
+  accent: "#f97316",
+  accentSurface: "rgba(249, 115, 22, 0.15)",
 };
 
 export const SPACING = {

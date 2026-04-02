@@ -6,18 +6,18 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#020617"
+      "backgroundColor": "#F0F2F5"
     },
     "android": {
       "package": "com.suzuki.servicepro",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#020617"
+        "backgroundColor": "#F0F2F5"
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
