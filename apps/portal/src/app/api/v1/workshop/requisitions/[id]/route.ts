@@ -49,9 +49,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             const reqItem = await tx.service_requisitions.findFirst({
                 where: {
                     id: requisitionId,
-                    job_cards: {
-                        dealer_id: dealerId
-                    }
+                    OR: [
+                        { job_cards: { dealer_id: dealerId } },
+                        { service_staff: { dealer_id: dealerId } }
+                    ]
                 },
                 include: { products: true }
             });

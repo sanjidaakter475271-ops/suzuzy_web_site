@@ -137,15 +137,6 @@ export default function AttendanceDashboardPage() {
                                     />
                                 </PopoverContent>
                             </Popover>
-
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setSelectedDate(new Date())}
-                                className="h-8 px-2 text-[10px] font-black uppercase tracking-widest text-brand hover:bg-brand/10 mx-1 rounded-md"
-                            >
-                                Today
-                            </Button>
                         </div>
 
                         <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1" />

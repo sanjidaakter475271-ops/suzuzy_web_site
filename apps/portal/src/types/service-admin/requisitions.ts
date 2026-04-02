@@ -15,9 +15,14 @@ export interface RequisitionGroup {
     technicianId: string;
     technicianName: string;
     technicianAvatar?: string;
+    customerName: string;
+    customerId?: string;
+    problemType: string;
     status: 'pending' | 'approved' | 'rejected' | 'issued';
     items: RequisitionItem[];
     createdAt: string;
     updatedAt: string;
     totalAmount: number;
+    rating?: number;
+    invoiceAmount?: number;
 }

@@ -8,14 +8,19 @@ import crypto from "crypto";
 // Local recursive Decimal-to-Number serializer
 const serialize = (obj: any): any => {
     if (obj === null || obj === undefined) return obj;
+    if (typeof obj === 'number' || typeof obj === 'string' || typeof obj === 'boolean') return obj;
+    if (obj instanceof Date || Object.prototype.toString.call(obj) === '[object Date]') return obj.toISOString();
     if (Array.isArray(obj)) return obj.map(serialize);
     if (typeof obj === 'object') {
-        if (obj.constructor && obj.constructor.name === 'Decimal') {
+        // Handle Prisma Decimal
+        if (obj.constructor && (obj.constructor.name === 'Decimal' || obj.d)) {
             return Number(obj);
         }
         const newObj: any = {};
         for (const key in obj) {
-            newObj[key] = serialize(obj[key]);
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                newObj[key] = serialize(obj[key]);
+            }
         }
         return newObj;
     }
@@ -49,9 +54,12 @@ export async function GET(req: NextRequest) {
         const where: any = {};
 
         // Enforce Dealer Scoping
-        where.job_cards = {
-            dealer_id: dealerId
-        };
+        if (dealerId) {
+            where.OR = [
+                { job_cards: { dealer_id: dealerId } },
+                { service_staff: { dealer_id: dealerId } }
+            ];
+        }
 
         if (!isServiceAdmin) {
             if (!technicianId) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
@@ -60,7 +68,7 @@ export async function GET(req: NextRequest) {
             // Admin filters
             const status = searchParams.get('status');
             const jobId = searchParams.get('jobId');
-            if (status) where.status = status;
+            if (status && status !== 'all') where.status = status;
             if (jobId) where.job_card_id = jobId;
         }
 
@@ -69,15 +77,45 @@ export async function GET(req: NextRequest) {
             include: {
                 products: true,
                 job_cards: {
-                    select: {
-                        id: true,
+                    include: {
                         service_tickets: {
-                            select: { service_number: true }
+                            include: {
+                                profiles: {
+                                    select: {
+                                        full_name: true,
+                                        id: true
+                                    }
+                                },
+                                service_feedback: {
+                                    select: {
+                                        rating: true
+                                    }
+                                },
+                                service_vehicles: {
+                                    select: {
+                                        customer_name: true
+                                    }
+                                }
+                            }
+                        },
+                        service_invoices: {
+                            select: {
+                                grand_total: true
+                            },
+                            take: 1,
+                            orderBy: { created_at: 'desc' }
                         }
                     }
                 },
                 service_staff: {
-                    include: { profiles: true }
+                    include: {
+                        profiles: {
+                            select: {
+                                full_name: true,
+                                email: true
+                            }
+                        }
+                    }
                 }
             },
             orderBy: { created_at: 'desc' }

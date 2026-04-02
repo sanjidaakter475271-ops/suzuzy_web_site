@@ -41,12 +41,17 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
                         jobCardId: item.job_card_id,
                         jobNumber: item.job_cards?.service_tickets?.service_number || 'N/A',
                         technicianId: item.staff_id,
-                        technicianName: item.service_staff?.profiles?.full_name || 'Unknown',
+                        technicianName: item.service_staff?.name || item.service_staff?.profiles?.full_name || 'Unknown',
                         technicianAvatar: item.service_staff?.profiles?.avatar_url,
+                        customerName: item.job_cards?.service_tickets?.profiles?.full_name || item.job_cards?.service_tickets?.service_vehicles?.customer_name || 'Unknown Customer',
+                        customerId: item.job_cards?.service_tickets?.profiles?.id,
+                        problemType: item.job_cards?.service_tickets?.service_description || 'General Service',
+                        rating: item.job_cards?.service_tickets?.service_feedback?.rating,
+                        invoiceAmount: item.job_cards?.service_invoices?.[0]?.grand_total,
                         status: item.status,
                         items: [],
-                        createdAt: item.created_at,
-                        updatedAt: item.updated_at,
+                        createdAt: item.created_at || new Date().toISOString(),
+                        updatedAt: item.updated_at || new Date().toISOString(),
                         totalAmount: 0
                     };
                 }
@@ -95,7 +100,8 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
             }
             await get().fetchRequisitions();
         } catch (error: any) {
-            alert(`Batch approve failed: ${error.message}`);
+            set({ error: error.message });
+            throw error;
         }
     },
 
@@ -116,7 +122,8 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
             }
             await get().fetchRequisitions();
         } catch (error: any) {
-            alert(`Batch reject failed: ${error.message}`);
+            set({ error: error.message });
+            throw error;
         }
     },
 
@@ -131,7 +138,8 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
             if (!data.success) throw new Error(data.error);
             await get().fetchRequisitions();
         } catch (error: any) {
-            alert(error.message);
+            set({ error: error.message });
+            throw error;
         }
     },
 
@@ -146,7 +154,8 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
             if (!data.success) throw new Error(data.error);
             await get().fetchRequisitions();
         } catch (error: any) {
-            alert(error.message);
+            set({ error: error.message });
+            throw error;
         }
     }
 }));
