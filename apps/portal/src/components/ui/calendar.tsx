@@ -52,7 +52,7 @@ function Calendar({
                 day_range_middle:
                     "aria-selected:bg-accent aria-selected:text-accent-foreground",
                 day_hidden: "invisible",
-                dropdown_container: "flex gap-0.5 items-center bg-white dark:bg-black/40 px-1.5 py-0.5 rounded-lg border border-slate-800",
+                dropdowns: "flex gap-0.5 items-center bg-white dark:bg-black/40 px-1.5 py-0.5 rounded-lg border border-slate-800",
                 dropdown: "bg-transparent text-[10px] font-black uppercase tracking-tight outline-none cursor-pointer",
                 footer: "pt-3 mt-2 border-t border-slate-800 flex justify-center",
                 ...classNames,

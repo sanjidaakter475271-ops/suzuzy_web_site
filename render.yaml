@@ -17,11 +17,14 @@ services:
     buildFilter:
       paths:
         - apps/portal/**
+    healthCheckPath: /api/health
     envVars:
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
         sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        value: "https://royal-suzuky-portal.onrender.com"
       - key: NEXT_PUBLIC_SOCKET_URL
         value: "https://royal-suzuky-realtime.onrender.com"
       - key: NEXT_PUBLIC_REALTIME_URL
@@ -39,7 +42,9 @@ services:
       - key: BETTER_AUTH_SECRET
         sync: false
       - key: BETTER_AUTH_URL
-        sync: false
+        value: "https://royal-suzuky-portal.onrender.com"
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
 
   # ============================================
   # Realtime Server (Socket.io)
@@ -52,12 +57,15 @@ services:
     region: singapore
     plan: free
     branch: main
+    healthCheckPath: /health
     buildFilter:
       paths:
         - apps/realtime/**
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 10000
       - key: JWT_SECRET
         sync: false
       - key: CORS_ORIGIN
@@ -74,6 +82,7 @@ services:
     region: singapore
     plan: free
     branch: main
+    healthCheckPath: /
     buildFilter:
       paths:
         - apps/storefront/**
