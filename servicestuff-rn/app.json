@@ -2,6 +2,7 @@
   "expo": {
     "name": "Suzuki Service Pro",
     "slug": "service-app",
+    "scheme": "suzuki-service-pro",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -27,7 +28,7 @@
     },
     "extra": {
       "PORTAL_API_URL": "https://royal-suzuky-portal.onrender.com",
-      "REALTIME_URL": "https://suzuky-realtime.onrender.com",
+      "REALTIME_URL": "https://royal-suzuky-realtime.onrender.com",
       "SUPABASE_URL": "https://idqikowpudzjickwpfzr.supabase.co",
       "SUPABASE_ANON_KEY": "sb_publishable_M4D9EG-nrI4j-9Y1J1nWHQ_uVxUqWbH",
       "eas": {

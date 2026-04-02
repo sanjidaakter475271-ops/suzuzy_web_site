@@ -48,6 +48,8 @@ import { MediaService } from '../../services/media';
 import { SocketService } from '../../services/socket';
 import { DetailSkeleton } from '../../components/Skeleton';
 import { diagnoseIssue } from '../../services/geminiService';
+import { StatusBadge } from '../../components/ui/StatusBadge';
+import { JobStatus } from '../../types';
 
 type Tab = 'summary' | 'checklist' | 'parts' | 'photos' | 'notes';
 
@@ -391,11 +393,7 @@ export default function JobCardDetail() {
                         <Text style={styles.vehicleName}>{job.vehicle?.model_name || 'Generic Bike'}</Text>
                         <Text style={styles.plateNumber}>{job.vehicle?.license_plate || 'WP-8899'}</Text>
                     </View>
-                    <View style={[styles.statusBadge, getStatusStyle(job.status || 'pending').badge]}>
-                        <Text style={[styles.statusText, getStatusStyle(job.status || 'pending').text]}>
-                            {job.status === 'in_progress' ? 'Active' : (job.status || 'pending').replace('_', ' ')}
-                        </Text>
-                    </View>
+                    <StatusBadge status={job.status || JobStatus.PENDING} />
                 </View>
 
                 <View style={{ flexDirection: 'row', gap: 16, marginTop: 24 }}>
@@ -763,19 +761,6 @@ export default function JobCardDetail() {
         </View>
     );
 }
-
-const getStatusStyle = (status: string) => {
-    switch (status) {
-        case 'completed':
-        case 'qc_passed':
-        case 'verified':
-            return { badge: { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.2)' }, text: { color: '#10b981' } };
-        case 'in_progress':
-            return { badge: { backgroundColor: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.2)' }, text: { color: '#3b82f6' } };
-        default:
-            return { badge: { backgroundColor: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.2)' }, text: { color: '#f59e0b' } };
-    }
-};
 
 const styles = StyleSheet.create({
     card: { backgroundColor: 'rgba(15, 23, 42, 0.5)', borderRadius: 32, padding: 24, borderWidth: 1, borderColor: 'rgba(30, 41, 59, 0.5)' },

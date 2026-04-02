@@ -57,6 +57,14 @@ interface APIResponse {
         transactionVolume: ChartData[];
         workshopPulse: WorkshopPulse;
         recentTransactions: Transaction[];
+        accounts: FinancialAccount[];
+        goals: any[];
+        volume: {
+            data: any[];
+            total: number;
+            today: number;
+            lastHour: number;
+        };
     };
 }
 
@@ -107,6 +115,12 @@ export interface DashboardStats {
     recentTransactions: Transaction[];
     accounts: FinancialAccount[];
     goals: any[];
+    volume?: {
+        data: any[];
+        total: number;
+        today: number;
+        lastHour: number;
+    };
 }
 
 export function useDashboardStats() {
@@ -143,8 +157,9 @@ export function useDashboardStats() {
                 transactionVolume: apiData.transactionVolume,
                 workshopPulse: apiData.workshopPulse,
                 recentTransactions: apiData.recentTransactions,
-                accounts: [], // TODO: Add API for accounts
-                goals: []     // TODO: Add API for goals
+                accounts: apiData.accounts || [],
+                goals: apiData.goals || [],
+                volume: apiData.volume
             });
 
         } catch (err) {

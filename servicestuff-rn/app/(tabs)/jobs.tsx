@@ -8,6 +8,7 @@ import NetInfo from '@react-native-community/netinfo';
 
 import { TopBar } from '../../components/TopBar';
 import MyJobCard from '../../components/MyJobCard';
+import { JobCardSkeleton } from '../../components/Skeleton';
 import { TechnicianAPI } from '../../services/api';
 import { JobCard, JobStatus, RoutePath } from '../../types';
 import { OfflineService } from '../../services/offline';
@@ -108,45 +109,6 @@ export default function MyJobs() {
         });
     }, [jobs, debouncedSearchQuery, activeTab]);
 
-    const getStatusInfo = useCallback((status: string) => {
-        const prettyStatus = status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-
-        switch (status) {
-            case JobStatus.COMPLETED:
-            case JobStatus.VERIFIED:
-            case JobStatus.QC_PASSED:
-                return {
-                    color: '#10b981',
-                    icon: <CheckCircle size={14} color="#10b981" />,
-                    label: status === JobStatus.COMPLETED ? 'Done' : prettyStatus
-                };
-            case JobStatus.IN_PROGRESS:
-                return {
-                    color: '#3b82f6',
-                    icon: <Clock size={14} color="#3b82f6" />,
-                    label: 'Active'
-                };
-            case JobStatus.PAUSED:
-                return {
-                    color: '#fbbf24',
-                    icon: <PauseCircle size={14} color="#fbbf24" />,
-                    label: 'Paused'
-                };
-            case JobStatus.PENDING:
-                return {
-                    color: '#fbbf24',
-                    icon: <AlertCircle size={14} color="#f59e0b" />,
-                    label: 'Pending'
-                };
-            default:
-                return {
-                    color: '#94a3b8',
-                    icon: <AlertCircle size={14} color="#94a3b8" />,
-                    label: prettyStatus
-                };
-        }
-    }, []);
-
     const tabs = [
         { id: 'all', label: 'All' },
         { id: JobStatus.PENDING, label: 'Pending' },
@@ -225,18 +187,18 @@ export default function MyJobs() {
             {/* Content */}
             <View style={{ flex: 1, paddingHorizontal: 16 }}>
                 {loading ? (
-                    <ActivityIndicator color="#3b82f6" style={{ marginTop: 40 }} />
+                    <View style={{ gap: 16, paddingTop: 16 }}>
+                        <JobCardSkeleton />
+                        <JobCardSkeleton />
+                        <JobCardSkeleton />
+                    </View>
                 ) : (
                     <FlashList
                         data={filteredJobs}
                         renderItem={({ item }) => {
-                            const { color, icon, label } = getStatusInfo(item.status);
                             return (
                                 <MyJobCard
                                     job={item}
-                                    color={color}
-                                    icon={icon}
-                                    label={label}
                                     isInitialMount={isInitialMount.current}
                                     onClick={(id) => router.push(`/job/${id}`)}
                                 />

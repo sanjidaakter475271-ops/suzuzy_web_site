@@ -1,6 +1,7 @@
 import 'react-native-reanimated';
 import "../global.css";
-import { Slot, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { Slot, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { AuthProvider, useAuth } from '../lib/auth';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -11,10 +12,14 @@ import { OfflineBanner } from '../components/OfflineBanner';
 import { PermissionManager } from '../components/PermissionManager';
 import { LocationTracker } from '../components/LocationTracker';
 
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync();
+
 function InitialLayout() {
   const { user, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const rootNavigationState = useRootNavigationState();
   const [permissionsDone, setPermissionsDone] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [isOnboarded, setIsOnboarded] = useState(false);
@@ -29,7 +34,16 @@ function InitialLayout() {
   }, []);
 
   useEffect(() => {
-    if (loading || !onboardingChecked) return;
+    if (loading || !onboardingChecked || !rootNavigationState?.key) return;
+
+    const hideSplash = async () => {
+      try {
+        await SplashScreen.hideAsync();
+      } catch (e) {
+        // Ignore errors if splash already hidden
+      }
+    };
+    hideSplash();
 
     const inAuthGroup = segments[0] === '(auth)';
 
@@ -42,9 +56,9 @@ function InitialLayout() {
       }
     } else if (user && inAuthGroup) {
       // Redirect to dashboard if authenticated
-      router.replace('/(tabs)');
+      router.replace('/');
     }
-  }, [user, loading, segments, onboardingChecked, isOnboarded]);
+  }, [user, loading, segments, onboardingChecked, isOnboarded, rootNavigationState?.key]);
 
   if (loading || !onboardingChecked) return null;
 

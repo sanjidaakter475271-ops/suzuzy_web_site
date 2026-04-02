@@ -16,8 +16,11 @@ import Breadcrumb from '@/components/service-admin/Breadcrumb';
 import ActiveRampsWidget from '@/components/service-admin/dashboard/ActiveRampsWidget';
 import QueuedVehiclesWidget from '@/components/service-admin/dashboard/QueuedVehiclesWidget';
 import CustomerRequestsWidget from '@/components/service-admin/dashboard/CustomerRequestsWidget';
+import VolumeChart from '@/components/service-admin/dashboard/VolumeChart';
 import { useDashboardStats } from '@/hooks/service-admin/useDashboardStats';
 import { useSocket } from '@/hooks/useSocket';
+import { useAuth } from '@/hooks/useAuth';
+import { format, subDays } from 'date-fns';
 
 // Loading skeleton for KPI cards
 function KPISkeletons() {
@@ -35,8 +38,19 @@ function KPISkeletons() {
 }
 
 export default function DashboardPage() {
+    const { user } = useAuth();
     const { data, isLoading, error, refetch } = useDashboardStats();
     const { socket, isConnected } = useSocket();
+    const [currentTime, setCurrentTime] = React.useState(new Date());
+
+    // Update time every second for the live feel
+    React.useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const userName = user?.name || 'Admin';
+    const greeting = currentTime.getHours() < 12 ? 'Good morning' : currentTime.getHours() < 17 ? 'Good afternoon' : 'Good evening';
 
     // Listen for realtime events to refresh dashboard data
     React.useEffect(() => {
@@ -48,59 +62,88 @@ export default function DashboardPage() {
         };
 
         socket.on('inventory:changed', handleUpdate);
+        socket.on('inventory:adjusted', handleUpdate);
         socket.on('order:update', handleUpdate);
+        socket.on('order:changed', handleUpdate);
         socket.on('sale:new', handleUpdate);
+        socket.on('sale:received', handleUpdate);
         socket.on('job_cards:changed', handleUpdate);
         socket.on('attendance:changed', handleUpdate);
+        socket.on('requisition:created', handleUpdate);
         socket.on('requisition:approved', handleUpdate);
         socket.on('requisition:rejected', handleUpdate);
+        socket.on('requisition:status_changed', handleUpdate);
         socket.on('signal:refresh', handleUpdate);
 
         return () => {
             socket.off('inventory:changed', handleUpdate);
+            socket.off('inventory:adjusted', handleUpdate);
             socket.off('order:update', handleUpdate);
+            socket.off('order:changed', handleUpdate);
             socket.off('sale:new', handleUpdate);
+            socket.off('sale:received', handleUpdate);
             socket.off('job_cards:changed', handleUpdate);
             socket.off('attendance:changed', handleUpdate);
+            socket.off('requisition:created', handleUpdate);
             socket.off('requisition:approved', handleUpdate);
             socket.off('requisition:rejected', handleUpdate);
+            socket.off('requisition:status_changed', handleUpdate);
             socket.off('signal:refresh', handleUpdate);
         };
     }, [socket, refetch]);
 
+    const dateRange = `${format(subDays(new Date(), 30), 'MMM dd, yyyy')} - ${format(new Date(), 'MMM dd, yyyy')}`;
+
     return (
         <div className="p-6 lg:p-8 space-y-8 animate-fade">
             {/* Realtime Status Indicator */}
-            {isConnected && (
-                <div className="fixed bottom-4 right-4 z-50">
-                    <div className="bg-success-bg/10 backdrop-blur-md border border-success/20 px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm">
-                        <div className="w-2 h-2 bg-success rounded-full animate-pulse" />
-                        <span className="text-[10px] font-bold text-success uppercase tracking-widest">Live</span>
+            <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+                <div className="flex items-center gap-3 bg-[#0D0D0F]/80 backdrop-blur-xl border border-white/10 px-4 py-2 rounded-2xl shadow-2xl animate-in slide-in-from-right duration-500">
+                    <div className="flex flex-col items-end">
+                        <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] leading-none mb-1">Current Stream</p>
+                        <p className="text-xs font-black text-white tabular-nums tracking-tighter leading-none">{format(currentTime, 'hh:mm:ss a')}</p>
+                    </div>
+                    <div className="w-px h-6 bg-white/10 mx-1" />
+                    <div className="flex items-center gap-2">
+                        <div className={cn("w-2 h-2 rounded-full", isConnected ? "bg-emerald-500 animate-pulse" : "bg-rose-500")} />
+                        <span className={cn("text-[10px] font-black uppercase tracking-widest", isConnected ? "text-emerald-500" : "text-rose-500")}>
+                            {isConnected ? 'Live' : 'Offline'}
+                        </span>
                     </div>
                 </div>
-            )}
+            </div>
 
             <Breadcrumb items={[{ label: 'Dashboard' }]} />
 
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-ink-heading dark:text-white flex items-center gap-2">
-                        Good morning, Demo! <span className="text-2xl">👋</span>
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Control Center Operations</p>
+                    </div>
+                    <h1 className="text-4xl font-black text-ink-heading dark:text-white tracking-tight uppercase italic">
+                        {greeting}, <span className="text-brand">{userName}</span>! <span className="text-2xl not-italic">👋</span>
                     </h1>
-                    <p className="text-ink-muted mt-2">Here&apos;s what&apos;s happening with your business today.</p>
+                    <p className="text-ink-muted mt-1 font-medium italic">Operational overview and real-time business performance analytics.</p>
                 </div>
 
                 <div className="flex items-center gap-3">
                     {error && (
-                        <button onClick={refetch} className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800 hover:bg-amber-100 transition-colors">
+                        <button onClick={refetch} className="flex items-center gap-2 text-xs text-rose-500 bg-rose-500/10 px-4 py-2 rounded-xl border border-rose-500/20 hover:bg-rose-500/20 transition-all font-black uppercase tracking-widest">
                             <AlertCircle size={14} />
-                            Using cached data · Retry
+                            Sync Error · Retry
                         </button>
                     )}
-                    <div className="flex items-center bg-white dark:bg-dark-card border border-surface-border dark:border-dark-border rounded-lg px-4 py-2.5 shadow-sm transition-colors hover:border-brand/30 cursor-pointer">
-                        <Calendar size={18} className="text-ink-muted mr-2" />
-                        <span className="text-sm font-medium text-ink-heading dark:text-white">Feb 10, 2026 - Mar 02, 2026</span>
+                    <div
+                        onClick={() => refetch()}
+                        className="flex items-center bg-white dark:bg-dark-card border border-surface-border dark:border-white/5 rounded-xl px-4 py-2.5 shadow-sm transition-all hover:border-brand/40 group cursor-pointer active:scale-95"
+                    >
+                        <Calendar size={18} className="text-ink-muted mr-3 group-hover:text-brand transition-colors" />
+                        <span className="text-[10px] font-black text-ink-heading dark:text-white uppercase tracking-widest">{dateRange}</span>
                     </div>
                 </div>
             </div>
@@ -136,6 +179,18 @@ export default function DashboardPage() {
                         </div>
                     </div>
                 </>
+            )}
+
+            {/* Activity Volume Stream */}
+            {data?.volume && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
+                    <VolumeChart
+                        data={data.volume.data}
+                        total={data.volume.total}
+                        today={data.volume.today}
+                        lastHour={data.volume.lastHour}
+                    />
+                </div>
             )}
 
             {/* Workshop Performance Section */}
@@ -208,49 +263,60 @@ export default function DashboardPage() {
             {/* Bottom Section: Recent Transactions & Goals */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Recent Transactions */}
-                <div className="lg:col-span-2 bg-white dark:bg-dark-card rounded-2xl shadow-card border border-surface-border dark:border-dark-border overflow-hidden flex flex-col">
-                    <div className="p-6 border-b border-surface-border dark:border-dark-border flex justify-between items-center bg-white dark:bg-dark-card sticky top-0 z-10">
-                        <h3 className="text-lg font-bold text-ink-heading dark:text-white">Recent Transactions</h3>
-                        <Link href="/service-admin/transactions" className="text-sm text-brand font-medium hover:underline">View All</Link>
+                <div className="lg:col-span-2 bg-white dark:bg-[#080809] rounded-[2.5rem] shadow-card border border-surface-border dark:border-white/5 overflow-hidden flex flex-col group hover:border-brand/20 transition-all">
+                    <div className="p-8 border-b border-surface-border dark:border-white/5 flex justify-between items-center bg-white dark:bg-[#080809] sticky top-0 z-10">
+                        <div>
+                            <h3 className="text-lg font-black text-ink-heading dark:text-white uppercase tracking-tight italic">Recent <span className="text-brand">Activity</span></h3>
+                            <p className="text-[10px] font-black text-ink-muted uppercase tracking-[0.2em] mt-1">Live financial ledger</p>
+                        </div>
+                        <Link href="/service-admin/transactions" className="text-[10px] font-black text-brand uppercase tracking-[0.3em] hover:underline px-4 py-2 bg-brand/5 rounded-xl border border-brand/10 transition-all active:scale-95">View All</Link>
                     </div>
-                    <div className="overflow-x-auto flex-1">
+                    <div className="overflow-x-auto flex-1 custom-scrollbar">
                         <table className="w-full">
-                            <thead className="bg-surface-page dark:bg-dark-page">
+                            <thead className="bg-surface-page dark:bg-white/[0.02]">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-ink-muted uppercase">Transaction</th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-ink-muted uppercase">Category</th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-ink-muted uppercase">Date</th>
-                                    <th className="px-6 py-3 text-right text-xs font-semibold text-ink-muted uppercase">Amount</th>
+                                    <th className="px-8 py-4 text-left text-[10px] font-black text-ink-muted uppercase tracking-widest">Transaction</th>
+                                    <th className="px-6 py-4 text-left text-[10px] font-black text-ink-muted uppercase tracking-widest">Category</th>
+                                    <th className="px-6 py-4 text-left text-[10px] font-black text-ink-muted uppercase tracking-widest">Timestamp</th>
+                                    <th className="px-8 py-4 text-right text-[10px] font-black text-ink-muted uppercase tracking-widest">Flow</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-surface-border dark:divide-dark-border">
-                                {(data?.recentTransactions ?? []).map((tx) => (
-                                    <tr key={tx.id} className="hover:bg-surface-hover dark:hover:bg-white/5 transition-colors">
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center gap-3">
+                            <tbody className="divide-y divide-surface-border dark:divide-white/5">
+                                {(data?.recentTransactions ?? []).map((tx, i) => (
+                                    <motion.tr
+                                        key={tx.id}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: i * 0.05 }}
+                                        className="hover:bg-surface-page dark:hover:bg-white/[0.01] transition-colors group/row"
+                                    >
+                                        <td className="px-8 py-5 whitespace-nowrap">
+                                            <div className="flex items-center gap-4">
                                                 <div className={cn(
-                                                    "p-2 rounded-full",
-                                                    tx.type === 'income' ? "bg-success-bg text-success" : "bg-surface-page text-ink-muted dark:bg-dark-border"
+                                                    "w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover/row:scale-110 shadow-sm",
+                                                    tx.type === 'income' ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
                                                 )}>
-                                                    {tx.type === 'income' ? <ArrowUpRight size={16} /> : <TrendingDown size={16} />}
+                                                    {tx.type === 'income' ? <ArrowUpRight size={18} /> : <TrendingDown size={18} />}
                                                 </div>
-                                                <span className="text-sm font-medium text-ink-heading dark:text-white">{tx.title}</span>
+                                                <span className="text-xs font-black text-ink-heading dark:text-white uppercase tracking-tight">{tx.title}</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-ink-muted">{tx.category}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-ink-muted">{tx.date}</td>
+                                        <td className="px-6 py-5 whitespace-nowrap">
+                                            <span className="text-[10px] font-bold text-ink-muted uppercase tracking-widest bg-slate-100 dark:bg-white/5 px-2 py-1 rounded-lg border border-slate-200 dark:border-white/5">{tx.category}</span>
+                                        </td>
+                                        <td className="px-6 py-5 whitespace-nowrap text-[10px] font-bold text-ink-muted uppercase tracking-widest">{tx.date}</td>
                                         <td className={cn(
-                                            "px-6 py-4 whitespace-nowrap text-sm font-bold text-right",
-                                            tx.type === 'income' ? "text-success" : "text-danger"
+                                            "px-8 py-5 whitespace-nowrap text-sm font-black text-right tabular-nums italic",
+                                            tx.type === 'income' ? "text-emerald-500" : "text-rose-500"
                                         )}>
                                             {tx.amount}
                                         </td>
-                                    </tr>
+                                    </motion.tr>
                                 ))}
                                 {(!data?.recentTransactions || data.recentTransactions.length === 0) && (
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-8 text-center text-sm text-ink-muted">
-                                            No recent transactions
+                                        <td colSpan={4} className="px-8 py-12 text-center">
+                                            <p className="text-[10px] font-black text-ink-muted uppercase tracking-[0.2em] opacity-30 italic">No transaction records detected</p>
                                         </td>
                                     </tr>
                                 )}

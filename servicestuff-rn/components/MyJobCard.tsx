@@ -3,17 +3,15 @@ import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import { MotiView } from 'moti';
 import { JobCard } from '../types';
+import { StatusBadge } from './ui/StatusBadge';
 
 interface MyJobCardProps {
     job: JobCard;
     onClick: (id: string) => void;
-    color: string;
-    icon: React.ReactNode;
-    label: string;
     isInitialMount: boolean;
 }
 
-const MyJobCard = React.memo(({ job, onClick, color, icon, label, isInitialMount }: MyJobCardProps) => (
+const MyJobCard = React.memo(({ job, onClick, isInitialMount }: MyJobCardProps) => (
     <MotiView
         from={isInitialMount ? { opacity: 0, translateY: 20 } : false}
         animate={{ opacity: 1, translateY: 0 }}
@@ -33,12 +31,7 @@ const MyJobCard = React.memo(({ job, onClick, color, icon, label, isInitialMount
                         {job.vehicle?.model_name || 'Vehicle'}
                     </Text>
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: color.replace('text-', '').replace('400', '500').replace('500', 'rgba(59, 130, 246, 0.2)'), backgroundColor: 'rgba(0,0,0,0.1)' }}>
-                    {icon}
-                    <Text style={{ fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', marginLeft: 6, color: '#f1f5f9' }}>
-                        {label}
-                    </Text>
-                </View>
+                <StatusBadge status={job.status} size="sm" />
             </View>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>

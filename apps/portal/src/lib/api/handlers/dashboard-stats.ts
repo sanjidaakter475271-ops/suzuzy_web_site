@@ -1,48 +1,197 @@
 import { prisma } from "@/lib/prisma/client";
-import { startOfDay, startOfMonth, subMonths, format } from "date-fns";
+import { startOfDay, startOfMonth, subMonths, format, subHours, startOfHour, endOfHour } from "date-fns";
 import { NextResponse } from "next/server";
 
 export async function getDashboardStats(user: any) {
     try {
         const today = startOfDay(new Date());
+        const dealerId = user.dealerId;
+
+        // Scoping
+        const scopeWhere = dealerId ? { dealer_id: dealerId } : {};
 
         // 1. KPIs
-        // Note: Logic assumes global visibility or user filtering needs to be added here based on 'user' context
-        // If specific scoping is needed, use user.dealerId
-
-        const todayTicketsCount = await prisma.service_tickets.count({
-            where: {
-                created_at: {
-                    gte: today
+        const [todayTicketsCount, activeRampsCount, totalRampsCount, techOnDutyCount] = await Promise.all([
+            prisma.service_tickets.count({
+                where: {
+                    profiles: dealerId ? { dealer_id: dealerId } : {},
+                    created_at: { gte: today }
                 }
-            }
+            }),
+            prisma.service_ramps.count({
+                where: {
+                    ...scopeWhere,
+                    status: 'busy'
+                }
+            }),
+            prisma.service_ramps.count({
+                where: scopeWhere
+            }),
+            prisma.service_staff.count({
+                where: {
+                    ...scopeWhere,
+                    is_active: true
+                }
+            })
+        ]);
+
+        // 2. Workshop Widgets Data
+        const [ramps, queuedVehiclesRaw, customerRequestsRaw] = await Promise.all([
+            prisma.service_ramps.findMany({
+                where: scopeWhere,
+                orderBy: { ramp_number: 'asc' },
+                include: {
+                    service_staff: true,
+                    service_tickets_service_ramps_current_ticket_idToservice_tickets: {
+                        include: {
+                            service_vehicles: {
+                                include: { bike_models: true }
+                            }
+                        }
+                    }
+                }
+            }),
+            prisma.service_tickets.findMany({
+                where: {
+                    profiles: dealerId ? { dealer_id: dealerId } : {},
+                    status: 'waiting'
+                },
+                orderBy: { created_at: 'asc' },
+                take: 10,
+                include: {
+                    service_vehicles: {
+                        include: { bike_models: true }
+                    },
+                    profiles: true
+                }
+            }),
+            prisma.service_tickets.findMany({
+                where: {
+                    profiles: dealerId ? { dealer_id: dealerId } : {},
+                    status: 'waiting',
+                    finalized_at: null
+                },
+                orderBy: { created_at: 'desc' },
+                take: 5,
+                include: {
+                    profiles: true,
+                    service_vehicles: true
+                }
+            })
+        ]);
+
+        const formattedRamps = ramps.map(ramp => {
+            const currentTicket = ramp.service_tickets_service_ramps_current_ticket_idToservice_tickets;
+            return {
+                id: ramp.id,
+                ramp_number: ramp.ramp_number,
+                status: ramp.status,
+                technician_name: ramp.service_staff?.name || null,
+                current_ticket: currentTicket ? {
+                    service_number: currentTicket.service_number,
+                    vehicle_model: currentTicket.service_vehicles?.bike_models?.name || 'Unknown Model'
+                } : null
+            };
         });
 
-        const activeRampsCount = await prisma.service_ramps.count({
+        const queuedVehicles = queuedVehiclesRaw.map(ticket => ({
+            ticket_id: ticket.id,
+            service_number: ticket.service_number,
+            vehicle_model: ticket.service_vehicles?.bike_models?.name || 'Unknown',
+            customer_name: ticket.profiles?.full_name || ticket.service_vehicles?.customer_name || 'Unknown',
+            status: ticket.status,
+            waiting_since: ticket.created_at ? ticket.created_at.toISOString() : new Date().toISOString()
+        }));
+
+        const customerRequests = customerRequestsRaw.map(req => ({
+            id: req.id,
+            service_number: req.service_number,
+            service_description: req.service_description || 'No description',
+            customer_name: req.profiles?.full_name || req.service_vehicles?.customer_name || 'Anonymous',
+            created_at: req.created_at ? req.created_at.toISOString() : new Date().toISOString()
+        }));
+
+
+        // 3. Charts Data (Real Transaction Data)
+        const sixMonthsAgo = startOfMonth(subMonths(new Date(), 5));
+        const transactions = await prisma.payment_transactions.findMany({
             where: {
-                status: 'busy'
-            }
+                ...scopeWhere,
+                created_at: { gte: sixMonthsAgo },
+                status: 'completed'
+            },
+            orderBy: { created_at: 'asc' }
         });
-        const totalRampsCount = await prisma.service_ramps.count();
 
-        const techOnDutyCount = await prisma.service_staff.count({
+        const revenueMap = new Map<string, { income: number, expense: number }>();
+        // Initialize last 6 months
+        for (let i = 5; i >= 0; i--) {
+            const m = format(subMonths(new Date(), i), 'MMM');
+            revenueMap.set(m, { income: 0, expense: 0 });
+        }
+
+        transactions.forEach(tx => {
+            if (!tx.created_at) return;
+            const month = format(tx.created_at, 'MMM');
+            const data = revenueMap.get(month) || { income: 0, expense: 0 };
+
+            // Map payment_transactions types to income/expense
+            const isExpense = ['expense', 'purchase_payment'].includes(tx.transaction_type || '');
+            if (isExpense) {
+                data.expense += Number(tx.amount);
+            } else {
+                data.income += Number(tx.amount);
+            }
+            revenueMap.set(month, data);
+        });
+
+        const revenueData = Array.from(revenueMap.entries()).map(([month, data]) => ({
+            name: month,
+            income: data.income,
+            expense: data.expense
+        }));
+
+        // Expense Breakdown (Real Data)
+        const expenses = await prisma.expenses.findMany({
             where: {
-                is_active: true
+                ...scopeWhere,
+                expense_date: { gte: startOfMonth(new Date()) }
+            },
+            include: {
+                expense_categories: true
             }
         });
 
+        const expenseMap = new Map<string, number>();
+        expenses.forEach(exp => {
+            const catName = exp.expense_categories?.name || 'Uncategorized';
+            const current = expenseMap.get(catName) || 0;
+            expenseMap.set(catName, current + Number(exp.amount));
+        });
+
+        const expenseBreakdown = Array.from(expenseMap.entries()).map(([name, value], index) => ({
+            name,
+            value,
+            color: ['#D4AF37', '#C75B12', '#DC2626', '#1F9D55', '#3B82F6'][index % 5]
+        }));
+
+
+        // 4. Workshop Pulse
         // Calculate Average TAT
         const completedJobs = await prisma.job_cards.findMany({
             where: {
+                ...scopeWhere,
                 status: { in: ['completed', 'finalized'] },
                 service_end_time: { not: null },
                 service_start_time: { not: null }
             },
             select: {
                 service_start_time: true,
-                service_end_time: true
+                service_end_time: true,
+                created_at: true
             },
-            take: 100
+            take: 100,
+            orderBy: { created_at: 'desc' }
         });
 
         let totalTatMinutes = 0;
@@ -63,141 +212,11 @@ export async function getDashboardStats(user: any) {
             ? `${Math.floor(totalTatMinutes / jobCountForTat)}m`
             : "N/A";
 
-        // 2. Workshop Widgets Data
-        const ramps = await prisma.service_ramps.findMany({
-            orderBy: { ramp_number: 'asc' },
-            include: {
-                service_staff: true,
-                service_tickets_service_ramps_current_ticket_idToservice_tickets: {
-                    include: {
-                        service_vehicles: {
-                            include: {
-                                bike_models: true
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        const formattedRamps = ramps.map(ramp => {
-            const currentTicket = ramp.service_tickets_service_ramps_current_ticket_idToservice_tickets;
-            return {
-                id: ramp.id,
-                ramp_number: ramp.ramp_number,
-                status: ramp.status,
-                technician_name: ramp.service_staff?.name || null,
-                current_ticket: currentTicket ? {
-                    service_number: currentTicket.service_number,
-                    vehicle_model: currentTicket.service_vehicles?.bike_models?.name || 'Unknown Model'
-                } : null
-            };
-        });
-
-        const queuedVehiclesRaw = await prisma.service_tickets.findMany({
-            where: { status: 'waiting' },
-            orderBy: { created_at: 'asc' },
-            take: 10,
-            include: {
-                service_vehicles: {
-                    include: {
-                        bike_models: true
-                    }
-                },
-                profiles: true
-            }
-        });
-
-        const queuedVehicles = queuedVehiclesRaw.map(ticket => ({
-            ticket_id: ticket.id,
-            service_number: ticket.service_number,
-            vehicle_model: ticket.service_vehicles?.bike_models?.name || 'Unknown',
-            customer_name: ticket.profiles?.full_name || ticket.service_vehicles?.customer_name || 'Unknown',
-            status: ticket.status,
-            waiting_since: ticket.created_at ? ticket.created_at.toISOString() : new Date().toISOString()
-        }));
-
-        const customerRequestsRaw = await prisma.service_tickets.findMany({
-            where: { status: 'waiting', finalized_at: null },
-            orderBy: { created_at: 'desc' },
-            take: 5,
-            include: {
-                profiles: true,
-                service_vehicles: true
-            }
-        });
-
-        const customerRequests = customerRequestsRaw.map(req => ({
-            id: req.id,
-            service_number: req.service_number,
-            service_description: req.service_description || 'No description',
-            customer_name: req.profiles?.full_name || req.service_vehicles?.customer_name || 'Anonymous',
-            created_at: req.created_at ? req.created_at.toISOString() : new Date().toISOString()
-        }));
-
-
-        // 3. Charts Data
-        const sixMonthsAgo = startOfMonth(subMonths(new Date(), 5));
-        const transactions = await prisma.transactions.findMany({
-            where: {
-                created_at: { gte: sixMonthsAgo },
-                status: 'completed'
-            },
-            orderBy: { created_at: 'asc' }
-        });
-
-        const revenueMap = new Map<string, { income: number, expense: number }>();
-
-        transactions.forEach(tx => {
-            if (!tx.created_at) return;
-            const month = format(tx.created_at, 'MMM');
-            const data = revenueMap.get(month) || { income: 0, expense: 0 };
-            if (tx.type === 'income') data.income += Number(tx.amount);
-            if (tx.type === 'expense') data.expense += Number(tx.amount);
-            revenueMap.set(month, data);
-        });
-
-        const revenueData = Array.from(revenueMap.entries()).map(([month, data]) => ({
-            name: month,
-            income: data.income,
-            expense: data.expense
-        }));
-
-        // Expense Breakdown
-        const expenses = await prisma.expenses.findMany({
-            where: {
-                expense_date: { gte: startOfMonth(new Date()) }
-            },
-            include: {
-                expense_categories: true
-            }
-        });
-
-        const expenseMap = new Map<string, number>();
-        expenses.forEach(exp => {
-            const catName = exp.expense_categories?.name || 'Uncategorized';
-            const current = expenseMap.get(catName) || 0;
-            expenseMap.set(catName, current + Number(exp.amount));
-        });
-
-        const expenseBreakdown = Array.from(expenseMap.entries()).map(([name, value], index) => ({
-            name,
-            value,
-            color: ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'][index % 4] || '#8884d8'
-        }));
-
-
-        // Transaction Volume
-        const transactionVolume = revenueData.map(d => ({
-            name: d.name,
-            income: d.income,
-            expense: d.expense
-        }));
-
-
-        // 4. Workshop Pulse
         const activeJobsCount = await prisma.job_cards.count({
-            where: { status: 'in_progress' }
+            where: {
+                ...scopeWhere,
+                status: { in: ['in_progress', 'in-service', 'waiting-parts'] }
+            }
         });
 
         const workshopPulse = {
@@ -207,20 +226,110 @@ export async function getDashboardStats(user: any) {
         };
 
         // 5. Recent Transactions
-        const recentTransactionsRaw = await prisma.transactions.findMany({
+        const recentTransactionsRaw = await prisma.payment_transactions.findMany({
+            where: scopeWhere,
             take: 5,
-            orderBy: { created_at: 'desc' }
+            orderBy: { created_at: 'desc' },
+            include: {
+                profiles_payment_transactions_customer_idToprofiles: { select: { full_name: true } },
+                vendors: { select: { name: true } }
+            }
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const recentTransactions = recentTransactionsRaw.map((tx: any) => ({
             id: tx.id,
-            title: tx.reference_type === 'service' ? 'Service Payment' : 'Expense',
+            title: tx.profiles_payment_transactions_customer_idToprofiles?.full_name || tx.vendors?.name || tx.transaction_type?.replace('_', ' ').toUpperCase() || 'Transaction',
             category: tx.reference_type || 'General',
             date: tx.created_at ? format(tx.created_at, 'MMM dd, yyyy') : 'N/A',
-            amount: `${tx.type === 'expense' ? '-' : '+'}$${tx.amount}`,
-            type: tx.type
+            amount: `${['expense', 'purchase_payment'].includes(tx.transaction_type || '') ? '-' : '+'}৳${Number(tx.amount).toLocaleString()}`,
+            type: ['expense', 'purchase_payment'].includes(tx.transaction_type || '') ? 'expense' : 'income'
         }));
+
+        // 6. Financial Accounts (Real Data from dealer_bank_accounts)
+        const accounts = await prisma.dealer_bank_accounts.findMany({
+            where: dealerId ? { dealer_id: dealerId } : {}
+        });
+
+        const formattedAccounts = accounts.map(acc => ({
+            id: acc.id,
+            name: acc.account_name || acc.provider_name || 'Bank Account',
+            balance: `৳0.00`, // Note: This model doesn't have a balance field, typically linked to ledger
+            type: acc.account_type || 'bank',
+            number: acc.account_number || 'N/A'
+        }));
+
+        // 7. Goals (Pulling from dealer_settings if available)
+        const settings = await prisma.dealer_settings.findMany({
+            where: {
+                dealer_id: dealerId,
+                setting_key: { in: ['target_monthly_revenue', 'target_service_volume'] }
+            }
+        });
+
+        const findSetting = (key: string, def: number) => {
+            const s = settings.find(x => x.setting_key === key);
+            return s ? Number((s.setting_value as any) || def) : def;
+        };
+
+        const revenueTarget = findSetting('target_monthly_revenue', 1000000);
+        const volumeTarget = findSetting('target_service_volume', 50);
+
+        const monthlyRevenue = revenueData[revenueData.length - 1]?.income || 0;
+        const goals = [
+            {
+                title: 'Monthly Revenue',
+                current: monthlyRevenue,
+                target: revenueTarget,
+                progress: Math.min(Math.floor((monthlyRevenue / revenueTarget) * 100), 100),
+                color: 'bg-brand'
+            },
+            {
+                title: 'Service Volume',
+                current: todayTicketsCount,
+                target: volumeTarget,
+                progress: Math.min(Math.floor((todayTicketsCount / volumeTarget) * 100), 100),
+                color: 'bg-emerald-500'
+            }
+        ];
+
+        // 8. Activity Volume (Last 24 Hours)
+        const last24H = subHours(new Date(), 23);
+        const [volTickets, volJobs, volSales] = await Promise.all([
+            prisma.service_tickets.findMany({
+                where: { profiles: dealerId ? { dealer_id: dealerId } : {}, created_at: { gte: last24H } },
+                select: { created_at: true }
+            }),
+            prisma.job_cards.findMany({
+                where: { ...scopeWhere, created_at: { gte: last24H } },
+                select: { created_at: true }
+            }),
+            prisma.payment_transactions.findMany({
+                where: { ...scopeWhere, created_at: { gte: last24H } },
+                select: { created_at: true }
+            })
+        ]);
+
+        const volumeData = [];
+        let lastHourCount = 0;
+        const now = new Date();
+
+        for (let i = 23; i >= 0; i--) {
+            const hourStart = startOfHour(subHours(now, i));
+            const hourEnd = endOfHour(hourStart);
+            const hourLabel = format(hourStart, 'hh:mm a');
+
+            const tickets = volTickets.filter(t => t.created_at! >= hourStart && t.created_at! <= hourEnd).length;
+            const jobs = volJobs.filter(j => j.created_at! >= hourStart && j.created_at! <= hourEnd).length;
+            const sales = volSales.filter(s => s.created_at! >= hourStart && s.created_at! <= hourEnd).length;
+
+            volumeData.push({ time: hourLabel, tickets, jobs, sales });
+            if (i === 0) lastHourCount = tickets + jobs + sales;
+        }
+
+        const total24H = volTickets.length + volJobs.length + volSales.length;
+        const todayCount = volTickets.filter(t => t.created_at! >= today).length +
+            volJobs.filter(j => j.created_at! >= today).length +
+            volSales.filter(s => s.created_at! >= today).length;
 
         return NextResponse.json({
             success: true,
@@ -236,9 +345,17 @@ export async function getDashboardStats(user: any) {
                 customerRequests,
                 revenueData,
                 expenseBreakdown,
-                transactionVolume,
+                transactionVolume: revenueData,
                 workshopPulse,
-                recentTransactions
+                recentTransactions,
+                accounts: formattedAccounts,
+                goals,
+                volume: {
+                    data: volumeData,
+                    total: total24H,
+                    today: todayCount,
+                    lastHour: lastHourCount
+                }
             }
         });
 

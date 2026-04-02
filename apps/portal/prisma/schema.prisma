@@ -76,6 +76,7 @@ model brands {
   products      products[]
 
   @@index([slug], map: "idx_brands_slug")
+  @@index([dealer_id], map: "idx_brands_dealer")
   @@schema("public")
 }
 
@@ -225,6 +226,8 @@ model customer_ledger {
 
   @@index([customer_id], map: "idx_cl_customer")
   @@index([transaction_date(sort: Desc)], map: "idx_cl_date")
+  @@index([dealer_id], map: "idx_cl_dealer")
+  @@index([dealer_id, transaction_date(sort: Desc)], map: "idx_cl_dealer_date")
   @@schema("public")
 }
 
@@ -568,6 +571,7 @@ model import_logs {
   completed_at    DateTime? @db.Timestamptz(6)
   dealers         dealers   @relation(fields: [dealer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([dealer_id], map: "idx_import_logs_dealer")
   @@schema("public")
 }
 

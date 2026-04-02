@@ -47,8 +47,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refreshSession();
 
         // Handle offline to online transition using NetInfo
+        let wasOffline = false;
         const unsubscribe = NetInfo.addEventListener(state => {
-            if (state.isConnected) {
+            const currentlyOnline = state.isConnected && state.isInternetReachable !== false;
+
+            if (currentlyOnline && wasOffline) {
                 console.log("App back online - checking for pending offline actions...");
 
                 // If session is cached or user data is missing, verify with server
@@ -69,10 +72,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     }, 2000);
                 }
             }
+            wasOffline = !currentlyOnline;
         });
 
         return () => unsubscribe();
-    }, [session?.token, user?.id]);
+    }, []); // Only run once on mount
 
     // Connect socket when authenticated
     useEffect(() => {

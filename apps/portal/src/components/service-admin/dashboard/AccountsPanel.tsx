@@ -23,11 +23,11 @@ const AccountsPanel: React.FC<AccountsPanelProps> = ({ data = [] }) => {
                             <span className="text-xs font-semibold text-ink-muted bg-surface-page dark:bg-dark-page px-2 py-1 rounded">{account.number}</span>
                         </div>
                         <div className="mt-4">
-                            <p className="text-sm text-ink-muted">{account.name}</p>
-                            <h4 className="text-xl font-bold text-ink-heading dark:text-white flex items-center">
-                                $<AnimatedNumber
+                            <p className="text-[10px] font-black text-ink-muted uppercase tracking-[0.2em] mb-1">{account.name}</p>
+                            <h4 className="text-2xl font-black text-ink-heading dark:text-white flex items-center tabular-nums italic">
+                                <AnimatedNumber
                                     value={parseFloat(account.balance.replace(/[^0-9.]/g, ''))}
-                                    format={(val: number) => val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    format={(val: number) => `৳${val.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
                                 />
                             </h4>
                         </div>

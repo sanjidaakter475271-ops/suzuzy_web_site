@@ -90,6 +90,20 @@ export async function POST(
             return updated;
         });
 
+        // Notify via Real-time
+        try {
+            const { broadcast } = await import("@/lib/socket-server");
+            await broadcast('job_cards:changed', {
+                id,
+                action: 'update',
+                toStatus,
+                dealerId: job.dealer_id
+            });
+            await broadcast('signal:refresh', { module: 'dashboard', dealerId: job.dealer_id });
+        } catch (e) {
+            console.warn("[REALTIME] Broadcast failed:", e);
+        }
+
         return NextResponse.json({
             success: true,
             status: updatedJob.status,

@@ -10,6 +10,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import { FlashList } from '@shopify/flash-list';
 
+import { StatusBadge } from '../../components/ui/StatusBadge';
+import { DashboardSkeleton } from '../../components/Skeleton';
 import { TechnicianAPI } from '../../services/api';
 import { JobCard, DashboardStats, AttendanceStatus, RoutePath, JobStatus } from '../../types';
 import { SocketService } from '../../services/socket';
@@ -81,12 +83,7 @@ const TaskCard = React.memo(({ item, onPress }: { item: JobCard, onPress: (id: s
     >
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
         <Text style={{ fontWeight: 'bold', color: '#f1f5f9', fontSize: 16 }}>{item.vehicle?.model_name || 'Unknown Model'}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, backgroundColor: style.bg, borderColor: style.border }}>
-          {style.icon}
-          <Text style={{ fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', marginLeft: 4, color: style.text }}>
-            {item.status === 'in_progress' ? 'Active' : item.status.replace('_', ' ')}
-          </Text>
-        </View>
+        <StatusBadge status={item.status} size="sm" />
       </View>
 
       <View style={{ backgroundColor: 'rgba(30, 41, 59, 0.5)', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginBottom: 8 }}>
@@ -328,7 +325,7 @@ export default function Dashboard() {
 
         <View style={{ paddingHorizontal: 16, minHeight: 300 }}>
           {loading ? (
-            <ActivityIndicator color="#3b82f6" style={{ marginTop: 40 }} />
+            <DashboardSkeleton />
           ) : tasks.length > 0 ? (
             <FlashList
               data={tasks}

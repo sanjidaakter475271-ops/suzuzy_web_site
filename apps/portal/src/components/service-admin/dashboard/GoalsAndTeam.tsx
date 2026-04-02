@@ -28,18 +28,20 @@ const GoalsAndTeam: React.FC<GoalsAndTeamProps> = ({ data = [] }) => {
                         <div key={idx}>
                             <div className="flex justify-between items-end mb-2">
                                 <div>
-                                    <p className="text-sm font-bold text-ink-heading dark:text-white">{goal.title}</p>
-                                    <p className="text-xs text-ink-muted">Target: {goal.date}</p>
+                                    <p className="text-[11px] font-black text-ink-heading dark:text-white uppercase tracking-tight italic">{goal.title}</p>
+                                    <p className="text-[9px] text-ink-muted font-bold uppercase tracking-widest">{goal.date || 'Monthly Cycle'}</p>
                                 </div>
-                                <span className="text-sm font-bold text-ink-body dark:text-gray-300">
+                                <span className="text-xs font-black text-ink-body dark:text-gray-300">
                                     <AnimatedNumber value={percent} format={(val: number) => val.toFixed(0)} />%
                                 </span>
                             </div>
-                            <div className="w-full bg-surface-border dark:bg-dark-border h-2 rounded-full overflow-hidden">
-                                <div className={cn("h-full rounded-full bg-brand", goal.color)} style={{ width: `${percent}%` }}></div>
+                            <div className="w-full bg-surface-border dark:bg-dark-border h-1.5 rounded-full overflow-hidden shadow-inner">
+                                <div className={cn("h-full rounded-full transition-all duration-1000", goal.color || "bg-brand")} style={{ width: `${percent}%` }}>
+                                    <div className="w-full h-full bg-white/20 animate-pulse" />
+                                </div>
                             </div>
-                            <div className="mt-1 text-xs text-ink-muted text-right">
-                                $<AnimatedNumber value={goal.current} format={(val: number) => val.toLocaleString()} /> / ${goal.target.toLocaleString()}
+                            <div className="mt-1 text-[10px] font-black text-ink-muted text-right uppercase tracking-widest tabular-nums">
+                                ৳<AnimatedNumber value={goal.current} format={(val: number) => val.toLocaleString()} /> / ৳{goal.target.toLocaleString()}
                             </div>
                         </div>
                     );
