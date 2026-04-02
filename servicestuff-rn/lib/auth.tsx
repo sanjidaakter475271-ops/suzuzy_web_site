@@ -1,18 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import NetInfo from '@react-native-community/netinfo';
 import { authClient } from './auth-client';
-import { User } from '../types';
+import { User, Session } from '../types';
 import { OfflineService } from '../services/offline';
 import { SocketService } from '../services/socket';
 import { setUnauthorizedHandler } from '../services/api';
 
 interface AuthContextType {
     user: User | null;
-    session: any;
+    session: Session | null;
     loading: boolean;
     isAuthReady: boolean;
-    signIn: (email: string, password: any) => Promise<{ error?: string }>;
-    signUp: (email: string, password: any, name: string) => Promise<{ error?: string }>;
+    signIn: (email: string, password: string) => Promise<{ error?: string }>;
+    signUp: (email: string, password: string, name: string) => Promise<{ error?: string }>;
     signOut: () => Promise<void>;
 }
 
@@ -20,7 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
-    const [session, setSession] = useState<any>(null);
+    const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
     const [isAuthReady, setIsAuthReady] = useState(false);
 
@@ -99,14 +99,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [user?.id, session?.token]);
 
-    const signIn = async (email: string, password: any) => {
+    const signIn = async (email: string, password: string) => {
         const { data, error } = await authClient.signIn.email({ email, password });
         if (error) return { error: error.message };
 
         if (data?.user) {
             setUser(data.user);
             const token = data.session?.accessToken || data.session?.token;
-            const sessionData = {
+            const sessionData: Session = {
                 ...data.session,
                 token,
                 accessToken: token
@@ -121,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error: "Unknown error during sign in" };
     };
 
-    const signUp = async (email: string, password: any, name: string) => {
+    const signUp = async (email: string, password: string, name: string) => {
         const { error } = await authClient.signUp.email({ email, password, name });
         if (error) return { error: error.message };
         return {};

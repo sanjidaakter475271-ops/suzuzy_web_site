@@ -27,7 +27,7 @@ d:\suzuzy_web_site\
 |-----|----------|
 | `apps/portal` | Next.js 16 (App Router), Prisma 7 + pg adapter, Supabase PostgreSQL, JWT auth (jose), Zustand, TanStack Query, shadcn/ui, Tailwind CSS v4, Zod v4 |
 | `apps/realtime` | Node.js 18+, Socket.io 4, CommonJS |
-| `servicestuff-rn` | React Native 0.81.5, Expo 54, NativeWind 4.2.3 (Tailwind v3), Reanimated 4.1.7, Worklets 0.5.1 |
+| `servicestuff-rn` | React Native 0.81.5, Expo 54, React Native Reanimated 4.1.7, StyleSheet (NativeWind removed), Worklets 0.5.1 |
 | `servicestuff` | (DEPRECATED) Vite 6, React 19, Capacitor 7 (Android) |
 
 ### CRITICAL WARNINGS
@@ -253,20 +253,21 @@ if (error instanceof Prisma.PrismaClientKnownRequestError) {
 ### Mandatory Rules
 
 1. **Architecture**: Use **Expo Router** for file-based routing inside `app/`. **New Architecture (Fabric) MUST be enabled** (`newArchEnabled: true` in `app.json`) for Reanimated 4 compatibility.
-2. **UI Components**: Always prefer native components (`View`, `Text`, `TouchableOpacity`, `TextInput`) over web elements.
-3. **Performance**: Use **FlashList** for all lists (MyJobs, Requisitions, Notifications) with appropriate `estimatedItemSize`.
-4. **Styling**: Use **NativeWind v4** (Tailwind v3 classes). Pin `nativewind` to `4.2.3` and `tailwindcss` to `3.4.17` for maximum stability in Expo Go.
+2. **UI Components**: Always prefer native components (`View`, `Text`, `TouchableOpacity`, `TextInput`) over web elements. Use reusable UI primitives from `components/ui/` (e.g., `StatusBadge.tsx`, `Loading.tsx`).
+3. **Performance**: Use **FlatList** for lists (Dashboard, MyJobs) with appropriate optimizations. Use `expo-image` for high-performance image caching.
+4. **Styling**: Use standard **React Native StyleSheet.create** combined with the centralized theme in `constants/theme.ts`. NativeWind has been removed to ensure maximum stability and remove build-time patching complexity.
 5. **Animations**: Use **Moti** or **React Native Reanimated**. 
    * **CRITICAL**: For Expo Go SDK 54, you MUST use `react-native-reanimated@4.1.7` with `react-native-worklets@0.5.1`. Version mismatch will cause `NullPointerException`.
 6. **Babel Config**: Plugins MUST be in this exact order: `react-native-worklets/plugin`, then `react-native-reanimated/plugin` (last).
 7. **Entry File**: `import 'react-native-reanimated';` MUST be at the very top of `app/_layout.tsx`.
 8. **API calls**: Use `TechnicianAPI` from `services/api.ts`.
-9. **Auth**: Use `useAuth()` hook. Session is stored in `AsyncStorage` via `auth-client.ts`.
+9. **Auth**: Use `useAuth()` hook. Session is stored in **SecureStore** via `auth-client.ts`. Access token is synchronized with socket connection.
 10. **Native APIs**: Use Expo modules (e.g., `expo-camera`, `expo-location`, `expo-local-authentication`).
-11. **Environment**: Config lives in `lib/env.ts` (proxied via `expo-constants`).
+11. **Environment**: Config lives in `lib/env.ts` (proxied via `expo-constants`). Prioritize `EXPO_PUBLIC_` variables for production/dev overrides.
 
 ### Build & Deploy
-- Use **EAS Build** for generating APKs.
+- Use **GitHub Actions** for automated Android builds (`.github/workflows/android_build_rn.yml`).
+- Use **EAS Build** for manual or local APK generation.
 - Local dev: `npx expo start`.
 
 ### 🛡️ WINDOWS BUILD & TAILWIND v4 FIXES

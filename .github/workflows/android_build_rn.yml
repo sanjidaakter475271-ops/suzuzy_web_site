@@ -19,11 +19,25 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'servicestuff-rn/package-lock.json'
 
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
       - name: Setup Expo
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Create .env file from Secrets
+        run: |
+          cd servicestuff-rn
+          echo "EXPO_PUBLIC_PORTAL_API_URL=${{ secrets.EXPO_PUBLIC_PORTAL_API_URL }}" >> .env
+          echo "EXPO_PUBLIC_REALTIME_URL=${{ secrets.EXPO_PUBLIC_REALTIME_URL }}" >> .env
+          echo "EXPO_PUBLIC_SUPABASE_URL=${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}" >> .env
+          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}" >> .env
 
       - name: Install dependencies
         run: |
@@ -34,6 +48,7 @@ jobs:
         run: |
           cd servicestuff-rn
           # Use eas directly as it's installed by the Setup Expo action
+          # We use --local to save build credits. This requires Android SDK/Java on runner.
           eas build -p android --profile preview --non-interactive --local --output=app-release.apk
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
@@ -42,5 +57,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Servicestuff-RN
+          name: Suzuki-Service-Pro-APK
           path: servicestuff-rn/app-release.apk
