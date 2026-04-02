@@ -9,6 +9,11 @@ const AUTH_TOKEN_KEY = 'auth_token';
 
 // Flag to prevent multiple 401 redirects
 let isAuthRedirecting = false;
+let onUnauthorizedCallback: (() => void) | null = null;
+
+export const setUnauthorizedHandler = (handler: () => void) => {
+    onUnauthorizedCallback = handler;
+};
 
 const api = axios.create({
     baseURL: `${API_Base_URL}/api/v1/technician`,
@@ -50,16 +55,21 @@ api.interceptors.response.use(
             // Token expired or invalid
             if (!isAuthRedirecting) {
                 isAuthRedirecting = true;
-                console.log('[API] 401 Unauthorized - Clearing session and redirecting to login');
+                console.log('[API] 401 Unauthorized - Clearing session and notifying provider');
 
                 await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
-                await AsyncStorage.removeItem('cached_profile'); // Clear offline profile to prevent login loop
+                await AsyncStorage.removeItem('cached_profile');
 
-                // Redirect to login
-                try {
-                    router.replace('/login');
-                } catch (e) {
-                    console.error('[API] Auth error redirect failed', e);
+                // Trigger the callback to reset AuthProvider state
+                if (onUnauthorizedCallback) {
+                    onUnauthorizedCallback();
+                } else {
+                    // Fallback to direct redirect if no handler set
+                    try {
+                        router.replace('/login');
+                    } catch (e) {
+                        console.error('[API] Auth error redirect failed', e);
+                    }
                 }
 
                 // Reset flag after delay

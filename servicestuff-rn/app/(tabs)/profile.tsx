@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, StyleSheet, Alert, Dimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
     User as UserIcon,
@@ -11,34 +11,29 @@ import {
     ChevronRight,
     Star,
     Target,
-    Store
+    Store,
+    Camera,
+    ShieldCheck
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { TechnicianAPI } from '../../services/api';
 import { useAuth } from '../../lib/auth';
-import { TopBar } from '../../components/TopBar';
-import { MaterialCircularProgress } from '../../components/ui/Loading';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
 import { ProfileSkeleton } from '../../components/Skeleton';
 
-const MenuItem = ({ icon, label, sub, onClick }: { icon: React.ReactNode, label: string, sub: string, onClick?: () => void }) => (
-    <TouchableOpacity
-        onPress={onClick}
-        style={styles.menuItem}
-        activeOpacity={0.7}
-    >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-            <View style={styles.menuIconContainer}>
-                {icon}
-            </View>
-            <View>
-                <Text style={styles.menuLabel}>{label}</Text>
-                <Text style={styles.menuSub}>{sub}</Text>
-            </View>
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+const StatItem = ({ label, value, icon, color }: { label: string, value: string | number, icon: React.ReactNode, color: string }) => (
+    <View style={styles.statContainer}>
+        <View style={[styles.statIconWrapper, { backgroundColor: color + '15' }]}>
+            {icon}
         </View>
-        <ChevronRight size={18} color={COLORS.textTertiary} />
-    </TouchableOpacity>
+        <View>
+            <Text style={styles.statValueText}>{value}</Text>
+            <Text style={styles.statLabelText}>{label}</Text>
+        </View>
+    </View>
 );
 
 export default function Profile() {
@@ -74,308 +69,491 @@ export default function Profile() {
     }, []);
 
     const handleLogout = async () => {
-        await signOut();
+        Alert.alert(
+            "Logout",
+            "Are you sure you want to exit?",
+            [
+                { text: "Cancel", style: "cancel" },
+                { text: "Logout", style: "destructive", onPress: () => signOut() }
+            ]
+        );
     };
-
-    const handleAchievementsClick = () => {
-        Alert.alert("Coming Soon", "The Achievements feature is currently in development. Stay tuned!");
-    };
-
-    const stats_cards = [
-        { label: 'Efficiency', value: `${stats?.efficiency_score || 0}%`, icon: <TrendingUp size={18} color={COLORS.success} /> },
-        { label: 'Avg Rating', value: stats?.average_rating || 'N/A', icon: <Star size={18} color={COLORS.warning} /> },
-        { label: 'Hours', value: stats?.hours_worked || 0, icon: <Clock size={18} color={COLORS.primary} /> }
-    ];
 
     if (loading) {
         return (
             <View style={{ flex: 1, backgroundColor: COLORS.pageBg }}>
-                <TopBar title="Profile" />
                 <ProfileSkeleton />
             </View>
         );
     }
 
+    const userAvatar = profile?.avatar_url || null;
+
     return (
         <View style={{ flex: 1, backgroundColor: COLORS.pageBg }}>
-            <TopBar title="Profile" />
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: SPACING.md, paddingBottom: 100 }}>
-                {/* Header Card */}
-                <LinearGradient
-                    colors={[COLORS.primaryLight, COLORS.primary]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.headerCard}
-                >
-                    <View style={styles.avatarGlow} />
-                    <View style={styles.avatarContainer}>
-                        <View style={styles.avatarInner}>
-                            {profile?.avatar_url ? (
-                                <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+                {/* Facebook Style Cover Section */}
+                <View style={styles.coverWrapper}>
+                    {userAvatar ? (
+                        <Image 
+                            source={{ uri: userAvatar }} 
+                            style={styles.coverImage} 
+                            blurRadius={Platform.OS === 'ios' ? 40 : 70} 
+                        />
+                    ) : (
+                        <LinearGradient 
+                            colors={[COLORS.primary, COLORS.primaryDark]} 
+                            style={styles.coverImage} 
+                        />
+                    )}
+                    <LinearGradient
+                        colors={['transparent', COLORS.pageBg]}
+                        style={styles.coverGradient}
+                    />
+                    
+                    {/* Header Controls */}
+                    <View style={styles.headerControls}>
+                        <TouchableOpacity 
+                            onPress={() => router.back()}
+                            style={styles.headerIconBtn}
+                        >
+                            <ChevronRight size={24} color="white" style={{ transform: [{ rotate: '180deg' }] }} />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            onPress={() => router.push('/settings')}
+                            style={styles.headerIconBtn}
+                        >
+                            <Settings size={20} color="white" />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Profile Info Overlay Section */}
+                <View style={styles.profileSection}>
+                    <View style={styles.avatarWrapper}>
+                        <View style={styles.avatarMain}>
+                            {userAvatar ? (
+                                <Image source={{ uri: userAvatar }} style={styles.avatarImg} />
                             ) : (
-                                <UserIcon size={40} color={COLORS.primary} style={{ opacity: 0.8 }} />
+                                <UserIcon size={50} color={COLORS.primary} />
                             )}
                         </View>
+                        <TouchableOpacity style={styles.cameraBtn}>
+                            <Camera size={14} color="white" />
+                        </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.profileName}>{profile?.name || user?.name || 'Technician'}</Text>
-                    <View style={styles.roleBadge}>
-                        <Text style={styles.roleText}>{(profile?.role || user?.role || 'TECHNICIAN').replace('_', ' ')}</Text>
-                    </View>
-
-                    <View style={styles.idBadge}>
-                        <Text style={styles.idText}>ID: {(profile?.id || user?.id || '00000000').slice(0, 8).toUpperCase()}</Text>
-                    </View>
-
-                    {profile?.dealer && (
-                        <View style={styles.dealerInfo}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                                <Store size={12} color="rgba(255,255,255,0.7)" />
-                                <Text style={styles.dealerLabel}>Official Dealer</Text>
+                    <View style={styles.mainInfo}>
+                        <Text style={styles.nameText}>{profile?.name || user?.name || 'Technician'}</Text>
+                        <View style={styles.badgeRow}>
+                            <View style={styles.proBadge}>
+                                <ShieldCheck size={12} color={COLORS.accent} />
+                                <Text style={styles.proBadgeText}>Verified Staff</Text>
                             </View>
-                            <Text style={styles.dealerName}>{profile.dealer.name}</Text>
+                            <Text style={styles.dot}>•</Text>
+                            <Text style={styles.roleSubText}>{(profile?.role || user?.role || 'Technician').replace('_', ' ')}</Text>
                         </View>
-                    )}
-                </LinearGradient>
+                    </View>
 
-                {/* Performance Grid */}
-                <View style={styles.statsGrid}>
-                    {stats_cards.map((card, i) => (
-                        <View key={i} style={styles.statCard}>
-                            <View style={styles.statIconContainer}>{card.icon}</View>
-                            <Text style={styles.statValue}>{card.value}</Text>
-                            <Text style={styles.statLabel}>{card.label}</Text>
-                        </View>
-                    ))}
+                    {/* Quick Stats Grid */}
+                    <View style={styles.quickStatsRow}>
+                        <StatItem 
+                            label="Efficiency" 
+                            value={`${stats?.efficiency_score || 0}%`} 
+                            icon={<TrendingUp size={16} color={COLORS.success} />}
+                            color={COLORS.success}
+                        />
+                        <View style={styles.statDivider} />
+                        <StatItem 
+                            label="Rating" 
+                            value={stats?.average_rating || '5.0'} 
+                            icon={<Star size={16} color={COLORS.warning} />}
+                            color={COLORS.warning}
+                        />
+                        <View style={styles.statDivider} />
+                        <StatItem 
+                            label="Hours" 
+                            value={stats?.hours_worked || 0} 
+                            icon={<Clock size={16} color={COLORS.primary} />}
+                            color={COLORS.primary}
+                        />
+                    </View>
+
+                    {/* Action Buttons */}
+                    <View style={styles.actionRow}>
+                        <TouchableOpacity 
+                            style={styles.primaryBtn}
+                            onPress={() => router.push('/settings')}
+                        >
+                            <Settings size={18} color="white" />
+                            <Text style={styles.primaryBtnText}>Manage Account</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={styles.secondaryBtn}
+                            onPress={() => router.push('/work-history')}
+                        >
+                            <Target size={18} color={COLORS.textPrimary} />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
-                {/* Menu Items */}
-                <View style={styles.menuContainer}>
-                    <MenuItem
-                        icon={<Award color={COLORS.warning} size={20} />}
-                        label="Achievements"
-                        sub="Unlock badges for quality service"
-                        onClick={handleAchievementsClick}
-                    />
-                    <MenuItem
-                        icon={<TrendingUp color={COLORS.success} size={20} />}
-                        label="Performance Stats"
-                        sub="View detailed metrics"
-                        onClick={() => router.push('/performance')}
-                    />
-                    <MenuItem
-                        icon={<Target color={COLORS.primary} size={20} />}
-                        label="Work History"
-                        sub="Completed jobs log"
-                        onClick={() => router.push('/work-history')}
-                    />
-                    <MenuItem
-                        icon={<Settings color={COLORS.textTertiary} size={20} />}
-                        label="Account Settings"
-                        sub="Security & Preferences"
-                        onClick={() => router.push('/settings')}
-                    />
-                </View>
+                {/* Content Sections */}
+                <View style={styles.contentPadding}>
+                    <Text style={styles.sectionTitle}>Professional Status</Text>
+                    <View style={styles.proCard}>
+                        <View style={styles.proRow}>
+                            <View style={styles.proIconBox}>
+                                <Store size={22} color={COLORS.accent} />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.proLabel}>Assigned Dealer</Text>
+                                <Text style={styles.proValue}>{profile?.dealer?.name || 'Authorized Service Center'}</Text>
+                            </View>
+                        </View>
+                        <LinearGradient
+                            colors={['rgba(249, 115, 22, 0.2)', 'transparent']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.proCardFooter}
+                        >
+                            <Award size={14} color={COLORS.accent} />
+                            <Text style={styles.proFooterText}>Certified Royal Enfield Technician</Text>
+                        </LinearGradient>
+                    </View>
 
-                <TouchableOpacity
-                    onPress={handleLogout}
-                    style={styles.logoutBtn}
-                    activeOpacity={0.8}
-                >
-                    <LogOut size={16} color={COLORS.danger} />
-                    <Text style={styles.logoutBtnText}>Terminate Session</Text>
-                </TouchableOpacity>
+                    <Text style={styles.sectionTitle}>General</Text>
+                    <View style={styles.menuList}>
+                        <TouchableOpacity 
+                            style={styles.menuRow}
+                            onPress={() => router.push('/performance')}
+                        >
+                            <View style={styles.menuIconBox}>
+                                <TrendingUp size={20} color={COLORS.success} />
+                            </View>
+                            <Text style={styles.menuText}>Performance Analysis</Text>
+                            <ChevronRight size={20} color={COLORS.textTertiary} />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                            style={styles.menuRow}
+                            onPress={() => router.push('/settings')}
+                        >
+                            <View style={styles.menuIconBox}>
+                                <Settings size={20} color={COLORS.primary} />
+                            </View>
+                            <Text style={styles.menuText}>Account Settings</Text>
+                            <ChevronRight size={20} color={COLORS.textTertiary} />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                            style={[styles.menuRow, { borderBottomWidth: 0 }]}
+                            onPress={handleLogout}
+                        >
+                            <View style={[styles.menuIconBox, { backgroundColor: COLORS.dangerBg }]}>
+                                <LogOut size={20} color={COLORS.danger} />
+                            </View>
+                            <Text style={[styles.menuText, { color: COLORS.danger }]}>Sign Out</Text>
+                        </TouchableOpacity>
+                    </View>
+                    
+                    <View style={styles.footerInfo}>
+                        <Text style={styles.versionText}>Technician Portal v1.0.4</Text>
+                        <Text style={styles.copyText}>© 2026 Global Motors Limited</Text>
+                    </View>
+                </View>
             </ScrollView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    headerCard: {
-        padding: SPACING.xl,
-        borderRadius: BORDER_RADIUS.xxl,
-        alignItems: 'center',
-        overflow: 'hidden',
+    coverWrapper: {
+        height: 220,
+        width: '100%',
         position: 'relative',
-        ...SHADOWS.md
     },
-    avatarGlow: {
+    coverImage: {
+        width: '100%',
+        height: '100%',
+        resizeMode: 'cover',
+    },
+    coverGradient: {
         position: 'absolute',
-        top: -100,
-        right: -100,
-        width: 200,
-        height: 200,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: 999
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 100,
     },
-    avatarContainer: {
-        width: 96,
-        height: 96,
-        borderRadius: BORDER_RADIUS.lg,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        padding: 4,
-        marginBottom: SPACING.md
-    },
-    avatarInner: {
-        width: '100%',
-        height: '100%',
-        borderRadius: BORDER_RADIUS.md,
-        backgroundColor: COLORS.white,
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-    },
-    avatarImage: {
-        width: '100%',
-        height: '100%',
-        resizeMode: 'cover'
-    },
-    profileName: {
-        fontSize: TYPOGRAPHY.sizes.xxl,
-        fontFamily: TYPOGRAPHY.families.bold,
-        color: COLORS.white,
-        marginBottom: SPACING.sm
-    },
-    roleBadge: {
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: BORDER_RADIUS.full,
-        marginBottom: SPACING.md
-    },
-    roleText: {
-        fontSize: TYPOGRAPHY.sizes.xxs,
-        fontFamily: TYPOGRAPHY.families.black,
-        color: COLORS.white,
-        textTransform: 'uppercase',
-        letterSpacing: 1
-    },
-    idBadge: {
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        paddingHorizontal: 16,
-        paddingVertical: 6,
-        borderRadius: BORDER_RADIUS.full,
-    },
-    idText: {
-        fontSize: 9,
-        fontFamily: TYPOGRAPHY.families.black,
-        color: 'rgba(255, 255, 255, 0.6)',
-        textTransform: 'uppercase',
-        letterSpacing: 2
-    },
-    dealerInfo: {
-        marginTop: SPACING.lg,
-        paddingTop: SPACING.lg,
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255, 255, 255, 0.1)',
-        width: '100%',
-        alignItems: 'center'
-    },
-    dealerLabel: {
-        fontSize: TYPOGRAPHY.sizes.xxs,
-        fontFamily: TYPOGRAPHY.families.bold,
-        color: 'rgba(255, 255, 255, 0.7)',
-        textTransform: 'uppercase',
-        letterSpacing: 1
-    },
-    dealerName: {
-        fontSize: TYPOGRAPHY.sizes.sm,
-        fontFamily: TYPOGRAPHY.families.bold,
-        color: COLORS.white
-    },
-    statsGrid: {
+    headerControls: {
+        position: 'absolute',
+        top: Platform.OS === 'ios' ? 50 : 30,
+        left: 0,
+        right: 0,
+        paddingHorizontal: 20,
         flexDirection: 'row',
-        gap: 12,
-        marginTop: SPACING.lg
+        justifyContent: 'space-between',
+        zIndex: 10,
     },
-    statCard: {
-        flex: 1,
-        backgroundColor: COLORS.cardBg,
-        padding: SPACING.md,
-        borderRadius: BORDER_RADIUS.xl,
-        borderWidth: 1,
-        borderColor: COLORS.border,
+    headerIconBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(0,0,0,0.3)',
         alignItems: 'center',
         justifyContent: 'center',
-        ...SHADOWS.sm
     },
-    statIconContainer: {
-        marginBottom: SPACING.sm,
-        padding: SPACING.sm,
-        backgroundColor: COLORS.cardBgAlt,
-        borderRadius: BORDER_RADIUS.lg
+    profileSection: {
+        marginTop: -60,
+        alignItems: 'center',
+        paddingHorizontal: 20,
     },
-    statValue: {
-        fontSize: TYPOGRAPHY.sizes.xl,
+    avatarWrapper: {
+        position: 'relative',
+        marginBottom: 16,
+    },
+    avatarMain: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        padding: 4,
+        backgroundColor: COLORS.pageBg,
+        ...SHADOWS.md,
+    },
+    avatarImg: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 60,
+        borderWidth: 2,
+        borderColor: COLORS.primarySurface,
+    },
+    cameraBtn: {
+        position: 'absolute',
+        bottom: 5,
+        right: 5,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: COLORS.slate700,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 3,
+        borderColor: COLORS.pageBg,
+    },
+    mainInfo: {
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    nameText: {
+        fontSize: 26,
         fontFamily: TYPOGRAPHY.families.bold,
         color: COLORS.textPrimary,
-        fontStyle: 'italic'
+        marginBottom: 6,
     },
-    statLabel: {
-        fontSize: 8,
+    badgeRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    proBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: COLORS.accentSurface,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    proBadgeText: {
+        fontSize: 10,
+        fontFamily: TYPOGRAPHY.families.black,
+        color: COLORS.accent,
+        textTransform: 'uppercase',
+    },
+    dot: {
+        color: COLORS.textTertiary,
+    },
+    roleSubText: {
+        fontSize: 14,
+        fontFamily: TYPOGRAPHY.families.medium,
+        color: COLORS.textSecondary,
+    },
+    quickStatsRow: {
+        flexDirection: 'row',
+        width: '100%',
+        backgroundColor: COLORS.cardBg,
+        padding: 16,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        justifyContent: 'space-between',
+        marginBottom: 20,
+        ...SHADOWS.sm,
+    },
+    statContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    statIconWrapper: {
+        width: 36,
+        height: 36,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    statValueText: {
+        fontSize: 14,
+        fontFamily: TYPOGRAPHY.families.bold,
+        color: COLORS.textPrimary,
+    },
+    statLabelText: {
+        fontSize: 10,
+        fontFamily: TYPOGRAPHY.families.medium,
+        color: COLORS.textTertiary,
+    },
+    statDivider: {
+        width: 1,
+        height: '60%',
+        backgroundColor: COLORS.divider,
+        alignSelf: 'center',
+    },
+    actionRow: {
+        flexDirection: 'row',
+        gap: 12,
+        width: '100%',
+        marginBottom: 30,
+    },
+    primaryBtn: {
+        flex: 1,
+        height: 54,
+        backgroundColor: COLORS.primary,
+        borderRadius: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        ...SHADOWS.sm,
+    },
+    primaryBtnText: {
+        color: 'white',
+        fontSize: 15,
+        fontFamily: TYPOGRAPHY.families.bold,
+    },
+    secondaryBtn: {
+        width: 54,
+        height: 54,
+        backgroundColor: COLORS.cardBg,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    contentPadding: {
+        paddingHorizontal: 20,
+        paddingBottom: 40,
+    },
+    sectionTitle: {
+        fontSize: 12,
         fontFamily: TYPOGRAPHY.families.black,
         color: COLORS.textTertiary,
         textTransform: 'uppercase',
-        marginTop: 4,
-        letterSpacing: 1
+        letterSpacing: 1.5,
+        marginBottom: 12,
+        marginLeft: 4,
     },
-    menuContainer: {
+    proCard: {
         backgroundColor: COLORS.cardBg,
-        borderRadius: BORDER_RADIUS.xxl,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: COLORS.border,
         overflow: 'hidden',
-        marginTop: SPACING.lg,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        ...SHADOWS.sm
+        marginBottom: 24,
+        ...SHADOWS.sm,
     },
-    menuItem: {
+    proRow: {
         flexDirection: 'row',
+        padding: 20,
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: SPACING.lg,
-        paddingVertical: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.divider
+        gap: 16,
     },
-    menuIconContainer: {
-        padding: 10,
-        backgroundColor: COLORS.cardBgAlt,
-        borderRadius: BORDER_RADIUS.lg,
-        borderWidth: 1,
-        borderColor: COLORS.border
-    },
-    menuLabel: {
-        fontSize: TYPOGRAPHY.sizes.sm,
-        fontFamily: TYPOGRAPHY.families.bold,
-        color: COLORS.textPrimary
-    },
-    menuSub: {
-        fontSize: TYPOGRAPHY.sizes.xxs,
-        color: COLORS.textSecondary,
-        textTransform: 'uppercase',
-        marginTop: 2,
-        letterSpacing: 0.5,
-        fontFamily: TYPOGRAPHY.families.medium
-    },
-    logoutBtn: {
-        width: '100%',
-        backgroundColor: COLORS.cardBg,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        paddingVertical: 20,
-        borderRadius: BORDER_RADIUS.xxl,
-        flexDirection: 'row',
+    proIconBox: {
+        width: 48,
+        height: 48,
+        borderRadius: 16,
+        backgroundColor: COLORS.accentSurface,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 12,
-        marginTop: SPACING.xl,
-        ...SHADOWS.sm
     },
-    logoutBtnText: {
-        color: COLORS.danger,
-        fontSize: TYPOGRAPHY.sizes.xxs,
-        fontFamily: TYPOGRAPHY.families.black,
+    proLabel: {
+        fontSize: 11,
+        fontFamily: TYPOGRAPHY.families.medium,
+        color: COLORS.textTertiary,
         textTransform: 'uppercase',
-        letterSpacing: 2
+    },
+    proValue: {
+        fontSize: 16,
+        fontFamily: TYPOGRAPHY.families.bold,
+        color: COLORS.textPrimary,
+    },
+    proCardFooter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        gap: 8,
+    },
+    proFooterText: {
+        fontSize: 11,
+        fontFamily: TYPOGRAPHY.families.bold,
+        color: COLORS.accent,
+    },
+    menuList: {
+        backgroundColor: COLORS.cardBg,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        overflow: 'hidden',
+        ...SHADOWS.sm,
+    },
+    menuRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        gap: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.divider,
+    },
+    menuIconBox: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: COLORS.cardBgAlt,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    menuText: {
+        flex: 1,
+        fontSize: 15,
+        fontFamily: TYPOGRAPHY.families.medium,
+        color: COLORS.textPrimary,
+    },
+    footerInfo: {
+        marginTop: 40,
+        alignItems: 'center',
+        gap: 4,
+    },
+    versionText: {
+        fontSize: 12,
+        color: COLORS.textTertiary,
+        fontFamily: TYPOGRAPHY.families.medium,
+    },
+    copyText: {
+        fontSize: 10,
+        color: 'rgba(100, 116, 139, 0.5)',
+        fontFamily: TYPOGRAPHY.families.regular,
     }
 });

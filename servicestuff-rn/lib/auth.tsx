@@ -4,6 +4,7 @@ import { authClient } from './auth-client';
 import { User } from '../types';
 import { OfflineService } from '../services/offline';
 import { SocketService } from '../services/socket';
+import { setUnauthorizedHandler } from '../services/api';
 
 interface AuthContextType {
     user: User | null;
@@ -49,6 +50,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     useEffect(() => {
+        // Set up the unauthorized handler from API
+        setUnauthorizedHandler(() => {
+            console.log('[AUTH] Unauthorized signal received - logging out');
+            signOut();
+        });
+
         refreshSession();
 
         // Handle offline to online transition using NetInfo
@@ -81,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
         return () => unsubscribe();
-    }, []); // Only run once on mount
+    }, []); 
 
     // Connect socket when authenticated
     useEffect(() => {
@@ -127,6 +134,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
         setSession(null);
         setIsAuthReady(false);
+        // Direct router call to ensure navigation happens if state update is slow
+        try {
+            const { router } = require('expo-router');
+            router.replace('/login');
+        } catch (e) {}
     };
 
     return (
