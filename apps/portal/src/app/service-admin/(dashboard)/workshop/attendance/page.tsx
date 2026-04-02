@@ -11,6 +11,10 @@ import {
     MapPin, Calendar as CalendarIcon, Filter
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 interface TechAttendance {
     id: string;
@@ -37,6 +41,7 @@ const statusConfig = {
 export default function AttendanceDashboardPage() {
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
     const [filterStatus, setFilterStatus] = useState<string>("all");
+    const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
     const { data, isLoading, isError, refetch, isFetching } = useQuery({
         queryKey: ["workshop-attendance", format(selectedDate, "yyyy-MM-dd")],
@@ -44,9 +49,10 @@ export default function AttendanceDashboardPage() {
             const res = await axios.get("/api/v1/workshop/attendance", {
                 params: { date: format(selectedDate, "yyyy-MM-dd") }
             });
+            setLastUpdated(new Date());
             return res.data.data as TechAttendance[];
         },
-        refetchInterval: 30000, // Refresh every 30 seconds
+        refetchInterval: 30000,
     });
 
     const formatTimeMs = (ms: number) => {
@@ -78,30 +84,72 @@ export default function AttendanceDashboardPage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-                        <Users className="text-brand" size={32} />
-                        Technician Attendance
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Live Workshop Stream</p>
+                    </div>
+                    <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3 italic uppercase">
+                        Staff <span className="text-brand">Attendance</span>
                     </h1>
-                    <p className="text-slate-500 mt-1 font-medium">Real-time workshop staff monitoring</p>
+                    <div className="flex items-center gap-4 mt-2">
+                        <p className="text-slate-500 text-sm font-medium">Real-time workshop staff monitoring</p>
+                        <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            Updated {format(lastUpdated, "hh:mm:ss a")}
+                        </p>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button
+                    <Button
+                        variant="outline"
+                        size="icon"
                         onClick={() => refetch()}
                         className={cn(
-                            "p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
-                            isFetching && "opacity-50 cursor-not-allowed"
+                            "rounded-xl border-slate-200 dark:border-slate-800 hover:border-brand/50 transition-all duration-300",
+                            isFetching && "opacity-50"
                         )}
                         disabled={isFetching}
                     >
-                        <RefreshCw size={20} className={cn("text-slate-500", isFetching && "animate-spin")} />
-                    </button>
+                        <RefreshCw size={18} className={cn("text-slate-500", isFetching && "animate-spin")} />
+                    </Button>
 
-                    <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1 shadow-sm">
-                        <CalendarIcon size={18} className="text-slate-400 ml-3 mr-2" />
-                        <span className="text-sm font-semibold pr-4 py-2 border-r border-slate-200 dark:border-slate-800 mr-2 text-slate-700 dark:text-slate-300">
-                            {format(selectedDate, "MMM dd, yyyy")}
-                        </span>
+                    <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1 shadow-sm transition-all duration-500 hover:border-brand/30">
+                        <div className="flex items-center">
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <button className="flex items-center px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors group">
+                                        <CalendarIcon size={18} className="text-slate-400 mr-2 group-hover:text-brand transition-colors" />
+                                        <span className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-tight">
+                                            {format(selectedDate, "MMM dd, yyyy")}
+                                        </span>
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="end">
+                                    <Calendar
+                                        mode="single"
+                                        selected={selectedDate}
+                                        onSelect={(date) => date && setSelectedDate(date)}
+                                        initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
+
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSelectedDate(new Date())}
+                                className="h-8 px-2 text-[10px] font-black uppercase tracking-widest text-brand hover:bg-brand/10 mx-1 rounded-md"
+                            >
+                                Today
+                            </Button>
+                        </div>
+
+                        <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1" />
+
                         {/* Status Filter */}
                         <div className="flex items-center gap-1 px-1">
                             {['all', 'active', 'break', 'offline'].map(status => (
@@ -109,9 +157,9 @@ export default function AttendanceDashboardPage() {
                                     key={status}
                                     onClick={() => setFilterStatus(status)}
                                     className={cn(
-                                        "px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-colors",
+                                        "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-300",
                                         filterStatus === status
-                                            ? "bg-brand text-white shadow-md shadow-brand/20"
+                                            ? "bg-brand text-white shadow-lg shadow-brand/20 scale-105"
                                             : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
                                     )}
                                 >
@@ -126,116 +174,143 @@ export default function AttendanceDashboardPage() {
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                    { label: "Total Techs", value: stats.total, icon: Users, color: "bg-brand/10 text-brand" },
-                    { label: "Active Now", value: stats.active, icon: PlayCircle, color: "bg-emerald-500/10 text-emerald-500" },
-                    { label: "On Break", value: stats.break, icon: PauseCircle, color: "bg-amber-500/10 text-amber-500" },
-                    { label: "Offline/Done", value: stats.offline + stats.checked_out, icon: Clock, color: "bg-slate-500/10 text-slate-500" },
+                    { label: "Total Techs", value: stats.total, icon: Users, color: "text-brand", bg: "bg-brand/10", border: "border-brand/20" },
+                    { label: "Active Now", value: stats.active, icon: PlayCircle, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20", pulse: true },
+                    { label: "On Break", value: stats.break, icon: PauseCircle, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+                    { label: "Offline/Done", value: stats.offline + stats.checked_out, icon: Clock, color: "text-slate-500", bg: "bg-slate-500/10", border: "border-slate-500/20" },
                 ].map((stat, i) => (
                     <motion.div
                         key={i}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                        className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm"
+                        transition={{ delay: i * 0.1, duration: 0.5, ease: "easeOut" }}
+                        className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-brand/30 transition-all duration-500"
                     >
-                        <div className="flex items-center justify-between">
-                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{stat.label}</p>
-                            <div className={cn("p-2 rounded-lg", stat.color)}>
-                                <stat.icon size={18} />
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 blur-3xl -mr-12 -mt-12 group-hover:bg-brand/10 transition-colors" />
+                        <div className="flex items-center justify-between relative z-10">
+                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{stat.label}</p>
+                            <div className={cn("p-2.5 rounded-xl transition-all duration-500 group-hover:scale-110 shadow-lg group-hover:rotate-3", stat.bg, stat.color)}>
+                                <stat.icon size={20} className={cn(stat.pulse && "animate-pulse")} />
                             </div>
                         </div>
-                        <h3 className="text-3xl font-black mt-2 text-slate-900 dark:text-white">{stat.value}</h3>
+                        <div className="flex items-baseline gap-2 mt-4 relative z-10">
+                            <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter italic">{stat.value}</h3>
+                            <div className={cn("w-1.5 h-1.5 rounded-full mb-2", stat.pulse ? "bg-emerald-500 animate-pulse" : "bg-slate-200 dark:bg-slate-800")} />
+                        </div>
                     </motion.div>
                 ))}
             </div>
 
             {/* Technician List */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl overflow-hidden shadow-slate-200/50 dark:shadow-none">
-                <div className="overflow-x-auto">
+            <div className="bg-white dark:bg-[#0D0D0F] rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-2xl overflow-hidden relative">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand/20 to-transparent" />
+                <div className="overflow-x-auto custom-scrollbar">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Technician</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Status</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Clock In</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Hours Logged</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widesttext-right">Actions</th>
+                            <tr className="bg-slate-50/30 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/5">
+                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Agent Profile</th>
+                                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Current Status</th>
+                                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Initial Contact</th>
+                                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Active Cycle</th>
+                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-right">Stream</th>
                             </tr>
                         </thead>
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={5} className="py-20 text-center text-slate-500">
-                                        <RefreshCw size={32} className="animate-spin mx-auto mb-4 text-slate-300" />
-                                        Loading attendance data...
+                                    <td colSpan={5} className="py-32 text-center text-slate-500 italic">
+                                        <RefreshCw size={40} className="animate-spin mx-auto mb-6 text-brand/20" />
+                                        <p className="text-xs font-black uppercase tracking-[0.2em] opacity-40">Synchronizing Attendance Data...</p>
                                     </td>
                                 </tr>
                             ) : filteredData.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="py-20 text-center text-slate-500">
-                                        <XCircle size={32} className="mx-auto mb-4 text-slate-300" />
-                                        No technicians found for the selected filter.
+                                    <td colSpan={5} className="py-32 text-center text-slate-500">
+                                        <XCircle size={40} className="mx-auto mb-6 text-slate-200 dark:text-slate-800" />
+                                        <p className="text-xs font-black uppercase tracking-[0.2em] opacity-40">No active agents detected</p>
                                     </td>
                                 </tr>
                             ) : (
                                 <AnimatePresence>
-                                    {filteredData.map((tech) => {
+                                    {filteredData.map((tech, i) => {
                                         const cfg = statusConfig[tech.status];
                                         const StatusIcon = cfg.icon;
 
                                         return (
                                             <motion.tr
                                                 key={tech.id}
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
+                                                initial={{ opacity: 0, x: -10 }}
+                                                animate={{ opacity: 1, x: 0 }}
                                                 exit={{ opacity: 0 }}
-                                                className="border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors group"
+                                                transition={{ delay: i * 0.05 }}
+                                                className="border-b border-slate-50/50 dark:border-white/[0.02] hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-all duration-500 group"
                                             >
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="relative">
-                                                            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden flex items-center justify-center font-bold text-slate-500">
+                                                <td className="px-8 py-5">
+                                                    <div className="flex items-center gap-5">
+                                                        <div className="relative shrink-0">
+                                                            <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 overflow-hidden flex items-center justify-center font-black text-slate-400 border border-slate-200 dark:border-white/10 group-hover:border-brand/30 transition-all duration-500 group-hover:rotate-3 group-hover:scale-105 shadow-inner">
                                                                 {tech.avatar ? (
                                                                     <img src={tech.avatar} alt={tech.name} className="w-full h-full object-cover" />
                                                                 ) : (
                                                                     tech.name.substring(0, 2).toUpperCase()
                                                                 )}
                                                             </div>
-                                                            <span className={cn("absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900", cfg.color)}></span>
+                                                            <span className={cn("absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-[3px] border-white dark:border-[#0D0D0F] shadow-xl z-10 transition-all duration-500", cfg.color)}></span>
                                                         </div>
-                                                        <div>
-                                                            <h4 className="font-bold text-slate-900 dark:text-white">{tech.name}</h4>
-                                                            <p className="text-xs text-slate-500">{tech.email || 'No email associated'}</p>
+                                                        <div className="min-w-0">
+                                                            <h4 className="font-black text-slate-900 dark:text-white italic uppercase tracking-tight group-hover:text-brand transition-colors duration-500 truncate">{tech.name}</h4>
+                                                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate">{tech.email || 'NO COMMS LINK'}</p>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    <span className={cn("inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border", cfg.bg, cfg.text, cfg.border)}>
-                                                        <StatusIcon size={12} className={tech.status === 'active' ? "animate-pulse" : ""} />
+                                                <td className="px-6 py-5">
+                                                    <span className={cn("inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border shadow-sm transition-all duration-500 group-hover:shadow-md", cfg.bg, cfg.text, cfg.border)}>
+                                                        <StatusIcon size={12} className={cn(tech.status === 'active' && "animate-pulse")} />
                                                         {cfg.label}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 font-medium">
+                                                <td className="px-6 py-5">
+                                                    <div className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-400 font-bold tabular-nums">
                                                         {tech.lastSeen ? (
                                                             <>
-                                                                <Clock size={14} className="text-slate-400" />
-                                                                {format(new Date(tech.lastSeen), "hh:mm a")}
+                                                                <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-white/5 flex items-center justify-center border border-slate-100 dark:border-white/5 group-hover:border-brand/20 transition-all">
+                                                                    <Clock size={14} className="text-slate-400 group-hover:text-brand transition-colors" />
+                                                                </div>
+                                                                <span className="group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+                                                                    {format(new Date(tech.lastSeen), "hh:mm a")}
+                                                                </span>
                                                             </>
                                                         ) : (
-                                                            <span className="text-slate-400 italic">No activity today</span>
+                                                            <span className="text-[10px] text-slate-300 dark:text-slate-700 uppercase tracking-widest italic font-black">NO ACTIVITY DATA</span>
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-sm text-slate-700 dark:text-slate-300 font-bold border border-slate-200 dark:border-slate-700">
-                                                        {formatTimeMs(tech.totalWorkTimeMs)}
-                                                    </span>
+                                                <td className="px-6 py-5">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="font-black tabular-nums bg-slate-100 dark:bg-white/5 px-3 py-1.5 rounded-xl text-xs text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 shadow-inner group-hover:border-brand/20 transition-all">
+                                                            {formatTimeMs(tech.totalWorkTimeMs)}
+                                                        </span>
+                                                        {tech.status === 'active' && (
+                                                            <div className="flex gap-0.5">
+                                                                {[0, 1, 2].map(j => (
+                                                                    <motion.div
+                                                                        key={j}
+                                                                        animate={{ height: [4, 12, 4] }}
+                                                                        transition={{ repeat: Infinity, duration: 0.8, delay: j * 0.2 }}
+                                                                        className="w-1 bg-emerald-500/40 rounded-full"
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <button className="p-2 rounded-lg text-slate-400 hover:text-brand hover:bg-brand/10 transition-colors">
+                                                <td className="px-8 py-5 text-right">
+                                                    <Link
+                                                        href={`/service-admin/workshop/technicians`}
+                                                        className="inline-flex w-10 h-10 items-center justify-center rounded-2xl bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-white hover:bg-brand hover:shadow-lg hover:shadow-brand/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 border border-slate-200 dark:border-white/10 hover:border-brand"
+                                                    >
                                                         <ChevronRight size={20} />
-                                                    </button>
+                                                    </Link>
                                                 </td>
                                             </motion.tr>
                                         );

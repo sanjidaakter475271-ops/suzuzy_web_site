@@ -67,6 +67,10 @@ const httpServer = createServer((req, res) => {
         });
         return;
     }
+    // Let socket.io handle its own path
+    if (req.url.startsWith('/socket.io/')) {
+        return;
+    }
 
     res.writeHead(404);
     res.end();

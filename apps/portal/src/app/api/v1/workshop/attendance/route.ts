@@ -12,22 +12,33 @@ export async function GET(req: NextRequest) {
 
         const { searchParams } = new URL(req.url);
         const dateParam = searchParams.get('date');
-        const now = dateParam ? new Date(dateParam) : new Date();
-        const todayStart = startOfDay(now);
-        const todayEnd = endOfDay(now);
+        const queryDate = dateParam ? new Date(dateParam) : new Date();
+        const todayStart = startOfDay(queryDate);
+        const todayEnd = endOfDay(queryDate);
+
+        // For work time calculation: if querying today, use current time for ongoing shifts.
+        // If querying a past date, use the end of that day.
+        const isQueryingToday = todayStart.getTime() === startOfDay(new Date()).getTime();
+        const calculationRefTime = isQueryingToday ? new Date() : todayEnd;
 
         // 1. Get all technicians for this dealer
         const technicians = await (prisma as any).service_staff.findMany({
             where: {
                 dealer_id: user.dealerId as string,
-                designation: { in: ['Technician', 'technician'] }
+                is_active: true,
+                designation: {
+                    contains: 'tech',
+                    mode: 'insensitive'
+                }
             },
-            include: {
+            select: {
+                id: true,
+                name: true,
+                email: true,
                 profiles: {
                     select: {
                         full_name: true,
-                        email: true,
-                        avatar_url: true
+                        email: true
                     }
                 }
             }
@@ -54,14 +65,22 @@ export async function GET(req: NextRequest) {
         const result = technicians.map((tech: any) => {
             const sessions = attendance.filter((a: any) => a.staff_id === tech.id);
             const activeSession = sessions.find((s: any) => !s.clock_out);
-            const activeShift = activeSession?.attendance_shifts.find((sh: any) => !sh.end_time);
+            const activeShift = activeSession?.attendance_shifts?.find((sh: any) => !sh.end_time);
 
             // Calculate work time
             let totalWorkTimeMs = 0;
-            sessions.flatMap((s: any) => s.attendance_shifts).forEach((shift: any) => {
-                const start = new Date(shift.start_time);
-                const end = shift.end_time ? new Date(shift.end_time) : now;
-                totalWorkTimeMs += end.getTime() - start.getTime();
+            sessions.forEach((s: any) => {
+                const shifts = s.attendance_shifts || [];
+                shifts.forEach((shift: any) => {
+                    const start = new Date(shift.start_time);
+                    const end = shift.end_time ? new Date(shift.end_time) : calculationRefTime;
+
+                    // Safety check to avoid negative time if clock-in is after calculationRefTime
+                    const duration = end.getTime() - start.getTime();
+                    if (duration > 0) {
+                        totalWorkTimeMs += duration;
+                    }
+                });
             });
 
             let status = 'offline';
@@ -77,9 +96,9 @@ export async function GET(req: NextRequest) {
 
             return {
                 id: tech.id,
-                name: tech.profiles?.full_name || 'Unknown',
-                email: tech.profiles?.email,
-                avatar: tech.profiles?.avatar_url,
+                name: tech.profiles?.full_name || tech.name || 'Unknown',
+                email: tech.profiles?.email || tech.email || null,
+                avatar: null,
                 status,
                 lastSeen: sessions[0]?.clock_in || null,
                 totalWorkTimeMs,
