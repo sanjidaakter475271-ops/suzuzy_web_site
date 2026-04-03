@@ -11,6 +11,7 @@ interface DatePickerProps {
     placeholder?: string;
     className?: string;
     label?: string;
+    align?: 'left' | 'right';
 }
 
 export const DatePicker: React.FC<DatePickerProps> = ({
@@ -18,7 +19,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     onChange,
     placeholder = "Select date",
     className,
-    label
+    label,
+    align = 'left'
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -87,14 +89,15 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
             {/* Dropdown Calendar */}
             {isOpen && (
-                <div className="absolute top-full left-0 mt-2 z-50 animate-in fade-in zoom-in-95 duration-200">
-                    <div className="bg-white dark:bg-dark-card rounded-[2rem] shadow-2xl border-2 border-surface-border dark:border-dark-border overflow-hidden p-2">
-                        <Calendar
-                            value={value}
-                            onChange={handleSelect}
-                        // Pass custom navigation handlers if needed or rely on internal state
-                        />
-                    </div>
+                <div className={cn(
+                    "absolute top-full mt-2 z-50 animate-in fade-in zoom-in-95 duration-200",
+                    align === 'right' ? "right-0" : "left-0"
+                )}>
+                    <Calendar
+                        value={value}
+                        onChange={handleSelect}
+                        className="shadow-2xl border-2"
+                    />
                 </div>
             )}
         </div>

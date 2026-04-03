@@ -1,6 +1,6 @@
 import NetInfo from '@react-native-community/netinfo';
 import { TechnicianAPI } from './api';
-import { JobCard } from '@/types';
+import { JobCard, AttendanceStatus } from '@/types';
 import { storage, getStorageJSON, setStorageJSON } from './storage';
 
 export class OfflineService {
@@ -145,6 +145,16 @@ export class OfflineService {
 
     getCachedStats(): any | null {
         return getStorageJSON<any>('cached_stats');
+    }
+
+    // Cache attendance status
+    cacheAttendanceStatus(status: AttendanceStatus) {
+        setStorageJSON('cached_attendance_status', status);
+    }
+
+    // Get cached attendance status
+    getCachedAttendanceStatus(): AttendanceStatus | null {
+        return getStorageJSON<AttendanceStatus>('cached_attendance_status');
     }
 
     // Cache user profile with 24h expiration

@@ -208,6 +208,7 @@ export default function StockAdjustmentPage() {
                             <label className="text-[10px] font-black uppercase tracking-widest text-ink-muted ml-1">Date</label>
                             <DatePicker
                                 value={formData.date}
+                                align="right"
                                 onChange={(date) => setFormData({ ...formData, date: date || new Date() })}
                             />
                         </div>

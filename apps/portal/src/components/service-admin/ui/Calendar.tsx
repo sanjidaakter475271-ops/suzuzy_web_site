@@ -69,40 +69,42 @@ export const Calendar: React.FC<CalendarProps> = ({ value, onChange, className }
     };
 
     return (
-        <div className={cn("p-4 bg-white dark:bg-dark-card rounded-3xl shadow-xl w-[320px] border border-surface-border dark:border-dark-border select-none", className)}>
+        <div className={cn("p-5 bg-white dark:bg-dark-card rounded-[2rem] shadow-xl w-[320px] border border-surface-border dark:border-dark-border select-none", className)}>
             {/* Header */}
-            <div className="flex items-center justify-between mb-4 px-2">
+            <div className="flex items-center justify-between mb-6 px-1">
                 <button
                     onClick={handlePrevMonth}
-                    className="p-2 hover:bg-surface-page dark:hover:bg-dark-page rounded-xl text-ink-muted transition-colors"
+                    type="button"
+                    className="p-2.5 hover:bg-surface-page dark:hover:bg-dark-page rounded-2xl text-ink-muted transition-all active:scale-90"
                 >
                     <ChevronLeft size={20} />
                 </button>
                 <div className="text-center">
-                    <h4 className="text-sm font-black text-ink-heading dark:text-white uppercase tracking-widest">
+                    <h4 className="text-xs font-black text-ink-heading dark:text-white uppercase tracking-[0.2em]">
                         {MONTHS[currentMonth]}
                     </h4>
-                    <span className="text-[10px] font-bold text-brand uppercase tracking-widest">{currentYear}</span>
+                    <span className="text-[10px] font-black text-brand uppercase tracking-widest mt-0.5 block">{currentYear}</span>
                 </div>
                 <button
                     onClick={handleNextMonth}
-                    className="p-2 hover:bg-surface-page dark:hover:bg-dark-page rounded-xl text-ink-muted transition-colors"
+                    type="button"
+                    className="p-2.5 hover:bg-surface-page dark:hover:bg-dark-page rounded-2xl text-ink-muted transition-all active:scale-90"
                 >
                     <ChevronRight size={20} />
                 </button>
             </div>
 
             {/* Days Header */}
-            <div className="grid grid-cols-7 mb-2">
+            <div className="grid grid-cols-7 mb-3">
                 {DAYS.map(day => (
-                    <div key={day} className="text-center text-[10px] font-black text-ink-muted uppercase tracking-wider py-1">
+                    <div key={day} className="text-center text-[9px] font-black text-ink-muted/60 uppercase tracking-widest py-1">
                         {day}
                     </div>
                 ))}
             </div>
 
             {/* Dates Grid */}
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-1.5">
                 {/* Empty slots for start offset */}
                 {Array.from({ length: startDay }).map((_, i) => (
                     <div key={`empty-${i}`} />
@@ -117,18 +119,19 @@ export const Calendar: React.FC<CalendarProps> = ({ value, onChange, className }
                     return (
                         <button
                             key={day}
+                            type="button"
                             onClick={() => handleDateClick(day)}
                             className={cn(
-                                "h-9 w-9 mx-auto rounded-xl flex items-center justify-center text-xs font-bold transition-all relative group",
+                                "h-10 w-10 mx-auto rounded-2xl flex items-center justify-center text-xs font-black transition-all relative group",
                                 selected
-                                    ? "bg-brand text-white shadow-lg shadow-brand/20 scale-105"
+                                    ? "bg-brand text-white shadow-lg shadow-brand/20 scale-110 z-10"
                                     : "hover:bg-surface-page dark:hover:bg-dark-page text-ink-heading dark:text-white",
-                                today && !selected && "border-2 border-brand text-brand"
+                                today && !selected && "border-2 border-brand/50 text-brand"
                             )}
                         >
                             {day}
                             {/* Dot indicator for selected/today */}
-                            {selected && <div className="absolute -bottom-1 w-1 h-1 rounded-full bg-white/50"></div>}
+                            {selected && <div className="absolute -bottom-1 w-1 h-1 rounded-full bg-white/50 animate-pulse"></div>}
                         </button>
                     );
                 })}

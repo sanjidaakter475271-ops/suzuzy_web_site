@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { TechnicianAPI } from '@/lib/api';
 import { JobCard, DashboardStats, AttendanceStatus, JobStatus } from '@/types';
 import { SocketService } from '@/lib/socket';
-import { getStorageJSON } from '@/lib/storage';
+import { OfflineService } from '@/lib/offline';
 
 interface JobState {
   jobs: JobCard[];
@@ -32,16 +32,18 @@ export const useJobStore = create<JobState>((set, get) => ({
   setRefreshing: (refreshing: boolean) => set({ refreshing }),
 
   fetchDashboardData: async (showLoading = true) => {
-    // 1. Instant Cache Load (SWR Pattern)
-    const cachedStats = getStorageJSON<any>('cached_stats');
-    const cachedAttendance = getStorageJSON<AttendanceStatus>('attendance_status'); // Adjusted key
-    const cachedJobs = getStorageJSON<{ data: JobCard[] }>('cached_jobs');
+    const offlineService = OfflineService.getInstance();
 
-    if (cachedStats || cachedAttendance || cachedJobs) {
+    // 1. Instant Cache Load (SWR Pattern)
+    const cachedStats = offlineService.getCachedStats();
+    const cachedAttendance = offlineService.getCachedAttendanceStatus();
+    const cachedJobs = offlineService.getCachedJobs();
+
+    if (cachedStats || cachedAttendance || cachedJobs.length > 0) {
       set({
-        stats: cachedStats?.stats || get().stats,
+        stats: cachedStats || get().stats,
         attendanceStatus: cachedAttendance || get().attendanceStatus,
-        jobs: cachedJobs?.data || get().jobs,
+        jobs: cachedJobs.length > 0 ? cachedJobs : get().jobs,
         loading: false
       });
     } else if (showLoading) {
@@ -56,13 +58,27 @@ export const useJobStore = create<JobState>((set, get) => ({
         TechnicianAPI.getJobs({ limit: 5 }),
       ]);
 
-      set({
-        stats: statsResult.status === 'fulfilled' ? statsResult.value.data?.data?.stats : get().stats,
-        attendanceStatus: statusResult.status === 'fulfilled' ? statusResult.value.data?.data : get().attendanceStatus,
-        jobs: jobsResult.status === 'fulfilled' ? jobsResult.value.data?.data : get().jobs,
-        loading: false,
-        refreshing: false,
-      });
+      const newState: Partial<JobState> = { loading: false, refreshing: false };
+
+      if (statsResult.status === 'fulfilled') {
+        const stats = statsResult.value.data?.data?.stats;
+        newState.stats = stats;
+        if (stats) offlineService.cacheStats(stats);
+      }
+
+      if (statusResult.status === 'fulfilled') {
+        const status = statusResult.value.data?.data;
+        newState.attendanceStatus = status;
+        if (status) offlineService.cacheAttendanceStatus(status);
+      }
+
+      if (jobsResult.status === 'fulfilled') {
+        const jobs = jobsResult.value.data?.data;
+        newState.jobs = jobs;
+        if (jobs) offlineService.cacheJobs(jobs);
+      }
+
+      set(newState);
     } catch (err) {
       console.error("[JOB_STORE] Fetch dashboard error:", err);
       set({ loading: false, refreshing: false });
@@ -70,10 +86,12 @@ export const useJobStore = create<JobState>((set, get) => ({
   },
 
   fetchJobs: async (params) => {
+    const offlineService = OfflineService.getInstance();
+
     // 1. Instant Cache Load
-    const cachedJobs = getStorageJSON<{ data: JobCard[] }>('cached_jobs');
-    if (cachedJobs?.data) {
-      set({ jobs: cachedJobs.data, loading: false });
+    const cachedJobs = offlineService.getCachedJobs();
+    if (cachedJobs.length > 0) {
+      set({ jobs: cachedJobs, loading: false });
     } else {
       set({ loading: true });
     }
@@ -81,7 +99,9 @@ export const useJobStore = create<JobState>((set, get) => ({
     // 2. Background Revalidation
     try {
       const res = await TechnicianAPI.getJobs(params);
-      set({ jobs: res.data?.data || [], loading: false });
+      const jobs = res.data?.data || [];
+      set({ jobs, loading: false });
+      if (jobs.length > 0) offlineService.cacheJobs(jobs);
     } catch (err) {
       console.error("[JOB_STORE] Fetch jobs error:", err);
       set({ loading: false });
@@ -89,8 +109,10 @@ export const useJobStore = create<JobState>((set, get) => ({
   },
 
   fetchJobDetail: async (id) => {
+    const offlineService = OfflineService.getInstance();
+
     // 1. Instant Cache Load
-    const cachedDetail = getStorageJSON<JobCard>(`job_detail_${id}`);
+    const cachedDetail = offlineService.getCachedJobDetail(id);
     if (cachedDetail) {
       set({ activeJob: cachedDetail, loading: false });
     } else {
@@ -100,7 +122,9 @@ export const useJobStore = create<JobState>((set, get) => ({
     // 2. Background Revalidation
     try {
       const res = await TechnicianAPI.getJobDetail(id);
-      set({ activeJob: res.data?.data || null, loading: false });
+      const job = res.data?.data || null;
+      set({ activeJob: job, loading: false });
+      if (job) offlineService.cacheJobDetail(id, job);
     } catch (err) {
       console.error("[JOB_STORE] Fetch job detail error:", err);
       set({ loading: false });
