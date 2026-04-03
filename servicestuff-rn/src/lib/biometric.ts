@@ -1,6 +1,6 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storage } from './storage';
 import { Platform } from 'react-native';
 
 const BIO_ENABLED_KEY = 'service_biometrics_enabled';
@@ -24,21 +24,20 @@ export class BiometricService {
     }
 
     static async isEnabled(): Promise<boolean> {
-        const value = await AsyncStorage.getItem(BIO_ENABLED_KEY);
-        return value === 'true';
+        return storage.getBoolean(BIO_ENABLED_KEY) ?? false;
     }
 
     static async setEnabled(enabled: boolean, credentials?: { email: string; pass: string }): Promise<void> {
         if (enabled) {
-            await AsyncStorage.setItem(BIO_ENABLED_KEY, 'true');
+            storage.set(BIO_ENABLED_KEY, true);
             if (credentials) {
                 // Using SecureStore for real security in React Native
                 await SecureStore.setItemAsync(BIO_CREDS_KEY, JSON.stringify(credentials));
             }
         } else {
-            await AsyncStorage.removeItem(BIO_ENABLED_KEY);
+            storage.remove(BIO_ENABLED_KEY);
             await SecureStore.deleteItemAsync(BIO_CREDS_KEY);
-            await AsyncStorage.removeItem(BIO_FAIL_COUNT);
+            storage.remove(BIO_FAIL_COUNT);
         }
     }
 
@@ -62,7 +61,7 @@ export class BiometricService {
 
             if (result.success) {
                 // Reset fail count on success
-                await AsyncStorage.removeItem(BIO_FAIL_COUNT);
+                storage.remove(BIO_FAIL_COUNT);
                 return true;
             } else {
                 if (result.error !== 'user_cancel' && result.error !== 'app_cancel') {
@@ -77,18 +76,17 @@ export class BiometricService {
     }
 
     static async incrementFailCount(): Promise<number> {
-        const value = await AsyncStorage.getItem(BIO_FAIL_COUNT);
-        const count = value ? parseInt(value, 10) + 1 : 1;
-        await AsyncStorage.setItem(BIO_FAIL_COUNT, count.toString());
+        const value = storage.getNumber(BIO_FAIL_COUNT) ?? 0;
+        const count = value + 1;
+        storage.set(BIO_FAIL_COUNT, count);
         return count;
     }
 
     static async getFailCount(): Promise<number> {
-        const value = await AsyncStorage.getItem(BIO_FAIL_COUNT);
-        return value ? parseInt(value, 10) : 0;
+        return storage.getNumber(BIO_FAIL_COUNT) ?? 0;
     }
 
     static async resetFailCount(): Promise<void> {
-        await AsyncStorage.removeItem(BIO_FAIL_COUNT);
+        storage.remove(BIO_FAIL_COUNT);
     }
 }

@@ -39,6 +39,8 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "expo-task-manager",
+      "expo-background-fetch",
       [
         "expo-build-properties",
         {

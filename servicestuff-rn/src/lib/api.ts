@@ -1,8 +1,8 @@
 import axios, { AxiosError, InternalAxiosRequestConfig, AxiosRequestConfig } from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { ENV } from '@/lib/env';
 import { router } from 'expo-router';
+import { storage } from './storage';
 
 const API_Base_URL = ENV.PORTAL_API_URL;
 const AUTH_TOKEN_KEY = 'auth_token';
@@ -43,7 +43,7 @@ api.interceptors.response.use(
         if (response.config.method?.toUpperCase() === 'GET') {
             const cacheKey = `cache_${response.config.url}`;
             try {
-                await AsyncStorage.setItem(cacheKey, JSON.stringify(response.data));
+                storage.set(cacheKey, JSON.stringify(response.data));
             } catch (e) {
                 console.warn('Failed to cache response', e);
             }
@@ -58,7 +58,7 @@ api.interceptors.response.use(
                 console.log('[API] 401 Unauthorized - Clearing session and notifying provider');
 
                 await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
-                await AsyncStorage.removeItem('cached_profile');
+                storage.remove('cached_profile');
 
                 // Trigger the callback to reset AuthProvider state
                 if (onUnauthorizedCallback) {
@@ -92,7 +92,7 @@ api.interceptors.response.use(
         // Offline Fallback for GET requests
         if (config && config.method?.toUpperCase() === 'GET' && (!error.response || error.response.status >= 500)) {
             const cacheKey = `cache_${config.url}`;
-            const value = await AsyncStorage.getItem(cacheKey);
+            const value = storage.getString(cacheKey);
             if (value) {
                 console.log(`[Offline Fallback] Serving cached data for ${config.url}`);
                 return Promise.resolve({

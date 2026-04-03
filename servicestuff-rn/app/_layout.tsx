@@ -5,7 +5,7 @@ import { Slot, useRouter, useSegments, useRootNavigationState } from 'expo-route
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storage } from '@/lib/storage';
 import { useFonts, MPLUSRounded1c_100Thin, MPLUSRounded1c_300Light, MPLUSRounded1c_400Regular, MPLUSRounded1c_500Medium, MPLUSRounded1c_700Bold, MPLUSRounded1c_800ExtraBold, MPLUSRounded1c_900Black } from '@expo-google-fonts/m-plus-rounded-1c';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Notifications from 'expo-notifications';
@@ -17,6 +17,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/stores/authStore';
 import { useJobStore } from '@/stores/jobStore';
+import { registerBackgroundSync } from '@/lib/backgroundTasks';
 import { OfflineBanner } from '@/components/feedback/OfflineBanner';
 import { PermissionManager } from '@/features/auth/components/PermissionManager';
 import { LocationTracker } from '@/features/tracking/components/LocationTracker';
@@ -110,16 +111,14 @@ function InitialLayout() {
   useEffect(() => {
     initAuth();
     initializeSocketListeners();
+    registerBackgroundSync();
   }, []);
 
   // Check onboarding status
   useEffect(() => {
-    const checkOnboarding = async () => {
-      const value = await AsyncStorage.getItem('servicemate_onboarded');
-      setIsOnboarded(value === 'true');
-      setOnboardingChecked(true);
-    };
-    checkOnboarding();
+    const onboarded = storage.getBoolean('servicemate_onboarded');
+    setIsOnboarded(!!onboarded);
+    setOnboardingChecked(true);
   }, []);
 
   // Handle splash screen and navigation

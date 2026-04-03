@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { TechnicianAPI } from '@/lib/api';
 import { JobCard, DashboardStats, AttendanceStatus, JobStatus } from '@/types';
 import { SocketService } from '@/lib/socket';
+import { getStorageJSON } from '@/lib/storage';
 
 interface JobState {
   jobs: JobCard[];
@@ -31,7 +32,23 @@ export const useJobStore = create<JobState>((set, get) => ({
   setRefreshing: (refreshing: boolean) => set({ refreshing }),
 
   fetchDashboardData: async (showLoading = true) => {
-    if (showLoading) set({ loading: true });
+    // 1. Instant Cache Load (SWR Pattern)
+    const cachedStats = getStorageJSON<any>('cached_stats');
+    const cachedAttendance = getStorageJSON<AttendanceStatus>('attendance_status'); // Adjusted key
+    const cachedJobs = getStorageJSON<{ data: JobCard[] }>('cached_jobs');
+
+    if (cachedStats || cachedAttendance || cachedJobs) {
+      set({
+        stats: cachedStats?.stats || get().stats,
+        attendanceStatus: cachedAttendance || get().attendanceStatus,
+        jobs: cachedJobs?.data || get().jobs,
+        loading: false
+      });
+    } else if (showLoading) {
+      set({ loading: true });
+    }
+
+    // 2. Background Revalidation
     try {
       const [statsResult, statusResult, jobsResult] = await Promise.allSettled([
         TechnicianAPI.getDashboardStats(),
@@ -53,7 +70,15 @@ export const useJobStore = create<JobState>((set, get) => ({
   },
 
   fetchJobs: async (params) => {
-    set({ loading: true });
+    // 1. Instant Cache Load
+    const cachedJobs = getStorageJSON<{ data: JobCard[] }>('cached_jobs');
+    if (cachedJobs?.data) {
+      set({ jobs: cachedJobs.data, loading: false });
+    } else {
+      set({ loading: true });
+    }
+
+    // 2. Background Revalidation
     try {
       const res = await TechnicianAPI.getJobs(params);
       set({ jobs: res.data?.data || [], loading: false });
@@ -64,7 +89,15 @@ export const useJobStore = create<JobState>((set, get) => ({
   },
 
   fetchJobDetail: async (id) => {
-    set({ loading: true });
+    // 1. Instant Cache Load
+    const cachedDetail = getStorageJSON<JobCard>(`job_detail_${id}`);
+    if (cachedDetail) {
+      set({ activeJob: cachedDetail, loading: false });
+    } else {
+      set({ loading: true });
+    }
+
+    // 2. Background Revalidation
     try {
       const res = await TechnicianAPI.getJobDetail(id);
       set({ activeJob: res.data?.data || null, loading: false });

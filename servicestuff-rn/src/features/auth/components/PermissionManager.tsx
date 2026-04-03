@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { Camera, MapPin, CheckCircle, ShieldAlert } from '@/components/icons';
 import * as Location from 'expo-location';
 import { Camera as ExpoCamera } from 'expo-camera';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storage } from '@/lib/storage';
 import { MotiView } from 'moti';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
 
@@ -13,8 +13,8 @@ export const PermissionManager: React.FC<{ onComplete: () => void }> = ({ onComp
 
     useEffect(() => {
         const checkInitialPermissions = async () => {
-            const requested = await AsyncStorage.getItem('permissions_requested');
-            if (requested === 'true') {
+            const requested = storage.getBoolean('permissions_requested');
+            if (requested) {
                 onComplete();
                 return;
             }
@@ -39,7 +39,7 @@ export const PermissionManager: React.FC<{ onComplete: () => void }> = ({ onComp
             console.warn("Camera permission failed", e);
         }
 
-        await AsyncStorage.setItem('permissions_requested', 'true');
+        storage.set('permissions_requested', true);
         setShowPrompt(false);
         onComplete();
     };

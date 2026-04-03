@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'rea
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storage } from '@/lib/storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -11,7 +11,7 @@ export default function Welcome() {
     const router = useRouter();
 
     const handleGetStarted = async () => {
-        await AsyncStorage.setItem('servicemate_onboarded', 'true');
+        storage.set('servicemate_onboarded', true);
         router.replace('/login');
     };
 

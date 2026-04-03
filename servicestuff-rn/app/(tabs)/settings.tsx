@@ -31,7 +31,7 @@ import {
     ArrowLeft
 } from '@/components/icons';
 import { MotiView } from 'moti';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storage } from '@/lib/storage';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { TechnicianAPI } from '@/lib/api';
@@ -110,7 +110,7 @@ export default function Settings() {
             [
                 { text: "Cancel", style: "cancel" },
                 { text: "Logout & Clear", style: "destructive", onPress: async () => {
-                    await AsyncStorage.clear();
+                    storage.clearAll();
                     router.replace('/login');
                 }}
             ]

@@ -1,12 +1,12 @@
 import axios from 'axios';
-import { ENV } from "../lib/env";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ENV } from "@/lib/env";
+import * as SecureStore from 'expo-secure-store';
 
 export const diagnoseIssue = async (issueDescription: string): Promise<string> => {
     try {
         console.log('[GEMINI_CLIENT] Requesting diagnosis from backend for:', issueDescription);
 
-        const token = await AsyncStorage.getItem('auth_token');
+        const token = await SecureStore.getItemAsync('auth_token');
         const response = await axios.post(`${ENV.PORTAL_API_URL}/api/v1/technician/diagnose`,
             { description: issueDescription },
             {
