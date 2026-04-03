@@ -28,7 +28,11 @@
       "Bash(rm -rf .expo)",
       "Bash(rm -rf node_modules/.cache)",
       "Bash(npx patch-package:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(grep \":$\")",
+      "Read(//d//**)",
+      "Bash(ls -d apps/portal/node_modules/lightningcss*)",
+      "Bash(ls -d apps/portal/node_modules/react-native-css-interop*)"
     ]
   }
 }

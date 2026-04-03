@@ -28,7 +28,8 @@ import {
     Settings,
     HelpCircle,
     Clock,
-    Lock
+    Lock,
+    Map
 } from 'lucide-react';
 import { MenuGroup } from '@/types/service-admin';
 
@@ -48,8 +49,8 @@ export const SIDEBAR_MENU: MenuGroup[] = [
                 icon: Hammer,
                 subItems: [
                     { title: "Ramp View", path: "/service-admin/workshop/ramp-view" },
+                    { title: "Floor Map", path: "/service-admin/workshop/visual-map", icon: Map },
                     { title: "Job Cards", path: "/service-admin/workshop/job-cards" },
-                    { title: "Status Board", path: "/service-admin/workshop/status-board" },
                     { title: "Technicians", path: "/service-admin/workshop/technicians" },
                     { title: "Attendance", path: "/service-admin/workshop/attendance" },
                     { title: "QR Codes", path: "/service-admin/workshop/qr-codes" },
