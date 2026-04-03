@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Calendar, Bike, Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/service-admin/ui';

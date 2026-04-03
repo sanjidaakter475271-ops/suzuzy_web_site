@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma/client";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { broadcast } from "@/lib/socket-server";
+import { v4 as uuidv4 } from "uuid";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const results = await prisma.$transaction(
             items.map(item =>
                 prisma.service_checklist_items.upsert({
-                    where: { id: item.id || 'new-uuid' }, // This logic might need refinement based on how items are identified
+                    where: { id: item.id || uuidv4() },
                     update: {
                         is_completed: item.is_completed,
                         condition: item.condition,
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
         return NextResponse.json({ success: true, data: results });
     } catch (error: any) {
+        console.error("[CHECKLIST_POST] error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

@@ -13,7 +13,26 @@ interface ExpensePieChartProps {
     lastMonthData?: ChartData[];
 }
 
-// ... (CustomTooltip stays same)
+const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        const percent = ((data.value / data.total) * 100).toFixed(1);
+        return (
+            <div className="bg-[#0D0D0F]/90 backdrop-blur-md p-3 border border-white/10 shadow-2xl rounded-2xl">
+                <p className="text-[10px] font-black text-ink-muted uppercase tracking-[0.2em] mb-2 border-b border-white/5 pb-1">{data.name}</p>
+                <div className="flex items-center justify-between gap-6">
+                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Amount:</span>
+                    <span className="text-xs font-black text-white tabular-nums">৳{data.value.toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between gap-6 mt-1">
+                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Share:</span>
+                    <span className="text-xs font-black text-brand tabular-nums">{percent}%</span>
+                </div>
+            </div>
+        );
+    }
+    return null;
+};
 
 const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ data = [], lastMonthData = [] }) => {
     const [range, setRange] = React.useState('month');

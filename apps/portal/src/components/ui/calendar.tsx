@@ -66,7 +66,7 @@ function Calendar({
             footer={
                 <div className="flex justify-center w-full">
                     <button
-                        onClick={() => props.onSelect?.(new Date() as any, new Date(), {} as any, {} as any)}
+                        onClick={() => (props as any).onSelect?.(new Date(), new Date(), {} as any, {} as any)}
                         className="text-[9px] font-black uppercase tracking-[0.2em] text-brand hover:bg-brand/10 px-3 py-1.5 rounded-lg transition-all"
                     >
                         Go to Today
