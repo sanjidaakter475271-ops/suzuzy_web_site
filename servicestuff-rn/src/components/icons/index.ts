@@ -70,7 +70,7 @@ import {
   CirclePlay as PlayCircle,
   CircleStop as StopCircle,
   Layers,
-  Edit2,
+  Pencil as Edit2,
   QrCode,
   Scan
 } from 'lucide-react-native';
