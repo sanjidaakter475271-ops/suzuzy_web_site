@@ -4,20 +4,21 @@ import { useRouter } from 'expo-router';
 import {
   Clock, CheckCircle, AlertCircle, Calendar, RefreshCw,
   ClipboardList, ChevronRight, QrCode, Scan, Zap
-} from 'lucide-react-native';
+} from '@/components/icons';
 import { MotiView, AnimatePresence } from 'moti';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { StatusBadge } from '../../components/ui/StatusBadge';
-import { DashboardSkeleton } from '../../components/Skeleton';
-import { MaterialCircularProgress } from '../../components/ui/Loading';
-import { TopBar } from '../../components/TopBar';
-import { TechnicianAPI } from '../../services/api';
-import { JobCard, DashboardStats, AttendanceStatus, JobStatus } from '../../types';
-import { SocketService } from '../../services/socket';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import { MaterialCircularProgress } from '@/components/ui/Loading';
+import { TopBar } from '@/components/layout/TopBar';
+import { TechnicianAPI } from '@/lib/api';
+import { JobCard, DashboardStats, AttendanceStatus, JobStatus } from '@/types';
+import { SocketService } from '@/lib/socket';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
+import { useJobStore } from '@/stores/jobStore';
 
 // Memoized Shift Timer Component
 const ShiftTimer = React.memo(({ startTime }: { startTime: string | null }) => {
@@ -93,56 +94,24 @@ const TaskCard = React.memo(({ item, onPress }: { item: JobCard, onPress: (id: s
 export default function Dashboard() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [tasks, setTasks] = useState<JobCard[]>([]);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const fetchTimeoutReq = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchData = async (showLoading = true) => {
-    if (showLoading) setLoading(true);
-    try {
-      const [statsResult, statusResult, jobsResult] = await Promise.allSettled([
-        TechnicianAPI.getDashboardStats(),
-        TechnicianAPI.getAttendanceStatus(),
-        TechnicianAPI.getJobs({ limit: 5 }),
-      ]);
-
-      if (statsResult.status === 'fulfilled') setStats(statsResult.value.data?.data?.stats || null);
-      if (statusResult.status === 'fulfilled') setAttendanceStatus(statusResult.value.data?.data || null);
-      if (jobsResult.status === 'fulfilled') setTasks(jobsResult.value.data?.data || []);
-
-    } catch (err) {
-      console.error("[DASHBOARD] Fetch error:", err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  const {
+    jobs: tasks,
+    stats,
+    attendanceStatus,
+    loading,
+    refreshing,
+    fetchDashboardData,
+    setRefreshing
+  } = useJobStore();
 
   useEffect(() => {
-    fetchData();
-
-    // Setup Socket Listeners
-    const socket = SocketService.getInstance();
-    const handleUpdate = () => {
-      if (fetchTimeoutReq.current) clearTimeout(fetchTimeoutReq.current);
-      fetchTimeoutReq.current = setTimeout(() => fetchData(false), 300);
-    };
-
-    const events = ['job_cards:changed', 'order:update', 'inventory:changed', 'attendance:changed'];
-    events.forEach(e => socket.on(e, handleUpdate));
-
-    return () => {
-      events.forEach(e => socket.off(e, handleUpdate));
-      if (fetchTimeoutReq.current) clearTimeout(fetchTimeoutReq.current);
-    };
+    fetchDashboardData();
   }, []);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchData(false);
+    fetchDashboardData(false);
   }, []);
 
   const getEfficiencyRating = (score: number) => {
@@ -199,7 +168,7 @@ export default function Dashboard() {
             <Text style={styles.headerSubtitle}>Technician</Text>
             <Text style={styles.headerTitle}>Dashboard</Text>
           </View>
-          <TouchableOpacity style={styles.refreshButton} onPress={() => fetchData(true)}>
+          <TouchableOpacity style={styles.refreshButton} onPress={() => fetchDashboardData(true)}>
             <RefreshCw size={20} color={COLORS.primary} />
           </TouchableOpacity>
         </View>

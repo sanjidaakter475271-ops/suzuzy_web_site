@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
-import { Bell, ChevronLeft, Home, ChevronRight } from 'lucide-react-native';
+import { Bell, ChevronLeft, Home, ChevronRight } from '@/components/icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TechnicianAPI } from '../services/api';
-import { SocketService } from '../services/socket';
-import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import { TechnicianAPI } from '@/lib/api';
+import { SocketService } from '@/lib/socket';
+import { COLORS, TYPOGRAPHY, SPACING } from '@/constants/theme';
 
 interface Breadcrumb {
     label: string;

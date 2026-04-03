@@ -2,7 +2,6 @@ import 'react-native-reanimated';
 import "../global.css";
 import * as SplashScreen from 'expo-splash-screen';
 import { Slot, useRouter, useSegments, useRootNavigationState } from 'expo-router';
-import { AuthProvider, useAuth } from '../lib/auth';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useEffect, useState } from 'react';
@@ -16,12 +15,14 @@ import { Platform, View } from 'react-native';
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { OfflineBanner } from '../components/OfflineBanner';
-import { PermissionManager } from '../components/PermissionManager';
-import { LocationTracker } from '../components/LocationTracker';
-import { ErrorBoundary } from '../components/ErrorBoundary';
-import { TechnicianAPI } from '../services/api';
-import { COLORS } from '../constants/theme';
+import { useAuthStore } from '@/stores/authStore';
+import { useJobStore } from '@/stores/jobStore';
+import { OfflineBanner } from '@/components/feedback/OfflineBanner';
+import { PermissionManager } from '@/features/auth/components/PermissionManager';
+import { LocationTracker } from '@/features/tracking/components/LocationTracker';
+import { ErrorBoundary } from '@/components/feedback/ErrorBoundary';
+import { TechnicianAPI } from '@/lib/api';
+import { COLORS } from '@/constants/theme';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -86,7 +87,8 @@ async function registerForPushNotificationsAsync() {
 }
 
 function InitialLayout() {
-  const { user, loading, isAuthReady } = useAuth();
+  const { user, loading, isAuthReady, initialize: initAuth } = useAuthStore();
+  const { initializeSocketListeners } = useJobStore();
   const [fontsLoaded, fontError] = useFonts({
     MPLUSRounded1c_100Thin,
     MPLUSRounded1c_300Light,
@@ -103,6 +105,12 @@ function InitialLayout() {
   const [permissionsDone, setPermissionsDone] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [isOnboarded, setIsOnboarded] = useState(false);
+
+  // Initialize stores on mount
+  useEffect(() => {
+    initAuth();
+    initializeSocketListeners();
+  }, []);
 
   // Check onboarding status
   useEffect(() => {
@@ -206,9 +214,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ErrorBoundary>
-          <AuthProvider>
-            <InitialLayout />
-          </AuthProvider>
+          <InitialLayout />
         </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>

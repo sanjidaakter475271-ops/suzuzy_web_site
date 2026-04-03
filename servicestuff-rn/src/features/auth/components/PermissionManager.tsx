@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { Camera, MapPin, CheckCircle, ShieldAlert } from 'lucide-react-native';
+import { Camera, MapPin, CheckCircle, ShieldAlert } from '@/components/icons';
 import * as Location from 'expo-location';
 import { Camera as ExpoCamera } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MotiView } from 'moti';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
 
 export const PermissionManager: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
     const [showPrompt, setShowPrompt] = useState(false);

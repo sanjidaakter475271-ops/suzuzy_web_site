@@ -12,16 +12,16 @@ import {
     Trophy,
     Flame,
     WifiOff
-} from 'lucide-react-native';
+} from '@/components/icons';
 import { MotiView } from 'moti';
 import Svg, { Circle } from 'react-native-svg';
 
-import { TechnicianAPI } from '../services/api';
-import { DashboardStats } from '../types';
-import { TopBar } from '../components/TopBar';
-import { OfflineService } from '../services/offline';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
-import { PerformanceSkeleton } from '../components/Skeleton';
+import { TechnicianAPI } from '@/lib/api';
+import { DashboardStats } from '@/types';
+import { TopBar } from '@/components/layout/TopBar';
+import { OfflineService } from '@/lib/offline';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
+import { PerformanceSkeleton } from '@/components/ui/Skeleton';
 
 const TargetProgress = ({ label, current, target, color }: { label: string, current: number, target: number, color: string }) => {
     const percentage = Math.min((current / target) * 100, 100);
@@ -165,7 +165,7 @@ export default function Performance() {
                         {(stats?.daily_performance || [
                             { day: 'M', jobs: 4 }, { day: 'T', jobs: 6 }, { day: 'W', jobs: 3 },
                             { day: 'T', jobs: 8 }, { day: 'F', jobs: 5 }, { day: 'S', jobs: 2 }, { day: 'S', jobs: 0 }
-                        ]).map((d, i) => (
+                        ]).map((d: any, i: number) => (
                             <View key={i} style={styles.chartBarGroup}>
                                 <View style={styles.chartBarBg}>
                                     <MotiView

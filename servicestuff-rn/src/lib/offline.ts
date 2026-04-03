@@ -1,7 +1,7 @@
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TechnicianAPI } from './api';
-import { JobCard } from '../types';
+import { JobCard } from '@/types';
 
 export class OfflineService {
     private static instance: OfflineService;

@@ -14,13 +14,13 @@ import {
     Store,
     Camera,
     ShieldCheck
-} from 'lucide-react-native';
+} from '@/components/icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { TechnicianAPI } from '../../services/api';
-import { useAuth } from '../../lib/auth';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
-import { ProfileSkeleton } from '../../components/Skeleton';
+import { TechnicianAPI } from '@/lib/api';
+import { useAuthStore } from '@/stores/authStore';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
+import { ProfileSkeleton } from '@/components/ui/Skeleton';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -37,7 +37,7 @@ const StatItem = ({ label, value, icon, color }: { label: string, value: string 
 );
 
 export default function Profile() {
-    const { user, signOut } = useAuth();
+    const { user, signOut } = useAuthStore();
     const router = useRouter();
     const [stats, setStats] = useState<any>(null);
     const [profile, setProfile] = useState<any>(null);

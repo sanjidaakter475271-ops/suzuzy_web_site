@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Platform } from 'react-native';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight } from '@/components/icons';
 import { MotiView } from 'moti';
-import { JobCard } from '../types';
-import { StatusBadge } from './ui/StatusBadge';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { JobCard } from '@/types';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
 
 interface MyJobCardProps {
     job: JobCard;

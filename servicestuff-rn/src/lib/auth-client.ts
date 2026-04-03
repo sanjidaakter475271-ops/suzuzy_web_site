@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
-import { ENV } from './env';
+import { ENV } from '@/lib/env';
 
 const PORTAL_API_URL = ENV.PORTAL_API_URL;
 const AUTH_TOKEN_KEY = 'auth_token';

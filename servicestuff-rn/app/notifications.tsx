@@ -14,17 +14,17 @@ import {
     CheckCircle2,
     Clock,
     Trash2
-} from 'lucide-react-native';
+} from '@/components/icons';
 import { MotiView } from 'moti';
 import { FlashList } from '@shopify/flash-list';
 
-import { TopBar } from '../components/TopBar';
-import { SocketService } from '../services/socket';
-import { Notification } from '../types';
-import { TechnicianAPI } from '../services/api';
-import { MaterialCircularProgress } from '../components/ui/Loading';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
-import { NotificationSkeleton } from '../components/Skeleton';
+import { TopBar } from '@/components/layout/TopBar';
+import { SocketService } from '@/lib/socket';
+import { Notification } from '@/types';
+import { TechnicianAPI } from '@/lib/api';
+import { MaterialCircularProgress } from '@/components/ui/Loading';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
+import { NotificationSkeleton } from '@/components/ui/Skeleton';
 
 export default function Notifications() {
     const [notifications, setNotifications] = useState<Notification[]>([]);

@@ -1,8 +1,8 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Home, Wrench, Clock, User, Settings } from 'lucide-react-native';
+import { Home, Wrench, Clock, User, Settings } from '@/components/icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, TYPOGRAPHY } from '../../constants/theme';
+import { COLORS, TYPOGRAPHY } from '@/constants/theme';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();

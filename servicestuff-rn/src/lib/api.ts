@@ -1,7 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig, AxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import { ENV } from '../lib/env';
+import { ENV } from '@/lib/env';
 import { router } from 'expo-router';
 
 const API_Base_URL = ENV.PORTAL_API_URL;

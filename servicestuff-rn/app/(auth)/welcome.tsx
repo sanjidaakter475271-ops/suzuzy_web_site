@@ -89,7 +89,7 @@ export default function Welcome() {
     );
 }
 
-import { Wrench } from 'lucide-react-native';
+import { Wrench } from '@/components/icons';
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#020617' },

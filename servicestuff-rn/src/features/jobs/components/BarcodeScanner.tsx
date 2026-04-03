@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { X, Camera, RefreshCw } from 'lucide-react-native';
+import { X, Camera, RefreshCw } from '@/components/icons';
 import { MotiView } from 'moti';
 
 interface ScannerProps {

@@ -27,18 +27,18 @@ import {
     Coffee,
     Zap,
     LogOut
-} from 'lucide-react-native';
+} from '@/components/icons';
 import { MotiView, AnimatePresence } from 'moti';
 import { useCallback } from 'react';
 
-import { TechnicianAPI } from '../../services/api';
-import { LocationService } from '../../services/location';
-import { TechnicianAttendance, AttendanceStatus } from '../../types';
-import { TopBar } from '../../components/TopBar';
-import { BarcodeScannerComponent } from '../../components/BarcodeScanner';
-import { MaterialCircularProgress } from '../../components/ui/Loading';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
-import { AttendanceSkeleton } from '../../components/Skeleton';
+import { TechnicianAPI } from '@/lib/api';
+import { LocationService } from '@/lib/location';
+import { TechnicianAttendance, AttendanceStatus } from '@/types';
+import { TopBar } from '@/components/layout/TopBar';
+import { BarcodeScannerComponent } from '@/features/jobs/components/BarcodeScanner';
+import { MaterialCircularProgress } from '@/components/ui/Loading';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
+import { AttendanceSkeleton } from '@/components/ui/Skeleton';
 
 export default function Attendance() {
     const router = useRouter();

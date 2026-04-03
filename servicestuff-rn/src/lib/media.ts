@@ -1,6 +1,6 @@
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { decode } from 'base64-arraybuffer';
 
 export class MediaService {
@@ -13,11 +13,11 @@ export class MediaService {
      */
     static async uploadImage(uri: string, bucket: string = 'service-docs', path: string = 'general'): Promise<string> {
         try {
-            // 1. Compress
+            // 1. Compress to WebP (60-80% smaller than JPEG)
             const manipulatedImage = await ImageManipulator.manipulateAsync(
                 uri,
                 [{ resize: { width: 1024 } }],
-                { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+                { compress: 0.7, format: ImageManipulator.SaveFormat.WEBP, base64: true }
             );
 
             if (!manipulatedImage.base64) {
@@ -25,15 +25,14 @@ export class MediaService {
             }
 
             // 2. Generate unique filename
-            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.jpg`;
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.webp`;
             const filePath = `${path}/${fileName}`;
 
             // 3. Upload to Supabase
-            // In React Native, we convert base64 to ArrayBuffer for Supabase upload
             const { data, error } = await supabase.storage
                 .from(bucket)
                 .upload(filePath, decode(manipulatedImage.base64), {
-                    contentType: 'image/jpeg',
+                    contentType: 'image/webp',
                     upsert: true
                 });
 

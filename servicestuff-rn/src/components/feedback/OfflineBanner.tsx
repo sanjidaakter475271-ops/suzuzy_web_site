@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { WifiOff, X } from 'lucide-react-native';
+import { WifiOff, X } from '@/components/icons';
 import { MotiView, AnimatePresence } from 'moti';
 import NetInfo from '@react-native-community/netinfo';
-import { COLORS } from '../constants/theme';
+import { COLORS } from '@/constants/theme';
 
 export const OfflineBanner: React.FC = () => {
     const [isOffline, setIsOffline] = useState(false);

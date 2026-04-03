@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { Easing } from 'react-native-reanimated';
 import { MotiView } from 'moti';
-import { COLORS } from '../../constants/theme';
+import { COLORS } from '@/constants/theme';
 
 interface LoadingProps {
   size?: number;

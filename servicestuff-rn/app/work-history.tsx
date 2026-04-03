@@ -8,15 +8,15 @@ import {
     History,
     Filter,
     Timer
-} from 'lucide-react-native';
+} from '@/components/icons';
 import { MotiView } from 'moti';
 import { FlashList } from '@shopify/flash-list';
 
-import { TechnicianAPI } from '../services/api';
-import { JobCard, JobStatus } from '../types';
-import { TopBar } from '../components/TopBar';
-import { JobCardSkeleton } from '../components/Skeleton';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { TechnicianAPI } from '@/lib/api';
+import { JobCard, JobStatus } from '@/types';
+import { TopBar } from '@/components/layout/TopBar';
+import { JobCardSkeleton } from '@/components/ui/Skeleton';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
 
 const formatDate = (dateStr?: string) => {
     if (!dateStr) return 'N/A';

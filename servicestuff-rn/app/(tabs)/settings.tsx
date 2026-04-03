@@ -29,22 +29,22 @@ import {
     ShieldCheck,
     User as UserIcon,
     ArrowLeft
-} from 'lucide-react-native';
+} from '@/components/icons';
 import { MotiView } from 'moti';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { TechnicianAPI } from '../../services/api';
-import { BiometricService } from '../../services/biometric';
-import { useAuth } from '../../lib/auth';
-import { MaterialCircularProgress } from '../../components/ui/Loading';
-import { COLORS, TYPOGRAPHY, SHADOWS } from '../../constants/theme';
-import { SettingsSkeleton } from '../../components/Skeleton';
+import { TechnicianAPI } from '@/lib/api';
+import { BiometricService } from '@/lib/biometric';
+import { useAuthStore } from '@/stores/authStore';
+import { MaterialCircularProgress } from '@/components/ui/Loading';
+import { COLORS, TYPOGRAPHY, SHADOWS } from '@/constants/theme';
+import { SettingsSkeleton } from '@/components/ui/Skeleton';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function Settings() {
-    const { user } = useAuth();
+    const { user } = useAuthStore();
 
     // State
     const [isEditing, setIsEditing] = useState(false);

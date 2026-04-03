@@ -1,8 +1,8 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AlertCircle, RotateCcw, Home } from 'lucide-react-native';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { AlertCircle, RotateCcw, Home } from '@/components/icons';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS } from '@/constants/theme';
 import { router } from 'expo-router';
 
 interface Props {

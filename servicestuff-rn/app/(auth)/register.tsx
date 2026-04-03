@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { User, Mail, Lock, ArrowLeft, Zap, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react-native';
-import { useAuth } from '../../lib/auth';
+import { User, Mail, Lock, ArrowLeft, Zap, CheckCircle2, AlertCircle, ShieldCheck } from '@/components/icons';
+import { useAuthStore } from '@/stores/authStore';
 import { MotiView, AnimatePresence } from 'moti';
-import { MaterialCircularProgress } from '../../components/ui/Loading';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
+import { MaterialCircularProgress } from '@/components/ui/Loading';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
 
 export default function Register() {
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { signUp } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);

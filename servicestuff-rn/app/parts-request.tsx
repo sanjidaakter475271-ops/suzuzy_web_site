@@ -16,15 +16,15 @@ import {
     RefreshCw,
     Search,
     Filter
-} from 'lucide-react-native';
+} from '@/components/icons';
 import { MotiView } from 'moti';
 import { FlashList } from '@shopify/flash-list';
 
-import { TechnicianAPI } from '../services/api';
-import { RequisitionGroup } from '../types';
-import { TopBar } from '../components/TopBar';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
-import { NotificationSkeleton } from '../components/Skeleton';
+import { TechnicianAPI } from '@/lib/api';
+import { RequisitionGroup } from '@/types';
+import { TopBar } from '@/components/layout/TopBar';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
+import { NotificationSkeleton } from '@/components/ui/Skeleton';
 
 export default function Requisitions() {
     const router = useRouter();

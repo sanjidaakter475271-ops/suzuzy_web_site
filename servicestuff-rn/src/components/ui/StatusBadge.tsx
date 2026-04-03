@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { CheckCircle, Clock, AlertCircle, PauseCircle, ShieldCheck, XCircle } from 'lucide-react-native';
-import { JobStatus } from '../../types';
-import { COLORS, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/theme';
+import { CheckCircle, Clock, AlertCircle, PauseCircle, XCircle } from '@/components/icons';
+import { JobStatus } from '@/types';
+import { COLORS, TYPOGRAPHY, BORDER_RADIUS } from '@/constants/theme';
 
 interface StatusBadgeProps {
   status: JobStatus;

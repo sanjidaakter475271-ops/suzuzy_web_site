@@ -80,7 +80,7 @@ export default function Splash() {
 }
 
 // Internal Zap icon since lucide-react-native is available
-import { Zap } from 'lucide-react-native';
+import { Zap } from '@/components/icons';
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#020617' },

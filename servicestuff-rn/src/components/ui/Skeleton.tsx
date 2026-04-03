@@ -8,7 +8,7 @@ import Animated, {
     Easing 
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { COLORS, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
 
 interface SkeletonProps {
     width?: DimensionValue;

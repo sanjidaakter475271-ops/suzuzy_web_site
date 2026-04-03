@@ -34,24 +34,24 @@ import {
     Sparkles,
     WifiOff,
     X
-} from 'lucide-react-native';
+} from '@/components/icons';
 import { MotiView, AnimatePresence } from 'moti';
 import * as ImagePicker from 'expo-image-picker';
 
-import { TechnicianAPI } from '../../services/api';
-import { JobCard, ChecklistItem, ServiceCondition, PartsRequest, RoutePath } from '../../types';
-import { TopBar } from '../../components/TopBar';
-import { PartsSelectionModal } from '../../components/PartsSelectionModal';
-import { OfflineService } from '../../services/offline';
-import { LocationService } from '../../services/location';
-import { MediaService } from '../../services/media';
-import { SocketService } from '../../services/socket';
-import { DetailSkeleton } from '../../components/Skeleton';
-import { diagnoseIssue } from '../../services/geminiService';
-import { StatusBadge } from '../../components/ui/StatusBadge';
-import { MaterialCircularProgress } from '../../components/ui/Loading';
-import { JobStatus } from '../../types';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
+import { TechnicianAPI } from '@/lib/api';
+import { JobCard, ChecklistItem, ServiceCondition, PartsRequest } from '@/types';
+import { TopBar } from '@/components/layout/TopBar';
+import { PartsSelectionModal } from '@/features/parts/components/PartsSelectionModal';
+import { OfflineService } from '@/lib/offline';
+import { LocationService } from '@/lib/location';
+import { MediaService } from '@/lib/media';
+import { SocketService } from '@/lib/socket';
+import { DetailSkeleton } from '@/components/ui/Skeleton';
+import { diagnoseIssue } from '@/lib/geminiService';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { MaterialCircularProgress } from '@/components/ui/Loading';
+import { JobStatus } from '@/types';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
 
 type Tab = 'summary' | 'checklist' | 'parts' | 'photos' | 'notes';
 

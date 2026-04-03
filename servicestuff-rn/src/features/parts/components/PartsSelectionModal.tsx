@@ -18,13 +18,13 @@ import {
     ShoppingCart,
     Package,
     Layers
-} from 'lucide-react-native';
+} from '@/components/icons';
 import { MotiView, AnimatePresence } from 'moti';
 import { FlashList } from '@shopify/flash-list';
-import { TechnicianAPI } from '../services/api';
-import { Category, ProductDetail } from '../types';
+import { TechnicianAPI } from '@/lib/api';
+import { Category, ProductDetail } from '@/types';
 import { RequisitionCart } from './RequisitionCart';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
 
 interface PartsSelectionModalProps {
     jobId: string;

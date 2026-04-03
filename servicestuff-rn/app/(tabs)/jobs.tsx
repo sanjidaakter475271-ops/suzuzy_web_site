@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Search, Clock, CheckCircle, AlertCircle, PauseCircle, ChevronRight, Briefcase, WifiOff } from 'lucide-react-native';
+import { Search, Clock, CheckCircle, AlertCircle, PauseCircle, ChevronRight, Briefcase, WifiOff } from '@/components/icons';
 import { MotiView, AnimatePresence } from 'moti';
 import { FlashList } from '@shopify/flash-list';
 import NetInfo from '@react-native-community/netinfo';
 
-import { TopBar } from '../../components/TopBar';
-import MyJobCard from '../../components/MyJobCard';
-import { JobCardSkeleton } from '../../components/Skeleton';
-import { TechnicianAPI } from '../../services/api';
-import { JobCard, JobStatus, RoutePath } from '../../types';
-import { OfflineService } from '../../services/offline';
-import { SocketService } from '../../services/socket';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
+import { TopBar } from '@/components/layout/TopBar';
+import MyJobCard from '@/features/jobs/components/MyJobCard';
+import { JobCardSkeleton } from '@/components/ui/Skeleton';
+import { TechnicianAPI } from '@/lib/api';
+import { JobCard, JobStatus } from '@/types';
+import { OfflineService } from '@/lib/offline';
+import { SocketService } from '@/lib/socket';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
 
 export default function MyJobs() {
     const router = useRouter();

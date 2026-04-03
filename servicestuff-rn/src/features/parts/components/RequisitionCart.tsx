@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
-import { ShoppingCart, Trash2, Plus, Minus, Send, ArrowLeft } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator, Platform } from 'react-native';
+import { ShoppingCart, Trash2, Plus, Minus, Send, ArrowLeft } from '@/components/icons';
 import { MotiView, AnimatePresence } from 'moti';
-import { ProductDetail } from '../types';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { ProductDetail } from '@/types';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
 
 interface CartItem {
     product: ProductDetail;

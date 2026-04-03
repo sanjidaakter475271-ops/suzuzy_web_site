@@ -11,29 +11,29 @@ import {
     KeyboardAvoidingView
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { 
-    KeyRound, 
-    Mail, 
-    ArrowRight, 
-    ShieldCheck, 
-    Zap, 
-    Fingerprint, 
+import {
+    KeyRound,
+    Mail,
+    ArrowRight,
+    ShieldCheck,
+    Zap,
+    Fingerprint,
     AlertCircle,
     Lock,
+    Settings,
     Bike,
     Activity,
-    Wind,
-    Settings
-} from 'lucide-react-native';
+    Wind
+} from '@/components/icons';
 import { MotiView, AnimatePresence } from 'moti';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Easing } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
-import { useAuth } from '../../lib/auth';
-import { BiometricService } from '../../services/biometric';
-import { MaterialCircularProgress } from '../../components/ui/Loading';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
+import { useAuthStore } from '@/stores/authStore';
+import { BiometricService } from '@/lib/biometric';
+import { MaterialCircularProgress } from '@/components/ui/Loading';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -138,8 +138,8 @@ const GearsBackground = () => (
 
 export default function Login() {
     const router = useRouter();
-    const { signIn, signOut, user: authUser } = useAuth();
-    
+    const { signIn, signOut, user: authUser } = useAuthStore();
+
     // States
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -151,7 +151,7 @@ export default function Login() {
 
     // Initial setups
     useEffect(() => {
-        BiometricService.isEnabled().then(enabled => {
+        BiometricService.isEnabled().then((enabled: boolean) => {
             setHasBiometrics(enabled);
             if (enabled) {
                 const timer = setTimeout(() => handleBiometricLogin(), 1000);

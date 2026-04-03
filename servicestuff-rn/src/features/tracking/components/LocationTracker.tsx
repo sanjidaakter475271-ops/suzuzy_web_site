@@ -1,11 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { LocationService } from '../services/location';
-import { SocketService } from '../services/socket';
-import { TechnicianAPI } from '../services/api';
-import { useAuth } from '../lib/auth';
+import { LocationService } from '@/lib/location';
+import { SocketService } from '@/lib/socket';
+import { TechnicianAPI } from '@/lib/api';
+import { useAuthStore } from '@/stores/authStore';
 
 export const LocationTracker: React.FC = () => {
-    const { isAuthReady, user } = useAuth();
+    const { isAuthReady, user } = useAuthStore();
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {

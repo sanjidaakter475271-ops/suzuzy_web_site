@@ -2,7 +2,7 @@ import { io, Socket } from 'socket.io-client';
 import * as SecureStore from 'expo-secure-store';
 import { AppState, AppStateStatus } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
-import { ENV } from '../lib/env';
+import { ENV } from '@/lib/env';
 
 const SOCKET_URL = ENV.REALTIME_URL;
 const AUTH_TOKEN_KEY = 'auth_token';
