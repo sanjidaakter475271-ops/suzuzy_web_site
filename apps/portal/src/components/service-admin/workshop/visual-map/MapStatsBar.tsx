@@ -2,6 +2,7 @@
 
 'use client';
 
+import { memo } from 'react';
 import { MapStats } from '@/types/service-admin/visualMap';
 import {
   LayoutGrid,
@@ -20,7 +21,7 @@ interface MapStatsBarProps {
   stats: MapStats;
 }
 
-export function MapStatsBar({ stats }: MapStatsBarProps) {
+export const MapStatsBar = memo(function MapStatsBar({ stats }: MapStatsBarProps) {
   const items = [
     {
       label: 'TOTAL BAYS',
@@ -103,4 +104,5 @@ export function MapStatsBar({ stats }: MapStatsBarProps) {
       ))}
     </div>
   );
-}
+});
+MapStatsBar.displayName = 'MapStatsBar';

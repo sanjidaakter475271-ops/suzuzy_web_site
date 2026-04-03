@@ -46,127 +46,147 @@ export const RampCard = memo(function RampCard({ ramp, onClick, isHighlighted }:
     <motion.div
       initial={{ opacity: 0, scale: 0.9, y: 20 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      whileHover={{ y: -5 }}
-      transition={{ duration: 0.3 }}
+      whileHover={{ y: -8 }}
+      transition={{ type: 'spring', damping: 15 }}
       className="relative group"
     >
       <div
         className={cn(
-          "relative w-full text-left rounded-[2.5rem] border-2 p-6 transition-all duration-500 ease-out shadow-sm cursor-grab active:cursor-grabbing",
+          "relative w-full text-left rounded-[2.5rem] border-2 p-7 transition-all duration-500 ease-out shadow-2xl cursor-grab active:cursor-grabbing overflow-hidden",
           config.bgClass,
           config.borderClass,
-          isHighlighted ? "shadow-[0_20px_50px_rgba(199,91,18,0.2)] border-brand ring-2 ring-brand/10" : "",
-          ramp.status === 'active' ? "border-dashed" : ""
+          isHighlighted ? "border-brand ring-4 ring-brand/10" : "border-opacity-30",
+          ramp.status === 'active' ? "border-dashed" : "border-solid"
         )}
         onClick={(e) => {
-           // Only trigger card click if not clicking on nested buttons/links
            if ((e.target as HTMLElement).closest('.stop-propagation')) return;
            onClick(ramp);
         }}
       >
-        {/* Blueprint Style Decorations */}
-        {ramp.status === 'active' && (
-          <div className="absolute inset-0 rounded-[2.5rem] bg-emerald-400/[0.03] animate-pulse pointer-events-none" />
-        )}
-        <div className="absolute top-4 left-4 w-2 h-2 border-t-2 border-l-2 border-current opacity-20" />
-        <div className="absolute bottom-4 right-4 w-2 h-2 border-b-2 border-r-2 border-current opacity-20" />
+        {/* Glassmorphism Background */}
+        <div className="absolute inset-0 bg-white/[0.01] dark:bg-black/20 backdrop-blur-sm pointer-events-none" />
 
-        {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
+        {/* Blueprint Style corner markings */}
+        <div className="absolute top-5 left-5 w-3 h-3 border-t-2 border-l-2 border-current opacity-30" />
+        <div className="absolute bottom-5 right-5 w-3 h-3 border-b-2 border-r-2 border-current opacity-30" />
+
+        {/* Dynamic Scan Line for Active Bays */}
+        {ramp.status === 'active' && (
+          <motion.div
+            animate={{ top: ['0%', '100%', '0%'] }}
+            transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+            className="absolute left-0 right-0 h-px bg-emerald-500/30 blur-sm pointer-events-none z-10"
+          />
+        )}
+
+        {/* Header Section */}
+        <div className="flex items-start justify-between mb-6 relative z-10">
+          <div className="flex items-center gap-4">
             <div className={cn(
-              "flex items-center justify-center h-12 w-12 rounded-2xl shadow-inner border transition-transform duration-500 group-hover:rotate-12",
+              "flex items-center justify-center h-14 w-14 rounded-2xl shadow-inner border-2 transition-all duration-700 group-hover:rotate-[360deg]",
               config.bgClass,
               config.borderClass
             )}>
-              <span className="text-xl">{config.icon}</span>
+              <span className="text-2xl">{config.icon}</span>
             </div>
             <div>
-              <h3 className="text-xs font-black text-ink-muted uppercase tracking-[0.2em] mb-0.5">
-                {ramp.rampName}
+              <h3 className="text-[10px] font-black text-ink-muted uppercase tracking-[0.4em] mb-1 opacity-70">
+                R A M P - {ramp.rampNumber}
               </h3>
-              <p className={cn("text-base font-black italic tracking-tight leading-none uppercase", config.textClass)}>
+              <p className={cn("text-xl font-black italic tracking-tighter leading-none uppercase", config.textClass)}>
                 {config.labelBn}
               </p>
             </div>
           </div>
 
-          <div className={cn("p-2 rounded-xl border border-current/10", config.bgClass)}>
-            <StatusIcon className={cn("h-4 w-4", config.textClass, ramp.status === 'active' && "animate-spin-slow")} />
+          <div className={cn(
+            "p-2.5 rounded-full border-2 transition-all duration-500",
+            config.bgClass, config.borderClass,
+            ramp.status === 'active' && "animate-pulse shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+          )}>
+            <StatusIcon className={cn("h-5 w-5", config.textClass, ramp.status === 'active' && "animate-spin-slow")} />
           </div>
         </div>
 
-        {/* Body Content */}
+        {/* Unit Data Container */}
         {ramp.vehicle ? (
-          <div className="space-y-4">
-            <div className="p-4 rounded-2xl bg-white/40 dark:bg-black/40 backdrop-blur-md border border-white/10 shadow-inner group-hover:bg-white/60 dark:group-hover:bg-black/60 transition-colors">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-full bg-brand/10 flex items-center justify-center text-brand">
-                  <Car size={16} strokeWidth={3} />
+          <div className="space-y-5 relative z-10">
+            <div className="p-5 rounded-[2rem] bg-white/40 dark:bg-black/50 backdrop-blur-xl border border-white/10 shadow-2xl group-hover:bg-white/60 dark:group-hover:bg-black/80 transition-all duration-500">
+              <div className="flex items-center gap-4 mb-3">
+                <div className="w-10 h-10 rounded-2xl bg-brand/10 flex items-center justify-center text-brand border border-brand/20">
+                  <Car size={20} strokeWidth={2.5} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-black text-ink-heading dark:text-white tabular-nums tracking-tighter truncate uppercase italic">
+                  <p className="text-base font-black text-ink-heading dark:text-white tabular-nums tracking-tighter truncate uppercase italic">
                     {ramp.vehicle.vehicleRegNo}
                   </p>
-                  <p className="text-[10px] font-bold text-ink-muted uppercase tracking-widest truncate">
+                  <p className="text-[11px] font-bold text-ink-muted uppercase tracking-widest truncate opacity-60">
                     {ramp.vehicle.vehicleName}
                   </p>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+
+              {/* Enhanced Tags Area */}
+              <div className="flex flex-wrap gap-2 pt-1">
                 {ramp.vehicle.priority !== 'normal' && (
-                  <span className={cn("text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest", PRIORITY_CONFIG[ramp.vehicle.priority].badge)}>
+                  <span className={cn(
+                    "text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg",
+                    PRIORITY_CONFIG[ramp.vehicle.priority].badge
+                  )}>
                     {ramp.vehicle.priority}
                   </span>
                 )}
-                <span className="text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest bg-slate-100 dark:bg-white/10 text-ink-muted">
+                <span className="text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest bg-slate-100 dark:bg-white/10 text-ink-muted border border-current/10">
                   {ramp.vehicle.serviceType}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center justify-between px-1">
-              <div className="flex flex-col">
-                <span className="text-[8px] font-black text-ink-muted uppercase tracking-widest mb-1">Duration</span>
+            {/* Bottom Metrics */}
+            <div className="flex items-center justify-between px-2">
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] font-black text-ink-muted uppercase tracking-[0.2em] opacity-50">Operation Time</span>
                 <TimeElapsedBadge since={ramp.occupiedSince} />
               </div>
-              <div className="flex flex-col items-end">
-                <span className="text-[8px] font-black text-ink-muted uppercase tracking-widest mb-1 italic">Mission Case</span>
+              <div className="flex flex-col items-end gap-1">
+                <span className="text-[9px] font-black text-ink-muted uppercase tracking-[0.2em] opacity-50 italic">Process Flow</span>
                 <Link
                    href={`/service-admin/workshop/job-cards/${ramp.vehicle.jobCardId}`}
-                   className="stop-propagation inline-flex items-center gap-1 text-[10px] font-black text-brand hover:underline"
+                   className="stop-propagation inline-flex items-center gap-1.5 text-[11px] font-black text-brand hover:text-brand-hover hover:scale-105 transition-all"
                    onClick={(e) => e.stopPropagation()}
                 >
-                   #{ramp.vehicle.jobCardNumber} <ExternalLink size={10} />
+                   #{ramp.vehicle.jobCardNumber} <ExternalLink size={12} strokeWidth={3} />
                 </Link>
               </div>
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-10 opacity-30 group-hover:opacity-100 transition-opacity">
-            <div className="w-16 h-16 rounded-full border-2 border-dashed border-current flex items-center justify-center mb-2">
-               <CheckCircle2 size={32} className="text-blue-500" />
+          <div className="flex flex-col items-center justify-center py-14 opacity-20 group-hover:opacity-100 transition-all duration-700">
+            <div className="relative mb-4">
+               <div className="w-20 h-20 rounded-full border-4 border-dashed border-current flex items-center justify-center animate-spin-slow opacity-20" />
+               <CheckCircle2 size={40} className="text-blue-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 shadow-glow" />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-ink-muted">Bay Available</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.4em] text-ink-muted italic">Sector Available</p>
           </div>
         )}
 
-        {/* Technician Footer */}
+        {/* Technician Status Area */}
         {ramp.technician ? (
-          <div className="mt-6 pt-5 border-t border-surface-border dark:border-white/5">
-            <TechnicianAvatar technician={ramp.technician} size="sm" />
+          <div className="mt-8 pt-6 border-t-2 border-surface-border dark:border-white/5 relative z-10 flex items-center justify-between">
+            <TechnicianAvatar technician={ramp.technician} size="md" />
+            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]" />
           </div>
         ) : ramp.status !== 'free' && ramp.status !== 'maintenance' ? (
-          <div className="mt-6 pt-5 border-t border-surface-border dark:border-white/5 flex items-center gap-2 text-amber-500 animate-pulse">
-            <AlertCircle size={14} />
-            <span className="text-[9px] font-black uppercase tracking-widest">Awaiting Staff</span>
+          <div className="mt-8 pt-6 border-t-2 border-dashed border-surface-border dark:border-white/5 flex items-center gap-3 text-amber-500 animate-pulse relative z-10">
+            <div className="p-2 rounded-xl bg-amber-500/10"><AlertCircle size={18} /></div>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Personnel Required</span>
           </div>
         ) : null}
 
-        {/* Interaction hint */}
-        <div className="absolute top-1/2 -right-2 -translate-y-1/2 translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500">
-           <div className="bg-brand text-white p-1.5 rounded-full shadow-lg">
-              <ChevronRight size={16} strokeWidth={4} />
+        {/* Console Action Hint */}
+        <div className="absolute top-1/2 -right-1 -translate-y-1/2 translate-x-8 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-700 ease-out z-20">
+           <div className="bg-brand text-white p-2 rounded-2xl shadow-[0_10px_30px_rgba(199,91,18,0.5)] border-2 border-white/20">
+              <ChevronRight size={20} strokeWidth={4} />
            </div>
         </div>
       </div>

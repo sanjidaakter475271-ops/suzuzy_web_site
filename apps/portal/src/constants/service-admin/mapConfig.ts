@@ -123,3 +123,32 @@ export const DEFAULT_MAP_LAYOUT = {
 
 export const REFRESH_INTERVAL_MS = 5000;
 export const ELAPSED_UPDATE_MS = 1000;
+
+export const WORKSHOP_STAGES = {
+  ENTRY: {
+    id: 'entry-stage',
+    label: 'INBOUND',
+    color: 'emerald',
+    targetStatus: null,
+  },
+  QC: {
+    id: 'qc-stage',
+    label: 'QC STAGE',
+    color: 'purple',
+    targetStatus: 'qc_pending',
+    queueLabel: 'QC AUDIT QUEUE',
+  },
+  FINANCE: {
+    id: 'finance-stage',
+    label: 'FINANCE',
+    color: 'amber',
+    targetStatus: 'completed',
+    queueLabel: 'SETTLEMENT QUEUE',
+  },
+  EXIT: {
+    id: 'exit-stage',
+    label: 'OUTBOUND',
+    color: 'rose',
+    targetStatus: 'delivered',
+  },
+} as const;

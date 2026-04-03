@@ -2,6 +2,7 @@
 
 'use client';
 
+import { memo } from 'react';
 import { RAMP_STATUS_CONFIG } from '@/constants/service-admin/mapConfig';
 import type { RampStatus } from '@/types/service-admin/visualMap';
 import { cn } from '@/lib/utils';
@@ -12,7 +13,7 @@ interface MapLegendProps {
   onFilterChange: (status: RampStatus | 'all') => void;
 }
 
-export function MapLegend({ filter, onFilterChange }: MapLegendProps) {
+export const MapLegend = memo(function MapLegend({ filter, onFilterChange }: MapLegendProps) {
   const statuses = Object.entries(RAMP_STATUS_CONFIG) as [RampStatus, typeof RAMP_STATUS_CONFIG[RampStatus]][];
 
   return (
@@ -54,4 +55,5 @@ export function MapLegend({ filter, onFilterChange }: MapLegendProps) {
       ))}
     </div>
   );
-}
+});
+MapLegend.displayName = 'MapLegend';

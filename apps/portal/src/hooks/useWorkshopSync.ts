@@ -1,3 +1,5 @@
+// apps/portal/src/hooks/useWorkshopSync.ts
+
 "use client";
 
 import { useEffect } from "react";
@@ -12,7 +14,11 @@ const WORKSHOP_EVENTS = [
     'requisition:approved',
     'requisition:rejected',
     'requisition:status_changed',
-    'attendance:changed'
+    'order:changed',        // Added: General order/job card structural changes
+    'sale:received',        // Added: Financial activity sync
+    'attendance:changed',
+    'attendance:shift_start', // Added: Tech shift tracking
+    'attendance:shift_end'    // Added: Tech shift tracking
 ];
 
 /**
@@ -27,7 +33,7 @@ export function useWorkshopSync() {
         }
 
         const handleUpdate = (data: any) => {
-            console.log("[WORKSHOP_SYNC] Update received, refreshing store:", data);
+            console.log("[WORKSHOP_SYNC] Live telemetry received, refreshing store:", data?.event || 'Sync');
             fetchWorkshopData();
         };
 
