@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
     ClipboardCheck,
     Search,
@@ -22,6 +24,7 @@ import { QC_CHECKLIST_TEMPLATE } from '@/constants/service-admin/workshopData';
 import { cn } from '@/lib/utils';
 
 const QCChecklistPage = () => {
+    const router = useRouter();
     const { jobCards, technicians, fetchWorkshopData } = useWorkshopStore();
     const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
     const [checklist, setChecklist] = useState(QC_CHECKLIST_TEMPLATE);
@@ -60,14 +63,22 @@ const QCChecklistPage = () => {
                 throw new Error(result.error || "Failed to submit QC review");
             }
 
-            alert(`QC ${status} successfully!`);
+            toast.success(`QC ${status} successfully!`, {
+                description: `Inspection for #${selectedJob.jobNo} has been ${status}.`
+            });
+
             setSelectedJobId(null);
             setChecklist(QC_CHECKLIST_TEMPLATE);
             setNotes('');
+
+            // Auto-refresh data and router
             await fetchWorkshopData();
+            router.refresh();
         } catch (error: any) {
             console.error("[QC_REVIEW_ERROR]", error);
-            alert(`Error: ${error.message}`);
+            toast.error("QC Review Failed", {
+                description: error.message
+            });
         } finally {
             setIsSubmitting(false);
         }
