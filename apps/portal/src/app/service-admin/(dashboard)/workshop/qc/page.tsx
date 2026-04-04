@@ -36,15 +36,11 @@ const QCChecklistPage = () => {
     };
 
     const handleQCSubmit = async (status: 'approved' | 'rejected') => {
-        if (!selectedJob || !selectedJob.qc_requests?.[0]?.id) {
-            alert("No pending QC request found for this job.");
-            return;
-        }
+        if (!selectedJob) return;
 
         setIsSubmitting(true);
         try {
-            const qcId = selectedJob.qc_requests[0].id;
-            const res = await fetch(`/api/v1/workshop/qc/${qcId}/review`, {
+            const res = await fetch(`/api/v1/workshop/jobs/${selectedJob.id}/qc-approve`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -58,7 +54,11 @@ const QCChecklistPage = () => {
                 })
             });
 
-            if (!res.ok) throw new Error("Failed to submit QC review");
+            const result = await res.json();
+
+            if (!res.ok) {
+                throw new Error(result.error || "Failed to submit QC review");
+            }
 
             alert(`QC ${status} successfully!`);
             setSelectedJobId(null);
@@ -66,7 +66,8 @@ const QCChecklistPage = () => {
             setNotes('');
             await fetchWorkshopData();
         } catch (error: any) {
-            alert(error.message);
+            console.error("[QC_REVIEW_ERROR]", error);
+            alert(`Error: ${error.message}`);
         } finally {
             setIsSubmitting(false);
         }
@@ -106,7 +107,7 @@ const QCChecklistPage = () => {
                                 <div className="flex justify-between items-start">
                                     <div className="space-y-0.5">
                                         <p className="text-[10px] font-black uppercase text-brand">JOB #{job.jobNo}</p>
-                                        <h4 className="font-bold text-ink-heading dark:text-white truncate">{job.customerId}</h4>
+                                        <h4 className="font-bold text-ink-heading dark:text-white truncate">{job.customerName || 'No Name'}</h4>
                                     </div>
                                     <div className={cn(
                                         "px-2 py-0.5 rounded-full text-[9px] font-black uppercase",
@@ -122,7 +123,16 @@ const QCChecklistPage = () => {
                                     </div>
                                     <div className="flex items-center gap-1">
                                         <Clock size={12} />
-                                        {Math.floor((Date.now() - new Date(job.updatedAt).getTime()) / 60000)}m ago
+                                        {(() => {
+                                            const updatedDate = new Date(job.updatedAt);
+                                            if (isNaN(updatedDate.getTime())) return 'Recently';
+                                            const diffInMinutes = Math.floor((Date.now() - updatedDate.getTime()) / 60000);
+                                            if (diffInMinutes < 1) return 'Just now';
+                                            if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+                                            const diffInHours = Math.floor(diffInMinutes / 60);
+                                            if (diffInHours < 24) return `${diffInHours}h ago`;
+                                            return `${Math.floor(diffInHours / 24)}d ago`;
+                                        })()}
                                     </div>
                                 </div>
                             </CardContent>
@@ -150,7 +160,7 @@ const QCChecklistPage = () => {
                                             </div>
                                             <div>
                                                 <h3 className="text-xl font-black text-ink-heading dark:text-white">Inspection: #{selectedJob.jobNo}</h3>
-                                                <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">{selectedJob.customerId} • {selectedJob.vehicleId}</p>
+                                                <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">{selectedJob.customerName || 'No Name'} • {selectedJob.vehicleModel || selectedJob.vehicleId}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">

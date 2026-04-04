@@ -32,7 +32,9 @@
       "Bash(grep \":$\")",
       "Read(//d//**)",
       "Bash(ls -d apps/portal/node_modules/lightningcss*)",
-      "Bash(ls -d apps/portal/node_modules/react-native-css-interop*)"
+      "Bash(ls -d apps/portal/node_modules/react-native-css-interop*)",
+      "Read(//d/suzuzy_web_site/servicestuff-rn/src/components/**)",
+      "Read(//d/suzuzy_web_site/servicestuff-rn/src/components/ui/**)"
     ]
   }
 }

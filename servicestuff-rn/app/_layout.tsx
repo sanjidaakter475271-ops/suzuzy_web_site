@@ -1,5 +1,4 @@
 import 'react-native-reanimated';
-import "../global.css";
 import * as SplashScreen from 'expo-splash-screen';
 import { Slot, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';

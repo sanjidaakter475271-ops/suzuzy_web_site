@@ -1,5 +1,3 @@
-import { createMMKV } from 'react-native-mmkv';
-
 /**
  * Global high-performance synchronous storage instance.
  * Replaces AsyncStorage for blazing fast, thread-safe caching.
@@ -7,6 +5,8 @@ import { createMMKV } from 'react-native-mmkv';
 let mmkvStorage: any;
 
 try {
+  // Use lazy require to prevent top-level import crash in Expo Go
+  const { createMMKV } = require('react-native-mmkv');
   mmkvStorage = createMMKV({
     id: 'suzuzy-staff-storage',
   });
