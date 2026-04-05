@@ -258,12 +258,15 @@ if (error instanceof Prisma.PrismaClientKnownRequestError) {
 4. **Styling**: Use standard **React Native StyleSheet.create** combined with the centralized theme in `constants/theme.ts`. NativeWind has been removed to ensure maximum stability and remove build-time patching complexity.
 5. **Animations**: Use **Moti** or **React Native Reanimated**. 
    * **CRITICAL**: For Expo Go SDK 54, you MUST use `react-native-reanimated@4.1.7` with `react-native-worklets@0.5.1`. Version mismatch will cause `NullPointerException`.
-6. **Babel Config**: Plugins MUST be in this exact order: `react-native-worklets/plugin`, then `react-native-reanimated/plugin` (last).
+   * **Babel Config**: Plugins for worklets and reanimated are now **automatically handled** by `babel-preset-expo` in SDK 54. Do NOT add them manually to `babel.config.js` to avoid `Duplicate plugin/preset detected` errors.
+6. **Babel Config**: Plugins MUST NOT be manually listed if they are already provided by the preset. Ensure `babel.config.js` only contains the `module-resolver`.
 7. **Entry File**: `import 'react-native-reanimated';` MUST be at the very top of `app/_layout.tsx`.
 8. **API calls**: Use `TechnicianAPI` from `services/api.ts`.
 9. **Auth**: Use `useAuth()` hook. Session is stored in **SecureStore** via `auth-client.ts`. Access token is synchronized with socket connection.
-10. **Native APIs**: Use Expo modules (e.g., `expo-camera`, `expo-location`, `expo-local-authentication`).
-11. **Environment**: Config lives in `lib/env.ts` (proxied via `expo-constants`). Prioritize `EXPO_PUBLIC_` variables for production/dev overrides.
+10. **Storage**: Use **MMKV** via `src/lib/storage.ts`. 
+    * **Expo Go Compatibility**: To prevent the `NitroModules` crash in Expo Go (which lacks the native Nitro bridge), MMKV MUST be **lazy-loaded** using a conditional `require('react-native-mmkv')` inside a `try/catch` block.
+11. **Native APIs**: Use Expo modules (e.g., `expo-camera`, `expo-location`, `expo-local-authentication`).
+12. **Environment**: Config lives in `lib/env.ts` (proxied via `expo-constants`). Prioritize `EXPO_PUBLIC_` variables for production/dev overrides.
 
 ### Build & Deploy
 - Use **GitHub Actions** for automated Android builds (`.github/workflows/android_build_rn.yml`).
@@ -271,9 +274,10 @@ if (error instanceof Prisma.PrismaClientKnownRequestError) {
 - Local dev: `npx expo start`.
 
 ### 🛡️ WINDOWS BUILD & TAILWIND v4 FIXES
+- **NitroModules Crash**: If `expo start` fails with `The native "NitroModules" Turbo/Native-Module could not be found` in Expo Go, use **lazy loading** in `storage.ts` via `require('react-native-mmkv')` inside a `try/catch` block.
+- **Babel Duplication**: If `Android Bundling failed` with `Duplicate plugin/preset detected` for `react-native-worklets` or `react-native-reanimated`, **REMOVE them manually** from `babel.config.js`. `babel-preset-expo@54` now handles their injection automatically.
 - **Native Modules**: If `eas build` or `expo start` fails with `Cannot find module '...lightningcss.node'`, manually copy the binary from `node_modules/lightningcss-win32-x64-msvc/` to `node_modules/lightningcss/` and `node_modules/react-native-css-interop/node_modules/lightningcss/`. 
 - **ESM Loader Bug**: If Metro fails with `ERR_UNSUPPORTED_ESM_URL_SCHEME` on Windows, ensure the patch in `metro-config/src/loadConfig.js` (using `pathToFileURL`) is applied via `patch-package`.
-- **Styling Patch**: `react-native-css-interop` Babel config is patched to remove hardcoded `worklets/plugin` to avoid duplication and version conflicts.
 
 ### ⚙️ EXPO MOBILE BUILD PROCESS (EAS)
 1. **Interactive Build**: `npx eas-cli build --platform android --profile preview` (Follow terminal prompts for Keystore & Credentials).
