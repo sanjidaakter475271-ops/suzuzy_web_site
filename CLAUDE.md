@@ -540,3 +540,20 @@ Base URL: `{PORTAL_API_URL}/api/v1/technician`
 8. **Biometric credentials stored as Base64**: Not secure — comment says "use SecureStorage in production"
 9. **Sidebar component exists but is NOT used in App.tsx** — replaced by BottomBar
 10. **`vite.config.ts` port is 3003** but CLAUDE.md says 5173 — potential confusion
+
+---
+
+## AI OPERATING GUIDELINES
+
+### Deep Analysis & Sequential Thinking
+- **Mandatory for Complex Tasks**: Use the `sequentialthinking` tool for any task involving deep analysis, complex debugging, or architectural changes.
+- **Thought Process**: Breakdown problems into hypotheses, verify them using tools, and iterate before finalizing an implementation plan.
+
+### MCP & Environment Access
+- **File System MCP**: Use this tool to access and analyze files outside the project scope (e.g., global Claude settings in `C:\Users\IT\.claude`) when troubleshooting environment or config issues.
+- **Supabase MCP**: Use for live database querying and inspection to verify data states that Prisma cannot easily show.
+
+### Persistence & Memory (CRITICAL)
+- **Always Update Memory**: After resolving any bug, completing a feature, or discovering a "gotcha" (like Windows-specific fixes), immediately update the relevant memory file in the `memory/` directory.
+- **Problem Indexing**: Ensure every conversation leaves behind a record of what was fixed and why, so that future sessions can immediately understand the project's current status and avoid repeating mistakes.
+- **Bug Tracker**: Proactively update `.agent/bugs.md` whenever a new issue is identified or resolved.

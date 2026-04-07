@@ -59,6 +59,12 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
                 },
                 job_photos: true,
                 service_checklist_items: true,
+                service_history: {
+                    orderBy: {
+                        created_at: 'desc'
+                    },
+                    take: 1
+                },
                 technician_time_logs: {
                     orderBy: {
                         timestamp: 'desc'
@@ -106,7 +112,7 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
                 color: vehicle.color || 'N/A',
                 engine_number: vehicle.engine_number || 'N/A',
                 chassis_number: vehicle.chassis_number || 'N/A',
-                mileage: 0, // Could be enhanced to fetch from service_history
+                mileage: job.service_history?.[0]?.mileage || 0,
             } : null,
             tasks: job.service_tasks?.map((t) => ({
                 id: t.id,

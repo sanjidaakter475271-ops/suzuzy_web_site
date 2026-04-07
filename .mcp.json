@@ -1,0 +1,38 @@
+{
+  "mcpServers": {
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
+    },
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "supabase-mcp-server"
+      ],
+      "env": {
+        "SUPABASE_URL": "https://idqikowpudzjickwpfzr.supabase.co",
+        "SUPABASE_ANON_KEY": "sb_publishable_M4D9EG-nrI4j-9Y1J1nWHQ_uVxUqWbH"
+      }
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "D:\\suzuzy_web_site",
+        "C:\\Users\\IT\\.claude"
+      ]
+    }
+  }
+}
