@@ -102,32 +102,38 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
                 paddingTop: insets.top,
                 backgroundColor: COLORS.headerBg,
                 borderBottomWidth: 1,
-                borderBottomColor: COLORS.primaryDark,
+                borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+                zIndex: 100,
             }}
         >
-            <View style={{ height: 60, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.md }}>
+            <View style={{ height: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.md }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                     <TouchableOpacity
                         onPress={handleBackAction}
-                        style={{ padding: SPACING.sm, marginRight: SPACING.sm, borderRadius: 12 }}
+                        style={{
+                            padding: 8,
+                            marginRight: SPACING.sm,
+                            borderRadius: 12,
+                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                            borderWidth: 1,
+                            borderColor: 'rgba(255, 255, 255, 0.1)'
+                        }}
                     >
                         {(onBack || showBack) ? (
-                            <ChevronLeft size={22} color={COLORS.textOnHeader} strokeWidth={2.5} />
+                            <ChevronLeft size={20} color={COLORS.textOnHeader} strokeWidth={2.5} />
                         ) : (
-                            <Home size={20} color={isHome ? COLORS.textOnHeader : "rgba(255,255,255,0.6)"} />
+                            <Home size={18} color={isHome ? COLORS.textOnHeader : COLORS.textSecondary} />
                         )}
                     </TouchableOpacity>
 
                     <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1 }}>
                         <Text style={{
-                            fontSize: isHome ? 10 : 14,
+                            fontSize: isHome ? 10 : 15,
                             fontWeight: isHome ? '900' : 'bold',
                             color: COLORS.textOnHeader,
                             textTransform: isHome ? 'uppercase' : 'none',
                             letterSpacing: isHome ? 2 : 0,
-                            fontStyle: isHome ? 'italic' : 'normal',
                             fontFamily: isHome ? TYPOGRAPHY.families.black : TYPOGRAPHY.families.bold,
-                            opacity: isHome ? 0.9 : 1,
                         }}>
                             Workshop
                         </Text>
@@ -135,13 +141,13 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
                         {breadcrumbs ? (
                             breadcrumbs.map((bc, idx) => (
                                 <React.Fragment key={idx}>
-                                    <ChevronRight size={12} color="rgba(255,255,255,0.4)" style={{ marginHorizontal: 4 }} />
+                                    <ChevronRight size={12} color="rgba(255, 255, 255, 0.3)" style={{ marginHorizontal: 4 }} />
                                     <Text
                                         numberOfLines={1}
                                         style={{
-                                            fontSize: 14,
+                                            fontSize: 15,
                                             fontWeight: '800',
-                                            color: idx === breadcrumbs.length - 1 ? COLORS.white : "rgba(255,255,255,0.8)",
+                                            color: idx === breadcrumbs.length - 1 ? COLORS.textOnHeader : COLORS.textSecondary,
                                             fontFamily: TYPOGRAPHY.families.bold,
                                         }}
                                     >
@@ -152,11 +158,11 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
                         ) : (
                             !isHome && (
                                 <>
-                                    <ChevronRight size={14} color="rgba(255,255,255,0.4)" style={{ marginHorizontal: 4 }} />
+                                    <ChevronRight size={14} color="rgba(255, 255, 255, 0.3)" style={{ marginHorizontal: 4 }} />
                                     <Text
                                         numberOfLines={1}
                                         style={{
-                                            fontSize: 14,
+                                            fontSize: 15,
                                             fontWeight: '900',
                                             color: COLORS.white,
                                             fontFamily: TYPOGRAPHY.families.bold,
@@ -174,24 +180,24 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, title, showBack, br
                     onPress={() => isNotifications ? router.back() : router.push('/notifications')}
                     style={{
                         padding: 10,
-                        borderRadius: 999,
-                        backgroundColor: isNotifications ? 'rgba(255,255,255,0.1)' : 'transparent',
-                        borderWidth: isNotifications ? 1 : 0,
-                        borderColor: 'rgba(255,255,255,0.2)'
+                        borderRadius: 14,
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                        borderWidth: 1,
+                        borderColor: 'rgba(255, 255, 255, 0.1)'
                     }}
                 >
-                    <Bell size={24} color={COLORS.textOnHeader} />
+                    <Bell size={22} color={COLORS.textOnHeader} />
                     {hasUnread && (
                         <View style={{
                             position: 'absolute',
-                            top: 10,
-                            right: 10,
-                            width: 10,
-                            height: 10,
+                            top: 8,
+                            right: 8,
+                            width: 8,
+                            height: 8,
                             backgroundColor: COLORS.danger,
-                            borderRadius: 5,
-                            borderWidth: 2,
-                            borderColor: COLORS.headerBg
+                            borderRadius: 4,
+                            borderWidth: 1.5,
+                            borderColor: COLORS.cardBg
                         }} />
                     )}
                 </TouchableOpacity>

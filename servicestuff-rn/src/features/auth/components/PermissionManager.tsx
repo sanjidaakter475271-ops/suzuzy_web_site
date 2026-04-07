@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { Camera, MapPin, CheckCircle, ShieldAlert } from '@/components/icons';
+import { Camera, MapPin, CheckCircle, ShieldAlert, Bell } from '@/components/icons';
 import * as Location from 'expo-location';
 import { Camera as ExpoCamera } from 'expo-camera';
+import * as Notifications from 'expo-notifications';
 import { storage } from '@/lib/storage';
 import { MotiView } from 'moti';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
@@ -37,6 +38,12 @@ export const PermissionManager: React.FC<{ onComplete: () => void }> = ({ onComp
             await ExpoCamera.requestCameraPermissionsAsync();
         } catch (e) {
             console.warn("Camera permission failed", e);
+        }
+
+        try {
+            await Notifications.requestPermissionsAsync();
+        } catch (e) {
+            console.warn("Notification permission failed", e);
         }
 
         storage.set('permissions_requested', true);
@@ -80,6 +87,16 @@ export const PermissionManager: React.FC<{ onComplete: () => void }> = ({ onComp
                         <View style={{ flex: 1 }}>
                             <Text style={styles.permissionName}>Location Services</Text>
                             <Text style={styles.permissionDesc}>Used for accurate attendance logging.</Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.permissionRow}>
+                        <View style={[styles.iconBg, { backgroundColor: COLORS.infoBg || '#E0F2FE' }]}>
+                            <Bell size={18} color={COLORS.info || '#0EA5E9'} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.permissionName}>Notifications</Text>
+                            <Text style={styles.permissionDesc}>Stay updated on job status and parts requests.</Text>
                         </View>
                     </View>
                 </View>

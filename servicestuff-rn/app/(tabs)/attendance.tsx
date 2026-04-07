@@ -33,17 +33,18 @@ import { useCallback } from 'react';
 
 import { TechnicianAPI } from '@/lib/api';
 import { LocationService } from '@/lib/location';
-import { TechnicianAttendance, AttendanceStatus } from '@/types';
+import { TechnicianAttendance } from '@/types';
 import { TopBar } from '@/components/layout/TopBar';
 import { BarcodeScannerComponent } from '@/features/jobs/components/BarcodeScanner';
 import { MaterialCircularProgress } from '@/components/ui/Loading';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
 import { AttendanceSkeleton } from '@/components/ui/Skeleton';
+import { useJobStore } from '@/stores/jobStore';
 
 export default function Attendance() {
     const router = useRouter();
+    const { attendanceStatus: status, fetchDashboardData, startShift, endShift, clockIn, clockOut } = useJobStore();
     const [history, setHistory] = useState<TechnicianAttendance[]>([]);
-    const [status, setStatus] = useState<AttendanceStatus | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
@@ -54,34 +55,41 @@ export default function Attendance() {
     const [elapsedTime, setElapsedTime] = useState(0);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-    const fetchStatus = async () => {
+    const fetchHistory = async () => {
         try {
-            const res = await TechnicianAPI.getAttendanceStatus();
-            setStatus(res.data.data);
-
             const historyRes = await TechnicianAPI.getAttendanceHistory();
             setHistory(historyRes.data.data || []);
         } catch (err) {
-            console.error("Status fetch error:", err);
+            console.error("History fetch error:", err);
         }
     };
 
     const fetchData = async () => {
         setLoading(true);
-        await fetchStatus();
-        setLoading(false);
+        try {
+            await Promise.all([
+                fetchDashboardData(false),
+                fetchHistory()
+            ]);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
-        await fetchStatus();
+        await Promise.all([
+            fetchDashboardData(false),
+            fetchHistory()
+        ]);
         setRefreshing(false);
     }, []);
 
     // Refresh data when screen comes into focus
     useFocusEffect(
         useCallback(() => {
-            fetchStatus();
+            fetchDashboardData(false);
+            fetchHistory();
         }, [])
     );
 
@@ -143,8 +151,8 @@ export default function Attendance() {
     const handleStartShift = async () => {
         setOperationLoading(true);
         try {
-            await TechnicianAPI.startShift();
-            await fetchStatus();
+            await startShift();
+            await fetchHistory();
         } catch (e: any) {
             Alert.alert("Error", e.response?.data?.error || "Failed to start work");
         } finally {
@@ -155,8 +163,8 @@ export default function Attendance() {
     const handleEndShift = async () => {
         setOperationLoading(true);
         try {
-            await TechnicianAPI.endShift();
-            await fetchStatus();
+            await endShift();
+            await fetchHistory();
         } catch (e: any) {
             Alert.alert("Error", e.response?.data?.error || "Failed to stop work");
         } finally {
@@ -173,11 +181,11 @@ export default function Attendance() {
         try {
             const location = await LocationService.getInstance().getCurrentLocation();
             if (purpose === 'clock_in') {
-                await TechnicianAPI.clockIn(location, result);
+                await clockIn(location, result);
             } else if (purpose === 'clock_out') {
-                await TechnicianAPI.clockOut(location, result);
+                await clockOut(location, result);
             }
-            await fetchStatus();
+            await fetchHistory();
         } catch (e: any) {
             Alert.alert("Error", e.response?.data?.error || "Failed to process QR code");
         } finally {

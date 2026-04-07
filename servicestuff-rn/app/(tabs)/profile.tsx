@@ -13,9 +13,11 @@ import {
     Target,
     Store,
     Camera,
-    ShieldCheck
+    ShieldCheck,
+    ChevronLeft
 } from '@/components/icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TechnicianAPI } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
@@ -39,6 +41,7 @@ const StatItem = ({ label, value, icon, color }: { label: string, value: string 
 export default function Profile() {
     const { user, signOut } = useAuthStore();
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const [stats, setStats] = useState<any>(null);
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -112,14 +115,14 @@ export default function Profile() {
                     />
                     
                     {/* Header Controls */}
-                    <View style={styles.headerControls}>
-                        <TouchableOpacity 
+                    <View style={[styles.headerControls, { top: insets.top + 10 }]}>
+                        <TouchableOpacity
                             onPress={() => router.back()}
                             style={styles.headerIconBtn}
                         >
-                            <ChevronRight size={24} color="white" style={{ transform: [{ rotate: '180deg' }] }} />
+                            <ChevronLeft size={20} color="white" />
                         </TouchableOpacity>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             onPress={() => router.push('/settings')}
                             style={styles.headerIconBtn}
                         >

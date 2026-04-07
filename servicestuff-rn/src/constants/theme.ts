@@ -22,7 +22,7 @@ export const COLORS = {
   pageBg: "#020617",
   cardBg: "#0d1326",
   cardBgAlt: "rgba(15, 23, 42, 0.4)",
-  headerBg: "#0f172a",
+  headerBg: "rgba(13, 19, 38, 0.85)",
   tabBarBg: "#0f172a",
   inputBg: "#131b2f",
   primarySurface: "rgba(30, 58, 138, 0.2)",

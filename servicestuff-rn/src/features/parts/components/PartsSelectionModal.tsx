@@ -25,6 +25,7 @@ import { TechnicianAPI } from '@/lib/api';
 import { Category, ProductDetail } from '@/types';
 import { RequisitionCart } from './RequisitionCart';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
+import { useJobStore } from '@/stores/jobStore';
 
 interface PartsSelectionModalProps {
     jobId: string;
@@ -36,6 +37,7 @@ type Step = 'category' | 'products' | 'cart';
 
 export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId, onClose, onSuccess }) => {
     const [step, setStep] = useState<Step>('category');
+    const { requestParts } = useJobStore();
     const [categories, setCategories] = useState<Category[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
     const [products, setProducts] = useState<ProductDetail[]>([]);
@@ -116,11 +118,9 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
                 quantity: item.quantity,
                 notes: ""
             }));
-            const res = await TechnicianAPI.requestParts(jobId, items);
-            if (res.data.success) {
-                onSuccess();
-                onClose();
-            }
+            await requestParts(jobId, items);
+            onSuccess();
+            onClose();
         } catch (err) {
             console.error("Submission failed:", err);
             alert("Failed to submit requisition. Please try again.");

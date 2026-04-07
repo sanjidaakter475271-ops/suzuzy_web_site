@@ -37,10 +37,8 @@
     "expo-splash-screen": "~31.0.13",
     "expo-status-bar": "~3.0.9",
     "expo-task-manager": "~14.0.9",
-    "lightningcss": "^1.32.0",
     "lucide-react-native": "^1.7.0",
     "moti": "^0.30.0",
-    "nativewind": "4.2.3",
     "react": "19.1.0",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
@@ -53,7 +51,6 @@
     "react-native-url-polyfill": "^3.0.0",
     "react-native-worklets": "0.5.1",
     "socket.io-client": "^4.8.3",
-    "tailwindcss": "3.4.17",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
@@ -72,9 +69,5 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "private": true,
-  "optionalDependencies": {
-    "lightningcss-linux-x64-gnu": "^1.32.0",
-    "lightningcss-win32-x64-msvc": "^1.32.0"
-  }
+  "private": true
 }

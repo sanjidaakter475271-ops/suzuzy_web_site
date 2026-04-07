@@ -8,7 +8,6 @@ import {
     Alert,
     Platform,
     StyleSheet,
-    Dimensions,
     Modal,
     ActivityIndicator
 } from 'react-native';
@@ -23,7 +22,6 @@ import {
     Info,
     Clock,
     User as UserIcon,
-    Tag,
     Camera,
     FileText,
     ListChecks,
@@ -37,20 +35,20 @@ import {
 } from '@/components/icons';
 import { MotiView, AnimatePresence } from 'moti';
 import * as ImagePicker from 'expo-image-picker';
+import NetInfo from '@react-native-community/netinfo';
 
 import { TechnicianAPI } from '@/lib/api';
-import { JobCard, ChecklistItem, ServiceCondition, PartsRequest } from '@/types';
+import { JobCard, ChecklistItem, ServiceCondition, PartsRequest, JobStatus } from '@/types';
 import { TopBar } from '@/components/layout/TopBar';
 import { PartsSelectionModal } from '@/features/parts/components/PartsSelectionModal';
 import { OfflineService } from '@/lib/offline';
 import { LocationService } from '@/lib/location';
 import { MediaService } from '@/lib/media';
-import { SocketService } from '@/lib/socket';
 import { DetailSkeleton } from '@/components/ui/Skeleton';
 import { diagnoseIssue } from '@/lib/geminiService';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { MaterialCircularProgress } from '@/components/ui/Loading';
-import { JobStatus } from '@/types';
+import { useJobStore } from '@/stores/jobStore';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
 
 type Tab = 'summary' | 'checklist' | 'parts' | 'photos' | 'notes';
@@ -58,15 +56,21 @@ type Tab = 'summary' | 'checklist' | 'parts' | 'photos' | 'notes';
 export default function JobCardDetail() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
-    const [job, setJob] = useState<JobCard | null>(null);
-    const [loading, setLoading] = useState(true);
+    const {
+        activeJob: job,
+        requisitions,
+        loading,
+        fetchJobDetail,
+        fetchRequisitions,
+        updateJobStatus
+    } = useJobStore();
+
     const [activeTab, setActiveTab] = useState<Tab>('summary');
     const offlineService = OfflineService.getInstance();
     const [isOnline, setIsOnline] = useState(true);
 
     // Parts State
     const [showPartsSelector, setShowPartsSelector] = useState(false);
-    const [requisitions, setRequisitions] = useState<PartsRequest[]>([]);
     const [adjustingPart, setAdjustingPart] = useState<any>(null);
     const [productForAdjustment, setProductForAdjustment] = useState<any>(null);
 
@@ -80,119 +84,39 @@ export default function JobCardDetail() {
     const [diagnosisLoading, setDiagnosisLoading] = useState(false);
     const [showDiagnosisModal, setShowDiagnosisModal] = useState(false);
 
-    const debouncedFetchJobs = React.useCallback(() => {
+    const debouncedFetchJob = React.useCallback(() => {
         if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
         fetchTimeoutRef.current = setTimeout(() => {
-            fetchJobDetails();
+            if (id) fetchJobDetail(id);
         }, 300);
-    }, [id]);
+    }, [id, fetchJobDetail]);
 
     const debouncedFetchRequisitions = React.useCallback(() => {
         if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
         fetchTimeoutRef.current = setTimeout(() => {
-            fetchRequisitions();
+            if (id) fetchRequisitions(id);
         }, 300);
-    }, [id]);
+    }, [id, fetchRequisitions]);
 
     useEffect(() => {
         if (id) {
-            fetchJobDetails();
-            fetchRequisitions();
+            fetchJobDetail(id);
+            fetchRequisitions(id);
         }
 
-        // Listen for realtime updates
-        const socket = SocketService.getInstance();
-        const handleUpdate = (data: any) => {
-            if (data?.jobId === id || data?.id === id || !data?.id) {
-                debouncedFetchJobs();
-            }
-        };
-
-        socket.on('order:update', handleUpdate);
-        socket.on('job_cards:changed', handleUpdate);
-        socket.on('requisition:created', debouncedFetchRequisitions);
-        socket.on('requisition:approved', debouncedFetchRequisitions);
-        socket.on('requisition:rejected', debouncedFetchRequisitions);
+        const unsubscribe = NetInfo.addEventListener(state => {
+            setIsOnline(state.isConnected ?? true);
+        });
 
         return () => {
-            socket.off('order:update', handleUpdate);
-            socket.off('job_cards:changed', handleUpdate);
-            socket.off('requisition:created', debouncedFetchRequisitions);
-            socket.off('requisition:approved', debouncedFetchRequisitions);
-            socket.off('requisition:rejected', debouncedFetchRequisitions);
+            unsubscribe();
             if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
         };
-    }, [id]);
-
-    const fetchJobDetails = async () => {
-        setLoading(true);
-        try {
-            if (!id) return;
-
-            const isCurrentOnline = offlineService.getOnlineStatus();
-            setIsOnline(isCurrentOnline);
-
-            if (!isCurrentOnline) {
-                const cached = await offlineService.getCachedJobDetail(id);
-                if (cached) {
-                    setJob(cached);
-                    setLoading(false);
-                    return;
-                }
-            }
-
-            const res = await TechnicianAPI.getJobDetail(id);
-            const jobData = res.data.data;
-
-            const sanitizedJob = {
-                ...jobData,
-                tasks: jobData.tasks || [],
-                checklist: (jobData.checklist || jobData.service_checklist_items || []).map((i: any) => ({
-                    id: i.id,
-                    name: i.name,
-                    category: i.category,
-                    is_completed: i.is_completed || false,
-                    condition: i.condition || 'na',
-                    photo_url: i.photo_url || i.photoUrl
-                })),
-                photos: jobData.photos || jobData.job_photos || []
-            };
-
-            setJob(sanitizedJob);
-            await offlineService.cacheJobDetail(id, sanitizedJob);
-        } catch (err) {
-            console.error("Error fetching job:", err);
-            if (id) {
-                const cached = await offlineService.getCachedJobDetail(id);
-                if (cached) setJob(cached);
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchRequisitions = async () => {
-        if (!id) return;
-        try {
-            const res = await TechnicianAPI.getPartsHistory();
-            if (res.data?.data) {
-                const allItems = res.data.data
-                    .filter((g: any) => g.job_card_id === id)
-                    .flatMap((g: any) => g.items || []);
-                setRequisitions(allItems);
-            }
-        } catch (err) {
-            console.error('Error fetching requisitions:', err);
-        }
-    };
+    }, [id, fetchJobDetail, fetchRequisitions]);
 
     const handleStatusUpdate = async (newStatus: string) => {
         if (!job) return;
-        const prevStatus = job.status;
         let location = null;
-
-        // Optimistic Update
-        setJob({ ...job, status: newStatus as any });
 
         try {
             try {
@@ -207,29 +131,22 @@ export default function JobCardDetail() {
                 return;
             }
 
-            await TechnicianAPI.updateJobStatus(job.id, newStatus, location || undefined);
+            await updateJobStatus(job.id, newStatus, location || undefined);
             if (newStatus === 'completed') {
                 router.replace('/(tabs)');
-            } else {
-                fetchJobDetails();
             }
         } catch (err) {
-            setJob({ ...job, status: prevStatus });
             Alert.alert("Error", "Failed to update status");
         }
     };
 
     const handleChecklistUpdate = async (itemId: string, completed: boolean, condition: ServiceCondition, photoUrl?: string) => {
-        if (!job) return;
-
-        const updatedChecklist = job.checklist?.map(c =>
-            c.id === itemId ? { ...c, condition, is_completed: completed, photo_url: photoUrl } : c
-        );
-        setJob({ ...job, checklist: updatedChecklist });
+        if (!job || !id) return;
 
         try {
             if (!isOnline) {
                 await offlineService.queueAction('update_checklist', { jobId: job.id, itemId, condition, completed, photoUrl });
+                // We would ideally update the store here too for optimistic UI
                 return;
             }
 
@@ -239,10 +156,10 @@ export default function JobCardDetail() {
                 completed: completed,
                 photoUrl: photoUrl
             }]);
-            fetchJobDetails();
+            fetchJobDetail(id);
         } catch (error) {
             console.error("Failed to update checklist item:", error);
-            fetchJobDetails();
+            fetchJobDetail(id);
         }
     };
 
@@ -252,25 +169,22 @@ export default function JobCardDetail() {
 
     const handleChecklistPhoto = async (item: ChecklistItem) => {
         const result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ['images'],
             quality: 0.7,
         });
 
-        if (!result.canceled && result.assets[0].uri) {
-            setLoading(true);
+        if (!result.canceled && result.assets[0].uri && id) {
             try {
                 const url = await MediaService.uploadImage(result.assets[0].uri, 'service-docs', `checklist/${job?.id}`);
                 await handleChecklistUpdate(item.id, true, item.condition, url);
             } catch (err) {
                 Alert.alert("Upload failed", "Could not upload photo.");
-            } finally {
-                setLoading(false);
             }
         }
     };
 
     const handleAddNote = async () => {
-        if (!job || !newNote.trim()) return;
+        if (!job || !newNote.trim() || !id) return;
         try {
             if (!isOnline) {
                 await offlineService.queueAction('add_note', { jobId: job.id, note: newNote });
@@ -279,7 +193,7 @@ export default function JobCardDetail() {
             }
             await TechnicianAPI.addNote(job.id, newNote);
             setNewNote('');
-            fetchJobDetails();
+            fetchJobDetail(id);
         } catch (err) {
             console.error("Error adding note:", err);
         }
@@ -305,12 +219,11 @@ export default function JobCardDetail() {
 
     const handlePhotoUpload = async () => {
         const result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ['images'],
             quality: 0.7,
         });
 
-        if (!result.canceled && result.assets[0].uri && job) {
-            setLoading(true);
+        if (!result.canceled && result.assets[0].uri && job && id) {
             try {
                 const publicUrl = await MediaService.uploadImage(result.assets[0].uri, 'service-docs', `jobs/${job.id}`);
                 await TechnicianAPI.uploadPhoto(job.id, {
@@ -318,11 +231,9 @@ export default function JobCardDetail() {
                     tag: 'during',
                     caption: `Uploaded from native app`
                 });
-                fetchJobDetails();
+                fetchJobDetail(id);
             } catch (err) {
                 Alert.alert("Upload failed", "Could not upload job photo.");
-            } finally {
-                setLoading(false);
             }
         }
     };
@@ -341,13 +252,10 @@ export default function JobCardDetail() {
     };
 
     const handleUpdateQuantity = (newQty: number) => {
-        if (!adjustingPart) return;
+        if (!adjustingPart || !id) return;
 
         const sanitizedQty = Math.max(0, newQty);
         setAdjustingPart({ ...adjustingPart, quantity: sanitizedQty });
-
-        // Optimistic update for the list
-        setRequisitions(prev => prev.map(r => r.id === adjustingPart.id ? { ...r, quantity: sanitizedQty } : r));
 
         if (syncTimeout.current) clearTimeout(syncTimeout.current);
 
@@ -356,13 +264,13 @@ export default function JobCardDetail() {
                 if (sanitizedQty <= 0) {
                     await TechnicianAPI.deleteRequisition(adjustingPart.id);
                     setAdjustingPart(null);
-                    fetchRequisitions();
+                    fetchRequisitions(id);
                 } else {
                     await TechnicianAPI.updateRequisition(adjustingPart.id, sanitizedQty);
                 }
             } catch (err) {
                 console.error("Sync failed:", err);
-                fetchRequisitions();
+                fetchRequisitions(id);
             }
         }, 500);
     };
@@ -461,7 +369,7 @@ export default function JobCardDetail() {
     );
 
     const renderChecklistTab = () => {
-        const categories = job.checklist?.reduce((acc, item) => {
+        const categories = job.checklist?.reduce((acc: Record<string, ChecklistItem[]>, item: ChecklistItem) => {
             const cat = item.category || 'General';
             if (!acc[cat]) acc[cat] = [];
             acc[cat].push(item);
@@ -470,10 +378,10 @@ export default function JobCardDetail() {
 
         return (
             <MotiView from={{ opacity: 0, translateY: 10 }} animate={{ opacity: 1, translateY: 0 }} style={{ paddingBottom: 100 }}>
-                {Object.entries(categories).map(([category, items]) => (
+                {Object.entries(categories).map(([category, items]: [string, ChecklistItem[]]) => (
                     <View key={category} style={{ marginBottom: 24 }}>
                         <Text style={styles.categoryHeader}>{category}</Text>
-                        {items.map(item => (
+                        {items.map((item: ChecklistItem) => (
                             <View key={item.id} style={styles.checkItemCard}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
@@ -566,7 +474,7 @@ export default function JobCardDetail() {
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
                 {activeTab === 'summary' && renderSummaryTab()}
                 {activeTab === 'checklist' && renderChecklistTab()}
-                {/* Other tabs follow similar porting pattern */}
+
                 {activeTab === 'parts' && (
                     <View style={{ paddingBottom: 100 }}>
                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -578,7 +486,7 @@ export default function JobCardDetail() {
                         </View>
 
                         {/* Issued Parts */}
-                        {job.parts?.map(part => (
+                        {job.parts?.map((part: any) => (
                             <View key={part.id} style={styles.partItem}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                                     <View style={styles.issuedIcon}><CheckCircle2 size={16} color={COLORS.primary} /></View>
@@ -592,7 +500,7 @@ export default function JobCardDetail() {
                         ))}
 
                         {/* Requisitions */}
-                        {requisitions.map(req => (
+                        {requisitions.map((req: any) => (
                             <TouchableOpacity key={req.id} onPress={() => handleOpenQuickAdjust(req)} style={styles.partItem}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                                     <View style={[styles.issuedIcon, { backgroundColor: COLORS.warningBg }]}><Clock size={16} color={COLORS.warning} /></View>
@@ -614,7 +522,7 @@ export default function JobCardDetail() {
 
                 {activeTab === 'photos' && (
                     <View style={styles.photoGrid}>
-                        {job.photos?.map(photo => (
+                        {job.photos?.map((photo: any) => (
                             <View key={photo.id} style={styles.photoContainer}>
                                 <Image
                                     source={{ uri: photo.image_url }}
@@ -727,7 +635,7 @@ export default function JobCardDetail() {
                 <PartsSelectionModal
                     jobId={id}
                     onClose={() => setShowPartsSelector(false)}
-                    onSuccess={() => { fetchJobDetails(); fetchRequisitions(); }}
+                    onSuccess={() => { fetchJobDetail(id); fetchRequisitions(id); }}
                 />
             )}
 
@@ -799,75 +707,73 @@ const styles = StyleSheet.create({
     value: { fontSize: TYPOGRAPHY.sizes.md, color: COLORS.textPrimary, fontFamily: TYPOGRAPHY.families.bold, marginTop: 2 },
     issueSection: { marginTop: SPACING.md, padding: SPACING.md, backgroundColor: COLORS.cardBgAlt, borderRadius: BORDER_RADIUS.lg, borderWidth: 1, borderColor: COLORS.border },
     issueBody: { fontSize: TYPOGRAPHY.sizes.md, color: COLORS.textSecondary, lineHeight: 22, fontFamily: TYPOGRAPHY.families.regular },
-    offlineBanner: { backgroundColor: COLORS.warningBg, paddingVertical: 8, paddingHorizontal: SPACING.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    offlineText: { color: COLORS.warning, fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase' },
-    offlineSubtext: { color: 'rgba(217, 119, 6, 0.6)', fontSize: 9, fontStyle: 'italic', fontFamily: TYPOGRAPHY.families.medium },
     tabContainer: { height: 60, borderBottomWidth: 1, borderBottomColor: COLORS.border, backgroundColor: COLORS.cardBg },
-    tabButton: { minWidth: 80, paddingHorizontal: SPACING.md, justifyContent: 'center', alignItems: 'center', gap: 4 },
-    tabButtonActive: {},
-    tabLabel: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textTertiary },
-    tabLabelActive: { color: COLORS.primary },
-    tabIndicator: { position: 'absolute', bottom: 0, left: 16, right: 16, height: 2, backgroundColor: COLORS.primary },
-    categoryHeader: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textTertiary, textTransform: 'uppercase', marginBottom: SPACING.md, paddingHorizontal: SPACING.sm, letterSpacing: 2 },
-    searchResult: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(30, 64, 175, 0.15)', padding: SPACING.md, borderRadius: BORDER_RADIUS.lg, marginBottom: SPACING.sm, borderWidth: 1, borderColor: 'rgba(30, 64, 175, 0.3)' },
-    checkItemCard: { backgroundColor: COLORS.cardBg, padding: SPACING.md, borderRadius: BORDER_RADIUS.xl, marginBottom: SPACING.sm, gap: SPACING.lg, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
-    checkbox: { padding: SPACING.sm, borderRadius: BORDER_RADIUS.md, backgroundColor: COLORS.cardBgAlt, borderWidth: 1, borderColor: COLORS.border },
-    checkboxActive: { backgroundColor: COLORS.successBg, borderColor: COLORS.success + '20' },
-    checkItemName: { fontSize: TYPOGRAPHY.sizes.lg, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textPrimary },
-    checkItemNameDone: { color: COLORS.textTertiary, textDecorationLine: 'line-through' },
-    checkItemImage: { width: 48, height: 48, borderRadius: BORDER_RADIUS.sm },
-    evidenceText: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.textTertiary, fontFamily: TYPOGRAPHY.families.bold },
-    cameraBtn: { padding: 10, borderRadius: BORDER_RADIUS.md, backgroundColor: COLORS.cardBgAlt, borderWidth: 1, borderColor: COLORS.border },
-    cameraBtnActive: { backgroundColor: COLORS.primarySurface, borderColor: COLORS.primary + '20' },
-    conditionRow: { flexDirection: 'row', gap: SPACING.sm, backgroundColor: COLORS.pageBg, padding: 4, borderRadius: BORDER_RADIUS.lg },
-    conditionBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: BORDER_RADIUS.md },
-    conditionText: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textTertiary, textTransform: 'uppercase' },
-    conditionTextActive: { color: COLORS.white },
-    conditionBtn_ok: { backgroundColor: COLORS.success },
-    conditionBtn_fair: { backgroundColor: COLORS.warning },
-    conditionBtn_bad: { backgroundColor: COLORS.danger },
-    conditionBtn_na: { backgroundColor: COLORS.slate400 },
-    sectionTitle: { fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textPrimary },
-    addPartBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.primarySurface, paddingHorizontal: 12, paddingVertical: 6, borderRadius: BORDER_RADIUS.full },
-    addPartBtnText: { color: COLORS.primary, fontSize: TYPOGRAPHY.sizes.xs, fontFamily: TYPOGRAPHY.families.bold },
-    partItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: SPACING.md, backgroundColor: COLORS.primarySurface, borderRadius: BORDER_RADIUS.xl, marginBottom: SPACING.sm, borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.3)', ...SHADOWS.sm },
-    partName: { color: COLORS.textPrimary, fontFamily: TYPOGRAPHY.families.bold, fontSize: TYPOGRAPHY.sizes.sm },
-    partMeta: { fontSize: TYPOGRAPHY.sizes.xxs, color: COLORS.textSecondary, marginTop: 2, fontFamily: TYPOGRAPHY.families.medium },
-    partPrice: { color: COLORS.textPrimary, fontFamily: TYPOGRAPHY.families.bold },
-    issuedIcon: { width: 32, height: 32, borderRadius: BORDER_RADIUS.sm, backgroundColor: COLORS.primarySurface, alignItems: 'center', justifyContent: 'center' },
-    reqBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: BORDER_RADIUS.full, marginTop: 4 },
-    reqBadge_approved: { backgroundColor: COLORS.successBg },
-    reqBadgeText: { fontSize: 8, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textPrimary, textTransform: 'uppercase' },
+    tabButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, gap: 10, position: 'relative' },
+    tabButtonActive: { borderBottomWidth: 0 },
+    tabLabel: { fontSize: 13, fontFamily: TYPOGRAPHY.families.medium, color: COLORS.textTertiary },
+    tabLabelActive: { color: COLORS.primary, fontFamily: TYPOGRAPHY.families.bold },
+    tabIndicator: { position: 'absolute', bottom: 0, left: 20, right: 20, height: 3, backgroundColor: COLORS.primary, borderTopLeftRadius: 3, borderTopRightRadius: 3 },
+    categoryHeader: { fontSize: 10, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textTertiary, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 12, marginLeft: 4 },
+    checkItemCard: { backgroundColor: COLORS.cardBg, borderRadius: 24, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
+    checkbox: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+    checkboxActive: { transform: [{ scale: 1.1 }] },
+    checkItemName: { fontSize: 14, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textPrimary },
+    checkItemNameDone: { textDecorationLine: 'line-through', opacity: 0.5 },
+    checkItemImage: { width: 40, height: 40, borderRadius: 8, borderWidth: 1, borderColor: COLORS.border },
+    evidenceText: { fontSize: 10, color: COLORS.success, fontFamily: TYPOGRAPHY.families.bold },
+    cameraBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.cardBgAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+    cameraBtnActive: { backgroundColor: COLORS.primarySurface, borderColor: COLORS.primary },
+    conditionRow: { flexDirection: 'row', gap: 8, marginTop: 16, borderTopWidth: 1, borderTopColor: COLORS.divider, paddingTop: 16 },
+    conditionBtn: { flex: 1, height: 36, borderRadius: 10, backgroundColor: COLORS.cardBgAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+    conditionBtn_ok: { backgroundColor: 'rgba(34, 197, 94, 0.1)', borderColor: 'rgba(34, 197, 94, 0.2)' },
+    conditionBtn_fair: { backgroundColor: 'rgba(234, 179, 8, 0.1)', borderColor: 'rgba(234, 179, 8, 0.2)' },
+    conditionBtn_bad: { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' },
+    conditionBtn_na: { backgroundColor: 'rgba(148, 163, 184, 0.1)', borderColor: 'rgba(148, 163, 184, 0.2)' },
+    conditionText: { fontSize: 10, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textTertiary, textTransform: 'uppercase' },
+    conditionTextActive: { color: COLORS.textPrimary },
+    offlineBanner: { backgroundColor: COLORS.warningBg, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    offlineText: { fontSize: 12, fontWeight: 'bold', color: COLORS.warning },
+    offlineSubtext: { fontSize: 10, color: COLORS.warning, opacity: 0.8 },
+    sectionTitle: { fontSize: 14, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textPrimary, textTransform: 'uppercase' },
+    addPartBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.primarySurface, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+    addPartBtnText: { color: COLORS.primary, fontSize: 11, fontFamily: TYPOGRAPHY.families.bold },
+    partItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.cardBg, borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
+    issuedIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: COLORS.primarySurface, alignItems: 'center', justifyContent: 'center' },
+    partName: { fontSize: 14, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textPrimary },
+    partMeta: { fontSize: 11, color: COLORS.textTertiary, marginTop: 2 },
+    partPrice: { fontSize: 14, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textPrimary },
+    reqBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginTop: 4 },
+    reqBadgeText: { fontSize: 8, fontFamily: TYPOGRAPHY.families.black, textTransform: 'uppercase', color: 'white' },
     photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-    photoContainer: { width: (Dimensions.get('window').width - 44) / 2, aspectRatio: 1, borderRadius: BORDER_RADIUS.lg, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border },
+    photoContainer: { width: '47%', aspectRatio: 1, borderRadius: 20, overflow: 'hidden', backgroundColor: COLORS.cardBgAlt, borderWidth: 1, borderColor: COLORS.border },
     jobPhoto: { width: '100%', height: '100%' },
-    photoTag: { position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: BORDER_RADIUS.xs },
-    photoTagText: { color: COLORS.white, fontSize: 10, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase' },
-    addPhotoBtn: { width: (Dimensions.get('window').width - 44) / 2, aspectRatio: 1, borderRadius: BORDER_RADIUS.lg, borderStyle: 'dashed', borderWidth: 2, borderColor: COLORS.borderStrong, alignItems: 'center', justifyContent: 'center' },
-    addPhotoText: { color: COLORS.textTertiary, fontSize: TYPOGRAPHY.sizes.xs, marginTop: 8, fontFamily: TYPOGRAPHY.families.medium },
-    notesCard: { backgroundColor: COLORS.cardBg, padding: SPACING.md, borderRadius: BORDER_RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
-    notesBody: { color: COLORS.textSecondary, fontSize: TYPOGRAPHY.sizes.md, lineHeight: 22, fontFamily: TYPOGRAPHY.families.regular },
-    noteInputContainer: { flexDirection: 'row', gap: 12, alignItems: 'flex-end' },
-    noteInput: { flex: 1, backgroundColor: COLORS.inputBg, borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, color: COLORS.textPrimary, fontSize: TYPOGRAPHY.sizes.md, minHeight: 50, fontFamily: TYPOGRAPHY.families.regular, borderWidth: 1, borderColor: COLORS.border },
-    sendNoteBtn: { backgroundColor: COLORS.primary, width: 50, height: 50, borderRadius: BORDER_RADIUS.lg, alignItems: 'center', justifyContent: 'center', ...SHADOWS.sm },
-    actionBar: { position: 'absolute', bottom: 24, left: 16, right: 16, height: 70 },
-    primaryAction: { flex: 1, backgroundColor: COLORS.accent, borderRadius: BORDER_RADIUS.xl, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, ...SHADOWS.md },
-    pauseAction: { width: 70, height: 70, backgroundColor: COLORS.cardBg, borderRadius: BORDER_RADIUS.xl, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
-    actionLabel: { color: COLORS.white, fontFamily: TYPOGRAPHY.families.bold, fontSize: TYPOGRAPHY.sizes.lg },
-    waitingBadge: { flex: 1, backgroundColor: COLORS.warningBg, borderRadius: BORDER_RADIUS.xl, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, borderWidth: 1, borderColor: COLORS.warning + '20' },
-    waitingText: { color: COLORS.warning, fontFamily: TYPOGRAPHY.families.bold, fontSize: TYPOGRAPHY.sizes.lg },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.8)', justifyContent: 'flex-end' },
-    quickAdjustModal: { backgroundColor: '#0f1c3d', padding: SPACING.xl, borderTopLeftRadius: BORDER_RADIUS.xxl, borderTopRightRadius: BORDER_RADIUS.xxl, alignItems: 'center', borderWidth: 1, borderTopColor: 'rgba(59, 130, 246, 0.5)' },
-    modalHeader: { alignItems: 'center', marginBottom: SPACING.xl },
-    modalIcon: { width: 64, height: 64, backgroundColor: COLORS.cardBgAlt, borderRadius: BORDER_RADIUS.xl, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
-    modalTitle: { color: COLORS.textPrimary, fontSize: TYPOGRAPHY.sizes.xl, fontFamily: TYPOGRAPHY.families.bold },
-    modalSku: { color: COLORS.textTertiary, fontSize: TYPOGRAPHY.sizes.xs, fontFamily: TYPOGRAPHY.families.bold, marginTop: 4 },
-    qtyContainer: { flexDirection: 'row', alignItems: 'center', gap: 40, marginBottom: SPACING.xl },
-    qtyBtn: { width: 56, height: 56, backgroundColor: COLORS.cardBgAlt, borderRadius: BORDER_RADIUS.xl, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
-    qtyValue: { fontSize: 48, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textPrimary },
-    qtyLabel: { color: COLORS.textTertiary, fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, textTransform: 'uppercase' },
-    modalDoneBtn: { backgroundColor: COLORS.primary, width: '100%', padding: 20, borderRadius: BORDER_RADIUS.xl, alignItems: 'center' },
-    modalDoneText: { color: COLORS.white, fontFamily: TYPOGRAPHY.families.bold, letterSpacing: 2 },
-    modalBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: COLORS.primary },
-    modalClose: { padding: 10, backgroundColor: COLORS.cardBgAlt, borderRadius: BORDER_RADIUS.md, borderWidth: 1, borderColor: COLORS.border }
+    photoTag: { position: 'absolute', top: 10, left: 10, backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+    photoTagText: { color: 'white', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' },
+    addPhotoBtn: { width: '47%', aspectRatio: 1, borderRadius: 20, borderStyle: 'dashed', borderWidth: 2, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center', gap: 8 },
+    addPhotoText: { fontSize: 12, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textTertiary },
+    notesCard: { backgroundColor: COLORS.cardBgAlt, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: COLORS.border },
+    notesBody: { fontSize: 14, color: COLORS.textSecondary, lineHeight: 22 },
+    noteInputContainer: { flexDirection: 'row', gap: 12, alignItems: 'flex-end', marginTop: 8 },
+    noteInput: { flex: 1, backgroundColor: COLORS.cardBg, borderRadius: 20, padding: 16, color: COLORS.textPrimary, borderWidth: 1, borderColor: COLORS.border, minHeight: 80, ...SHADOWS.sm },
+    sendNoteBtn: { width: 52, height: 52, borderRadius: 20, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', ...SHADOWS.md },
+    actionBar: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, paddingBottom: Platform.OS === 'ios' ? 40 : 20, backgroundColor: COLORS.cardBg, borderTopWidth: 1, borderTopColor: COLORS.border, flexDirection: 'row', justifyContent: 'center' },
+    primaryAction: { flex: 1, height: 56, borderRadius: 20, backgroundColor: COLORS.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, ...SHADOWS.md },
+    pauseAction: { width: 56, height: 56, borderRadius: 20, backgroundColor: COLORS.cardBgAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+    actionLabel: { color: 'white', fontSize: 15, fontFamily: TYPOGRAPHY.families.black, textTransform: 'uppercase', letterSpacing: 1 },
+    waitingBadge: { flex: 1, height: 56, borderRadius: 20, backgroundColor: COLORS.warningBg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1, borderColor: COLORS.warning + '20' },
+    waitingText: { color: COLORS.warning, fontSize: 14, fontFamily: TYPOGRAPHY.families.bold },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(2, 6, 23, 0.9)', justifyContent: 'flex-end' },
+    quickAdjustModal: { backgroundColor: COLORS.cardBg, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: 40, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
+    modalBar: { width: 40, height: 4, backgroundColor: COLORS.divider, borderRadius: 2, marginBottom: 24 },
+    modalHeader: { alignItems: 'center', gap: 8, marginBottom: 32 },
+    modalIcon: { width: 64, height: 64, borderRadius: 24, backgroundColor: COLORS.primarySurface, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+    modalTitle: { fontSize: 20, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textPrimary, textAlign: 'center' },
+    modalSku: { fontSize: 12, color: COLORS.textTertiary, fontFamily: 'monospace' },
+    qtyContainer: { flexDirection: 'row', alignItems: 'center', gap: 40, marginBottom: 40 },
+    qtyBtn: { width: 56, height: 56, borderRadius: 20, backgroundColor: COLORS.cardBgAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+    qtyValue: { fontSize: 40, fontFamily: TYPOGRAPHY.families.black, color: COLORS.textPrimary },
+    qtyLabel: { fontSize: 10, color: COLORS.textTertiary, textTransform: 'uppercase', letterSpacing: 1, marginTop: -4 },
+    modalDoneBtn: { width: '100%', height: 56, borderRadius: 20, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', ...SHADOWS.md },
+    modalDoneText: { color: 'white', fontSize: 14, fontFamily: TYPOGRAPHY.families.black, letterSpacing: 2 },
+    modalClose: { padding: 8, backgroundColor: COLORS.cardBgAlt, borderRadius: 12 }
 });

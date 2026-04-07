@@ -47,7 +47,8 @@
           "android": {
             "enableShrinkResourcesInReleaseBuilds": true,
             "enableProguardInReleaseBuilds": true,
-            "extraProguardRules": "-keep class com.google.crypto.tink.** { *; }\n-keep class net.openid.appauth.** { *; }\n-keep class com.reactnativecommunity.asyncstorage.** { *; }\n-keep class com.it_dr_m.servicestuff_rn.** { *; }"
+            "enableAbiSplitInReleaseBuild": true,
+            "extraProguardRules": "-keep class com.google.crypto.tink.** { *; }\n-keep class net.openid.appauth.** { *; }\n-keep class com.it_dr_m.servicestuff_rn.** { *; }"
           }
         }
       ],

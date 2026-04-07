@@ -177,7 +177,7 @@ export default function Dashboard() {
         <View style={styles.widgetContainer}>
           <TouchableOpacity onPress={() => router.push('/attendance')}>
             <LinearGradient
-              colors={attendanceStatus?.currentState === 'SHIFT_ACTIVE' ? [COLORS.accent, COLORS.primary] : [COLORS.primaryLight, COLORS.primary]}
+              colors={attendanceStatus?.currentState === 'SHIFT_ACTIVE' ? ['#6366f1', '#3b82f6'] : ['#1e293b', '#0f172a']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.attendanceGradient}
