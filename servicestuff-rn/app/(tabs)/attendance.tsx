@@ -210,7 +210,8 @@ export default function Attendance() {
     const getDaysInMonth = (date: Date) => {
         const year = date.getFullYear();
         const month = date.getMonth();
-        const firstDay = new Date(year, month, 1).getDay();
+        // Shift start day to Saturday: (standard getDay() + 1) % 7
+        const firstDay = (new Date(year, month, 1).getDay() + 1) % 7;
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const days = [];
         for (let i = 0; i < firstDay; i++) days.push(null);
@@ -405,15 +406,18 @@ export default function Attendance() {
 
                     <View style={styles.calendarCard}>
                         <View style={{ flexDirection: 'row', marginBottom: 16 }}>
-                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                            {['S', 'S', 'M', 'T', 'W', 'T', 'F'].map((d, i) => (
                                 <Text key={`${d}-${i}`} style={styles.dayHeader}>{d}</Text>
                             ))}
                         </View>
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                        <View style={styles.daysGrid}>
                             {getDaysInMonth(currentMonth).map((day, idx) => {
                                 const dayStatus = day ? getDayStatus(day) : null;
+                                // Friday is the 7th column (index 6, 13, 20, etc.)
+                                const isFriday = (idx + 1) % 7 === 0;
+
                                 return (
-                                    <View key={idx} style={{ width: (Dimensions.get('window').width - 100) / 7, aspectRatio: 1 }}>
+                                    <View key={idx} style={styles.dayCell}>
                                         {day && (
                                             <TouchableOpacity
                                                 onPress={() => fetchDateStats(day)}
@@ -421,10 +425,16 @@ export default function Attendance() {
                                                     styles.dayBtn,
                                                     dayStatus === 'present' && styles.dayBtnPresent,
                                                     dayStatus === 'leave' && styles.dayBtnLeave,
-                                                    dayStatus === 'sick_leave' && styles.dayBtnSick
+                                                    dayStatus === 'sick_leave' && styles.dayBtnSick,
+                                                    (!dayStatus && isFriday) && styles.dayBtnOff
                                                 ]}
                                             >
-                                                <Text style={[styles.dayText, dayStatus && styles.dayTextActive]}>{day}</Text>
+                                                <Text style={[
+                                                    styles.dayText,
+                                                    (dayStatus || isFriday) && styles.dayTextActive
+                                                ]}>
+                                                    {day}
+                                                </Text>
                                             </TouchableOpacity>
                                         )}
                                     </View>
@@ -441,6 +451,16 @@ export default function Attendance() {
                     <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: COLORS.warning }]} /><Text style={styles.legendText}>Sick Leave</Text></View>
                     <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: COLORS.borderStrong }]} /><Text style={styles.legendText}>Off Day</Text></View>
                 </View>
+
+                {/* Apply for Leave Button */}
+                <TouchableOpacity
+                    onPress={() => router.push('/leave-application')}
+                    style={styles.applyLeaveBtn}
+                    activeOpacity={0.8}
+                >
+                    <CalendarIcon size={20} color="white" />
+                    <Text style={styles.applyLeaveBtnText}>Apply for Leave</Text>
+                </TouchableOpacity>
             </ScrollView>
 
             {/* Summary Modal */}
@@ -534,16 +554,33 @@ const styles = StyleSheet.create({
     navBtn: { padding: SPACING.sm, borderRadius: BORDER_RADIUS.xs },
     calendarCard: { backgroundColor: COLORS.cardBg, padding: SPACING.lg, borderRadius: BORDER_RADIUS.xxl, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm },
     dayHeader: { flex: 1, textAlign: 'center', fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textTertiary },
+    daysGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+    dayCell: { width: `${100 / 7}%`, aspectRatio: 1, padding: 4 },
     dayBtn: { flex: 1, backgroundColor: COLORS.pageBg, borderRadius: BORDER_RADIUS.sm, alignItems: 'center', justifyContent: 'center' },
     dayBtnPresent: { backgroundColor: COLORS.accent },
-    dayBtnLeave: { backgroundColor: COLORS.primary },
+    dayBtnLeave: { backgroundColor: "#6366f1" },
     dayBtnSick: { backgroundColor: COLORS.warning },
+    dayBtnOff: { backgroundColor: COLORS.divider },
     dayText: { fontSize: TYPOGRAPHY.sizes.sm, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textSecondary },
     dayTextActive: { color: COLORS.white },
     legendContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md, backgroundColor: COLORS.cardBgAlt, padding: SPACING.lg, borderRadius: BORDER_RADIUS.xl, marginTop: SPACING.lg, borderWidth: 1, borderColor: COLORS.border },
     legendItem: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
     dot: { width: 10, height: 10, borderRadius: 5 },
     legendText: { fontSize: TYPOGRAPHY.sizes.xxs, fontFamily: TYPOGRAPHY.families.bold, color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: 1 },
+    applyLeaveBtn: {
+        marginTop: 32,
+        backgroundColor: COLORS.cardBg,
+        paddingVertical: 20,
+        borderRadius: BORDER_RADIUS.xl,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        borderWidth: 1,
+        borderColor: COLORS.borderStrong,
+        ...SHADOWS.md
+    },
+    applyLeaveBtnText: { color: COLORS.white, fontFamily: TYPOGRAPHY.families.bold, fontSize: TYPOGRAPHY.sizes.md, textTransform: 'uppercase', letterSpacing: 1 },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.8)', justifyContent: 'flex-end' },
     summaryModal: { backgroundColor: COLORS.cardBg, padding: SPACING.xl, borderTopLeftRadius: BORDER_RADIUS.xxl, borderTopRightRadius: BORDER_RADIUS.xxl, overflow: 'hidden' },
     modalBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 6, backgroundColor: COLORS.accent },

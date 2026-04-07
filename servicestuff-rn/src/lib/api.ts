@@ -158,6 +158,11 @@ export const TechnicianAPI = {
     getNotifications: (config?: AxiosRequestConfig) => api.get('/notifications', config),
     markNotificationsRead: (id?: string, config?: AxiosRequestConfig) => api.patch('/notifications', { id }, config),
     deleteNotifications: (id?: string, config?: AxiosRequestConfig) => api.delete('/notifications', { data: { id }, ...config }),
+
+    // Leave Application
+    applyForLeave: (data: { leaveType: string; startDate: string; endDate: string; reason: string; hometown?: string; phoneNumber?: string }, config?: AxiosRequestConfig) =>
+        api.post('/leave', data, config),
+    getLeaveHistory: (config?: AxiosRequestConfig) => api.get('/leave', config),
 };
 
 export default api;
