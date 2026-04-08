@@ -47,15 +47,14 @@ jobs:
       - name: Build APK (Local)
         run: |
           cd servicestuff-rn
-          # Use eas directly as it's installed by the Setup Expo action
-          # We use --local to save build credits. This requires Android SDK/Java on runner.
-          eas build -p android --profile preview --non-interactive --local --output=app-release.apk
+          # We remove --output to allow EAS/Gradle to generate multiple split APKs
+          eas build -p android --profile preview --non-interactive --local
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EAS_SKIP_AUTO_FINGERPRINT: 1
 
-      - name: Upload APK
+      - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: Suzuki-Service-Pro-APK
-          path: servicestuff-rn/app-release.apk
+          name: Suzuki-Service-Pro-Split-APKs
+          path: servicestuff-rn/*.apk

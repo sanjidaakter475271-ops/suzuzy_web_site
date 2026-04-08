@@ -94,9 +94,9 @@ export const TYPOGRAPHY = {
   // Font Families (using M PLUS Rounded 1c mapped in tailwind.config.js)
   families: {
     regular: "MPLUSRounded1c_400Regular",
-    medium: "MPLUSRounded1c_500Medium",
+    medium: "MPLUSRounded1c_400Regular", // Mapped to regular to save space
     bold: "MPLUSRounded1c_700Bold",
-    black: "MPLUSRounded1c_900Black",
+    black: "MPLUSRounded1c_700Bold", // Mapped to bold to save space
   }
 };
 

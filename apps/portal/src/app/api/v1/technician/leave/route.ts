@@ -28,15 +28,6 @@ export async function POST(request: NextRequest) {
 
         const { leaveType, startDate, endDate, reason, hometown, phoneNumber } = parsed.data;
 
-        // Create the leave request
-        // Since the schema doesn't have hometown/phoneNumber fields in leave_requests,
-        // we'll append them to the reason for now to ensure the data is captured.
-        const enhancedReason = [
-            reason,
-            hometown ? `Hometown: ${hometown}` : null,
-            phoneNumber ? `Phone: ${phoneNumber}` : null
-        ].filter(Boolean).join('\n');
-
         const leaveRequest = await prisma.leave_requests.create({
             data: {
                 staff_id: technician.serviceStaffId,
@@ -44,7 +35,9 @@ export async function POST(request: NextRequest) {
                 leave_type: leaveType,
                 start_date: new Date(startDate),
                 end_date: new Date(endDate),
-                reason: enhancedReason,
+                reason: reason,
+                hometown: hometown,
+                emergency_phone: phoneNumber,
                 status: "pending",
             },
         });

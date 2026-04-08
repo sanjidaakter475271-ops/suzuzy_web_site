@@ -48,7 +48,7 @@
             "enableShrinkResourcesInReleaseBuilds": true,
             "enableProguardInReleaseBuilds": true,
             "enableAbiSplitInReleaseBuild": true,
-            "extraProguardRules": "-keep class com.google.crypto.tink.** { *; }\n-keep class net.openid.appauth.** { *; }\n-keep class com.it_dr_m.servicestuff_rn.** { *; }"
+            "extraProguardRules": "-keep class com.google.crypto.tink.** { *; }\n-keep class net.openid.appauth.** { *; }\n-keep class com.suzuki.servicepro.** { *; }"
           }
         }
       ],

@@ -5,7 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useEffect, useState } from 'react';
 import { storage } from '@/lib/storage';
-import { useFonts, MPLUSRounded1c_400Regular, MPLUSRounded1c_500Medium, MPLUSRounded1c_700Bold, MPLUSRounded1c_900Black } from '@expo-google-fonts/m-plus-rounded-1c';
+import { useFonts, MPLUSRounded1c_400Regular, MPLUSRounded1c_700Bold } from '@expo-google-fonts/m-plus-rounded-1c';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
@@ -93,9 +93,7 @@ function InitialLayout() {
   const { initializeSocketListeners } = useJobStore();
   const [fontsLoaded, fontError] = useFonts({
     MPLUSRounded1c_400Regular,
-    MPLUSRounded1c_500Medium,
     MPLUSRounded1c_700Bold,
-    MPLUSRounded1c_900Black,
   });
 
   const segments = useSegments();

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     View,
     Text,
@@ -7,7 +7,6 @@ import {
     TouchableOpacity,
     TextInput,
     Alert,
-    Dimensions,
     Platform,
     Modal
 } from 'react-native';
@@ -22,7 +21,7 @@ import {
     CheckCircle,
     X
 } from '@/components/icons';
-import { MotiView, AnimatePresence } from 'moti';
+import { MotiView } from 'moti';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
 import { TopBar } from '@/components/layout/TopBar';
 import { TechnicianAPI } from '@/lib/api';
@@ -205,7 +204,7 @@ export default function LeaveApplication() {
                         >
                             <Text style={styles.dateLabel}>Start Date</Text>
                             <View style={styles.dateValueContainer}>
-                                <CalendarIcon size={16} color={COLORS.primary} />
+                                <CalendarIcon size={16} color={COLORS.accent} />
                                 <Text style={[styles.dateValue, !startDate && styles.datePlaceholder]}>
                                     {formatDate(startDate)}
                                 </Text>
@@ -222,7 +221,7 @@ export default function LeaveApplication() {
                         >
                             <Text style={styles.dateLabel}>End Date</Text>
                             <View style={styles.dateValueContainer}>
-                                <CalendarIcon size={16} color={COLORS.primary} />
+                                <CalendarIcon size={16} color={COLORS.accent} />
                                 <Text style={[styles.dateValue, !endDate && styles.datePlaceholder]}>
                                     {formatDate(endDate)}
                                 </Text>
@@ -285,13 +284,13 @@ export default function LeaveApplication() {
 
                         <View style={styles.monthNav}>
                             <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}>
-                                <ChevronLeft size={24} color={COLORS.primary} />
+                                <ChevronLeft size={24} color={COLORS.accent} />
                             </TouchableOpacity>
                             <Text style={styles.monthName}>
                                 {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                             </Text>
                             <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}>
-                                <ChevronLeft size={24} color={COLORS.primary} style={{ transform: [{ rotate: '180deg' }] }} />
+                                <ChevronLeft size={24} color={COLORS.accent} style={{ transform: [{ rotate: '180deg' }] }} />
                             </TouchableOpacity>
                         </View>
 
@@ -316,13 +315,13 @@ export default function LeaveApplication() {
                                                 onPress={() => handleDateSelect(day)}
                                                 style={[
                                                     styles.calendarDay,
-                                                    isFriday && styles.calendarFriday,
-                                                    isSelected && styles.calendarSelectedDay
+                                                    !!isFriday && styles.calendarFriday,
+                                                    !!isSelected && styles.calendarSelectedDay
                                                 ]}
                                             >
                                                 <Text style={[
                                                     styles.calendarDayText,
-                                                    (isFriday || isSelected) && { color: 'white' }
+                                                    (isFriday || isSelected) ? { color: 'white' } : null
                                                 ]}>
                                                     {day}
                                                 </Text>
@@ -354,7 +353,7 @@ const styles = StyleSheet.create({
     sectionLabel: {
         fontSize: 10,
         fontFamily: TYPOGRAPHY.families.bold,
-        color: COLORS.primary,
+        color: COLORS.accent,
         letterSpacing: 2,
         marginBottom: 16,
         marginTop: 8,
@@ -374,8 +373,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     typeBtnActive: {
-        backgroundColor: COLORS.primarySurface,
-        borderColor: COLORS.primary,
+        backgroundColor: COLORS.accentSurface,
+        borderColor: COLORS.accent,
     },
     typeBtnText: {
         fontSize: TYPOGRAPHY.sizes.sm,
@@ -383,7 +382,7 @@ const styles = StyleSheet.create({
         color: COLORS.textSecondary,
     },
     typeBtnTextActive: {
-        color: COLORS.primary,
+        color: COLORS.accent,
     },
     formGroup: {
         marginBottom: 24,
@@ -457,7 +456,7 @@ const styles = StyleSheet.create({
         marginTop: 18,
     },
     submitBtn: {
-        backgroundColor: COLORS.primary,
+        backgroundColor: COLORS.accent,
         borderRadius: BORDER_RADIUS.xl,
         paddingVertical: 18,
         flexDirection: 'row',
@@ -549,6 +548,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(239, 68, 68, 0.15)',
     },
     calendarSelectedDay: {
-        backgroundColor: COLORS.primary,
+        backgroundColor: COLORS.accent,
     }
 });

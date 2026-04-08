@@ -35,7 +35,8 @@
       "Bash(ls -d apps/portal/node_modules/react-native-css-interop*)",
       "Read(//d/suzuzy_web_site/servicestuff-rn/src/components/**)",
       "Read(//d/suzuzy_web_site/servicestuff-rn/src/components/ui/**)",
-      "mcp__filesystem__create_directory"
+      "mcp__filesystem__create_directory",
+      "Bash(du -sh servicestuff-rn/node_modules/*)"
     ]
   }
 }
