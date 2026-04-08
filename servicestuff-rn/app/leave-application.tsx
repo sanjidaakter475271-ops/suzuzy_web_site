@@ -8,7 +8,8 @@ import {
     TextInput,
     Alert,
     Platform,
-    Modal
+    Modal,
+    Dimensions
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
