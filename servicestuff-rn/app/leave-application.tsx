@@ -64,6 +64,13 @@ export default function LeaveApplication() {
         return days;
     }, [currentMonth]);
 
+    const isSameDate = (d1: Date | null, day: number, monthDate: Date) => {
+        if (!d1) return false;
+        return d1.getDate() === day &&
+               d1.getMonth() === monthDate.getMonth() &&
+               d1.getFullYear() === monthDate.getFullYear();
+    };
+
     const handleDateSelect = (day: number) => {
         const selected = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
         if (selectingDateType === 'start') {
@@ -303,9 +310,9 @@ export default function LeaveApplication() {
                         <View style={styles.calendarGrid}>
                             {daysInMonth.map((day, idx) => {
                                 const isFriday = (idx + 1) % 7 === 0;
-                                const isSelected = day && (
-                                    (selectingDateType === 'start' && startDate?.getDate() === day && startDate?.getMonth() === currentMonth.getMonth()) ||
-                                    (selectingDateType === 'end' && endDate?.getDate() === day && endDate?.getMonth() === currentMonth.getMonth())
+                                const isSelected = !!day && (
+                                    (selectingDateType === 'start' && isSameDate(startDate, day, currentMonth)) ||
+                                    (selectingDateType === 'end' && isSameDate(endDate, day, currentMonth))
                                 );
 
                                 return (
