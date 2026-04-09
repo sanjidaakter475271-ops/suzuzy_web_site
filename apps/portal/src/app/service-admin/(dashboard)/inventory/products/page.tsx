@@ -285,8 +285,51 @@ export default function InventoryProductsPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {products.map((product) => (
-                    <Card key={product.id} className="hover:border-brand transition-all group rounded-[2rem] overflow-hidden border-surface-border dark:border-dark-border shadow-card hover:shadow-xl hover:shadow-brand/5 dark:hover:shadow-none duration-300">
+                {isLoading && products.length === 0 ? (
+                    // Loading Skeletons
+                    Array.from({ length: 6 }).map((_, idx) => (
+                        <Card key={`skeleton-${idx}`} className="rounded-[2rem] overflow-hidden border-surface-border dark:border-dark-border shadow-card animate-pulse">
+                            <CardContent className="p-6 space-y-4">
+                                <div className="flex justify-between items-start">
+                                    <div className="space-y-2">
+                                        <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-16"></div>
+                                        <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-48"></div>
+                                        <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-24"></div>
+                                    </div>
+                                    <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-800"></div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 py-4 border-y border-surface-border dark:border-dark-border/50">
+                                    <div className="space-y-2">
+                                        <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-16"></div>
+                                        <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-12"></div>
+                                    </div>
+                                    <div className="space-y-2 text-right flex flex-col items-end">
+                                        <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-16"></div>
+                                        <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-16"></div>
+                                    </div>
+                                </div>
+                                <div className="flex gap-3 pt-2">
+                                    <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-xl flex-1"></div>
+                                    <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-xl flex-1"></div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))
+                ) : !isLoading && products.length === 0 ? (
+                    // Empty State
+                    <div className="col-span-full py-20 text-center space-y-4 bg-white dark:bg-dark-card rounded-3xl border-2 border-dashed border-surface-border dark:border-dark-border flex flex-col items-center justify-center">
+                        <div className="w-20 h-20 bg-brand/5 rounded-full flex items-center justify-center mb-2">
+                            <Search size={40} className="text-brand/40" />
+                        </div>
+                        <h3 className="text-xl font-black text-ink-heading dark:text-white">No products found</h3>
+                        <p className="text-ink-muted max-w-md font-medium">We couldn't find any products matching your current filters or search query. Try adjusting your search or add a new product.</p>
+                        <Button onClick={() => handleOpenPanel()} className="mt-4 gap-2 shadow-lg shadow-brand/20">
+                            <Plus size={18} /> Add New Product
+                        </Button>
+                    </div>
+                ) : (
+                    products.map((product) => (
+                        <Card key={product.id} className="hover:border-brand transition-all group rounded-[2rem] overflow-hidden border-surface-border dark:border-dark-border shadow-card hover:shadow-xl hover:shadow-brand/5 dark:hover:shadow-none duration-300">
                         <CardContent className="p-6 space-y-4">
                             <div className="flex justify-between items-start">
                                 <div>

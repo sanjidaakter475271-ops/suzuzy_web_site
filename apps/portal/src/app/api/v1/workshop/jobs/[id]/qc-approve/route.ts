@@ -78,7 +78,7 @@ export async function POST(
             return NextResponse.json({ success: false, error: "Job card not found or access denied" }, { status: 404 });
         }
 
-        const nextJobStatus = status === 'approved' ? JOB_STATUS.QC_APPROVED : JOB_STATUS.QC_REJECTED;
+        const nextJobStatus = status === 'approved' ? JOB_STATUS.COMPLETED : JOB_STATUS.QC_REJECTED;
 
         // 2. Perform Transaction
         const result = await prisma.$transaction(async (tx) => {
@@ -121,11 +121,22 @@ export async function POST(
                 });
             }
 
-            // Update Job Card status
+            // Update Job Card status and end time if approved
             await tx.job_cards.update({
                 where: { id: jobId },
-                data: { status: nextJobStatus }
+                data: {
+                    status: nextJobStatus,
+                    ...(status === 'approved' ? { service_end_time: new Date() } : {})
+                }
             });
+
+            // If approved, mark all tasks as completed
+            if (status === 'approved') {
+                await tx.service_tasks.updateMany({
+                    where: { job_card_id: jobId },
+                    data: { status: 'completed' }
+                });
+            }
 
             // Log Job History
             await tx.job_state_history.create({

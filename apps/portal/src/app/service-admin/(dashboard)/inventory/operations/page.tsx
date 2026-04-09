@@ -30,7 +30,8 @@ export default function StockOperationsPage() {
         fetchAdjustments,
         fetchRequisitions,
         approveRequisition,
-        rejectRequisition
+        rejectRequisition,
+        isLoading
     } = useInventoryStore();
 
     const [activeTab, setActiveTab] = useState<'requests' | 'adjustments'>('requests');
@@ -138,7 +139,31 @@ export default function StockOperationsPage() {
             {/* Content - Workshop Requests */}
             {activeTab === 'requests' && (
                 <div className="space-y-6">
-                    {partsIssues.length === 0 ? (
+                    {isLoading && partsIssues.length === 0 ? (
+                        Array.from({ length: 3 }).map((_, idx) => (
+                            <Card key={`req-skel-${idx}`} className="rounded-2xl border-surface-border dark:border-dark-border shadow-sm animate-pulse">
+                                <CardContent className="p-6">
+                                    <div className="flex flex-col md:flex-row gap-6">
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-12 h-12 rounded-xl bg-slate-200 dark:bg-slate-800"></div>
+                                            <div className="space-y-2">
+                                                <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-48"></div>
+                                                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-64"></div>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl p-4 min-w-[250px] space-y-3">
+                                            <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-32"></div>
+                                            <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-full"></div>
+                                        </div>
+                                        <div className="flex flex-col gap-3 min-w-[150px] justify-center pl-6">
+                                            <div className="h-12 bg-slate-200 dark:bg-slate-800 rounded-xl w-full"></div>
+                                            <div className="h-12 bg-slate-200 dark:bg-slate-800 rounded-xl w-full"></div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))
+                    ) : partsIssues.length === 0 ? (
                         <div className="py-20 text-center space-y-4 bg-surface-card dark:bg-dark-card rounded-2xl border-2 border-dashed border-surface-border dark:border-dark-border">
                             <CheckCircle2 size={48} className="mx-auto text-success/40" />
                             <p className="text-ink-muted font-bold text-lg">No pending requisitions from workshop.</p>
@@ -233,7 +258,23 @@ export default function StockOperationsPage() {
                     </div>
 
                     <div className="divide-y divide-surface-border dark:divide-dark-border/50">
-                        {filteredAdjustments.length === 0 ? (
+                        {isLoading && filteredAdjustments.length === 0 ? (
+                            Array.from({ length: 3 }).map((_, idx) => (
+                                <div key={`adj-skel-${idx}`} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-pulse">
+                                    <div className="flex items-center gap-5 w-full">
+                                        <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-800 shrink-0"></div>
+                                        <div className="space-y-2 w-full max-w-md">
+                                            <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-3/4"></div>
+                                            <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/2"></div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-8 w-full md:w-auto">
+                                        <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded w-20"></div>
+                                        <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded w-24"></div>
+                                    </div>
+                                </div>
+                            ))
+                        ) : filteredAdjustments.length === 0 ? (
                             <div className="p-12 text-center">
                                 <p className="text-ink-muted font-bold">No adjustments found.</p>
                             </div>
