@@ -249,6 +249,16 @@ export interface Notification {
   timestamp?: Date;
 }
 
+export interface ProductVariant {
+  id: string;
+  product_id: string;
+  sku: string;
+  price: number;
+  stock_quantity: number;
+  attributes: any;
+  barcode?: string;
+}
+
 export interface ProductDetail {
   id: string;
   name: string;
@@ -259,6 +269,7 @@ export interface ProductDetail {
   stock_quantity: number;
   image_url?: string;
   category_id: string;
+  has_variants?: boolean;
 }
 
 export interface RequisitionGroup {

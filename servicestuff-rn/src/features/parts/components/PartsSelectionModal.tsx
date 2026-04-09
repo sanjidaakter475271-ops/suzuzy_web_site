@@ -22,7 +22,7 @@ import {
 import { MotiView, AnimatePresence } from 'moti';
 import { FlashList } from '@shopify/flash-list';
 import { TechnicianAPI } from '@/lib/api';
-import { Category, ProductDetail } from '@/types';
+import { Category, ProductDetail, ProductVariant } from '@/types';
 import { RequisitionCart } from './RequisitionCart';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '@/constants/theme';
 import { useJobStore } from '@/stores/jobStore';
@@ -33,17 +33,19 @@ interface PartsSelectionModalProps {
     onSuccess: () => void;
 }
 
-type Step = 'category' | 'products' | 'cart';
+type Step = 'category' | 'products' | 'variants' | 'cart';
 
 export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId, onClose, onSuccess }) => {
     const [step, setStep] = useState<Step>('category');
     const { requestParts } = useJobStore();
     const [categories, setCategories] = useState<Category[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+    const [selectedProduct, setSelectedProduct] = useState<ProductDetail | null>(null);
     const [products, setProducts] = useState<ProductDetail[]>([]);
+    const [variants, setVariants] = useState<ProductVariant[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [cart, setCart] = useState<{ product: ProductDetail; quantity: number }[]>([]);
+    const [cart, setCart] = useState<{ product: ProductDetail; variant?: ProductVariant; quantity: number }[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
@@ -78,36 +80,69 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
         }
     };
 
+    const fetchVariants = async (productId: string) => {
+        setLoading(true);
+        try {
+            const res = await TechnicianAPI.getProductVariants(productId);
+            if (res.data.success) {
+                const fetchedVariants = res.data.data;
+                setVariants(fetchedVariants);
+                return fetchedVariants;
+            }
+        } catch (err) {
+            console.error("Failed to fetch variants:", err);
+        } finally {
+            setLoading(false);
+        }
+        return [];
+    };
+
     const handleCategorySelect = (category: Category) => {
         setSelectedCategory(category);
         fetchProducts(category.id);
         setStep('products');
     };
 
-    const handleAddToCart = (product: ProductDetail) => {
+    const handleProductSelect = async (product: ProductDetail) => {
+        setSelectedProduct(product);
+        const fetchedVariants = await fetchVariants(product.id);
+
+        if (fetchedVariants.length > 1) {
+            setStep('variants');
+        } else if (fetchedVariants.length === 1) {
+            handleAddToCart(product, fetchedVariants[0]);
+        } else {
+            handleAddToCart(product);
+        }
+    };
+
+    const handleAddToCart = (product: ProductDetail, variant?: ProductVariant) => {
         setCart(prev => {
-            const existing = prev.find(item => item.product.id === product.id);
+            const matchId = variant ? variant.id : product.id;
+            const existing = prev.find(item => (item.variant?.id || item.product.id) === matchId);
+
             if (existing) {
                 return prev.map(item =>
-                    item.product.id === product.id
+                    (item.variant?.id || item.product.id) === matchId
                         ? { ...item, quantity: item.quantity + 1 }
                         : item
                 );
             }
-            return [...prev, { product, quantity: 1 }];
+            return [...prev, { product, variant, quantity: 1 }];
         });
+        if (step !== 'cart') setStep('products');
     };
 
-    const updateCartQuantity = (productId: string, delta: number) => {
+    const updateCartQuantity = (id: string, delta: number) => {
         setCart(prev => prev.map(item =>
-            item.product.id === productId
+            (item.variant?.id || item.product.id) === id
                 ? { ...item, quantity: Math.max(1, item.quantity + delta) }
                 : item
         ));
     };
 
-    const removeFromCart = (productId: string) => {
-        setCart(prev => prev.filter(item => item.product.id !== productId));
+    const removeFromCart = (id: string) => {
+        setCart(prev => prev.filter(item => (item.variant?.id || item.product.id) !== id));
     };
 
     const handleSubmit = async () => {
@@ -115,6 +150,7 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
         try {
             const items = cart.map(item => ({
                 productId: item.product.id,
+                variantId: item.variant?.id,
                 quantity: item.quantity,
                 notes: ""
             }));
@@ -137,8 +173,8 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
     const renderHeader = () => (
         <View style={styles.header}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                {step === 'products' ? (
-                    <TouchableOpacity onPress={() => setStep('category')} style={{ padding: 8, marginLeft: -8 }}>
+                {step !== 'category' ? (
+                    <TouchableOpacity onPress={() => setStep(step === 'variants' ? 'products' : 'category')} style={{ padding: 8, marginLeft: -8 }}>
                         <ArrowLeft size={24} color={COLORS.textTertiary} />
                     </TouchableOpacity>
                 ) : (
@@ -146,10 +182,10 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
                 )}
                 <View>
                     <Text style={styles.headerTitle}>
-                        {step === 'category' ? 'Select category' : selectedCategory?.name}
+                        {step === 'category' ? 'Select category' : step === 'variants' ? 'Select Variant' : selectedCategory?.name}
                     </Text>
                     <Text style={styles.headerStep}>
-                        Step {step === 'category' ? '1' : '2'} of 3
+                        Step {step === 'category' ? '1' : step === 'products' ? '2' : '3'} of 3
                     </Text>
                 </View>
             </View>
@@ -159,7 +195,7 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
                         onPress={() => setStep('cart')}
                         style={styles.cartButton}
                     >
-                        <ShoppingCart size={20} color={COLORS.primary} />
+                        <ShoppingCart size={20} color={COLORS.accent} />
                         <View style={styles.cartBadge}>
                             <Text style={styles.cartBadgeText}>{cart.length}</Text>
                         </View>
@@ -200,17 +236,16 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
                         )}
 
                         <View style={{ flex: 1 }}>
-                            {loading && products.length === 0 ? (
+                            {loading && (products.length === 0 && categories.length === 0) ? (
                                 <View style={styles.loadingContainer}>
-                                    <ActivityIndicator size="large" color={COLORS.primary} />
-                                    <Text style={styles.loadingText}>Loading Catalog...</Text>
+                                    <ActivityIndicator size="large" color={COLORS.accent} />
+                                    <Text style={styles.loadingText}>Synchronizing Catalog...</Text>
                                 </View>
                             ) : step === 'category' ? (
                                 <FlashList
                                     data={categories}
                                     numColumns={2}
                                     contentContainerStyle={{ padding: 16 }}
-                                    // @ts-ignore
                                     estimatedItemSize={150}
                                     renderItem={({ item, index }) => (
                                         <MotiView
@@ -226,20 +261,19 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
                                             >
                                                 <View style={styles.categoryIconContainer}>
                                                     <Layers color={COLORS.textSecondary} size={32} />
-                                                </View>
+                                                </div>
                                                 <Text style={styles.categoryName}>{item.name}</Text>
                                             </TouchableOpacity>
                                         </MotiView>
                                     )}
                                 />
-                            ) : (
+                            ) : step === 'products' ? (
                                 <FlashList
                                     data={filteredProducts}
                                     contentContainerStyle={{ padding: 16 }}
-                                    // @ts-ignore
                                     estimatedItemSize={120}
                                     renderItem={({ item, index }) => {
-                                        const inCart = cart.find(c => c.product.id === item.id);
+                                        const inCart = cart.some(c => c.product.id === item.id);
                                         return (
                                             <MotiView
                                                 from={{ opacity: 0, translateX: -20 }}
@@ -269,37 +303,52 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
                                                     </View>
 
                                                     <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12 }}>
-                                                        {inCart ? (
-                                                            <View style={styles.cartControls}>
-                                                                <TouchableOpacity
-                                                                    onPress={() => updateCartQuantity(item.id, -1)}
-                                                                    style={styles.cartControlBtn}
-                                                                >
-                                                                    <Text style={styles.cartControlText}>-</Text>
-                                                                </TouchableOpacity>
-                                                                <Text style={styles.cartQuantityText}>{inCart.quantity}</Text>
-                                                                <TouchableOpacity
-                                                                    onPress={() => updateCartQuantity(item.id, 1)}
-                                                                    style={styles.cartControlBtn}
-                                                                >
-                                                                    <Text style={styles.cartControlText}>+</Text>
-                                                                </TouchableOpacity>
-                                                            </View>
-                                                        ) : (
-                                                            <TouchableOpacity
-                                                                onPress={() => handleAddToCart(item)}
-                                                                disabled={item.stock_quantity <= 0}
-                                                                style={[styles.addBtn, item.stock_quantity <= 0 && { opacity: 0.3 }]}
-                                                            >
-                                                                <Text style={styles.addBtnText}>Add to request</Text>
-                                                            </TouchableOpacity>
-                                                        )}
+                                                        <TouchableOpacity
+                                                            onPress={() => handleProductSelect(item)}
+                                                            disabled={item.stock_quantity <= 0}
+                                                            style={[styles.addBtn, item.stock_quantity <= 0 && { opacity: 0.3 }]}
+                                                        >
+                                                            <Text style={styles.addBtnText}>
+                                                                {item.has_variants ? 'View Variants' : inCart ? 'Add More' : 'Add to request'}
+                                                            </Text>
+                                                        </TouchableOpacity>
                                                     </View>
                                                 </View>
                                             </MotiView>
                                         );
                                     }}
                                 />
+                            ) : (
+                                <View style={{ flex: 1, padding: 16 }}>
+                                    <Text style={[styles.sectionTitle, { marginBottom: 16 }]}>{selectedProduct?.name}</Text>
+                                    <FlashList
+                                        data={variants}
+                                        estimatedItemSize={80}
+                                        renderItem={({ item }) => {
+                                            const inCart = cart.find(c => c.variant?.id === item.id);
+                                            const attrString = Object.entries(item.attributes || {})
+                                                .map(([k, v]) => `${k}: ${v}`).join(', ');
+
+                                            return (
+                                                <TouchableOpacity
+                                                    onPress={() => handleAddToCart(selectedProduct!, item)}
+                                                    style={styles.variantCard}
+                                                >
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={styles.variantName}>{attrString || item.sku}</Text>
+                                                        <Text style={styles.variantSku}>{item.sku}</Text>
+                                                    </View>
+                                                    <View style={{ alignItems: 'flex-end' }}>
+                                                        <Text style={styles.productPrice}>৳{item.price.toLocaleString()}</Text>
+                                                        <Text style={[styles.stockText, { color: item.stock_quantity > 0 ? COLORS.success : COLORS.danger }]}>
+                                                            {item.stock_quantity} in stock
+                                                        </Text>
+                                                    </View>
+                                                </TouchableOpacity>
+                                            );
+                                        }}
+                                    />
+                                </View>
                             )}
                         </View>
                     </View>
@@ -345,7 +394,7 @@ const styles = StyleSheet.create({
     },
     headerStep: {
         fontSize: 10,
-        color: COLORS.primary,
+        color: COLORS.accent,
         fontWeight: 'bold',
         textTransform: 'uppercase',
         letterSpacing: 2,
@@ -353,9 +402,9 @@ const styles = StyleSheet.create({
     },
     cartButton: {
         padding: 10,
-        backgroundColor: COLORS.primarySurface,
+        backgroundColor: COLORS.accentSurface,
         borderWidth: 1,
-        borderColor: COLORS.primary + '20',
+        borderColor: COLORS.accent + '20',
         borderRadius: 16,
         position: 'relative',
     },
@@ -492,39 +541,12 @@ const styles = StyleSheet.create({
     productPrice: {
         fontSize: 14,
         fontWeight: '900',
-        color: COLORS.primary,
+        color: COLORS.accent,
     },
     stockText: {
         fontSize: 9,
         fontWeight: 'bold',
         marginTop: 4,
-    },
-    cartControls: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: COLORS.primary,
-        borderRadius: 12,
-        padding: 4,
-        ...SHADOWS.md,
-    },
-    cartControlBtn: {
-        width: 28,
-        height: 28,
-        borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    },
-    cartControlText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    cartQuantityText: {
-        paddingHorizontal: 12,
-        color: 'white',
-        fontWeight: '900',
-        fontSize: 13,
     },
     addBtn: {
         backgroundColor: COLORS.cardBgAlt,
@@ -535,10 +557,38 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     addBtnText: {
-        color: COLORS.textSecondary,
+        color: COLORS.accent,
         fontSize: 10,
         fontWeight: '900',
         textTransform: 'uppercase',
         letterSpacing: 1,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: '900',
+        color: COLORS.textPrimary,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    variantCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.cardBg,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 8,
+        ...SHADOWS.sm,
+    },
+    variantName: {
+        color: COLORS.textPrimary,
+        fontSize: 13,
+        fontWeight: 'bold',
+    },
+    variantSku: {
+        color: COLORS.textTertiary,
+        fontSize: 10,
+        marginTop: 2,
     }
 });

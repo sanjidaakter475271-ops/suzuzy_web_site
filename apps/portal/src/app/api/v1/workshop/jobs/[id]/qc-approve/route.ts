@@ -121,6 +121,115 @@ export async function POST(
                 });
             }
 
+            // If approved, handle comprehensive completion logic
+            if (status === 'approved') {
+                // A. Handle Pending Requisitions (Auto-Issue Parts)
+                const pendingRequisitions = await tx.service_requisitions.findMany({
+                    where: {
+                        job_card_id: jobId,
+                        status: 'pending'
+                    },
+                    include: { products: true }
+                });
+
+                for (const reqItem of pendingRequisitions) {
+                    if (reqItem.product_id) {
+                        const product = reqItem.products;
+                        const requestedQuantity = reqItem.quantity;
+
+                        // Fetch available batches (FIFO)
+                        const batches = await tx.inventory_batches.findMany({
+                            where: {
+                                product_id: reqItem.product_id,
+                                dealer_id: dealerId,
+                                current_quantity: { gt: 0 },
+                                status: 'active'
+                            },
+                            orderBy: { received_date: 'asc' }
+                        });
+
+                        const totalAvailable = batches.reduce((sum, b) => sum + b.current_quantity, 0);
+
+                        // We deduct whatever is available, even if insufficient, to "finish" the job
+                        // or we could throw error. In this "Heal & Finish" mode, we'll deduct max possible.
+                        let remainingToDeduct = requestedQuantity;
+
+                        for (const batch of batches) {
+                            if (remainingToDeduct <= 0) break;
+
+                            const deduction = Math.min(batch.current_quantity, remainingToDeduct);
+                            const newBatchQty = batch.current_quantity - deduction;
+
+                            // Update Batch
+                            await tx.inventory_batches.update({
+                                where: { id: batch.id },
+                                data: {
+                                    current_quantity: newBatchQty,
+                                    sold_quantity: (batch.sold_quantity || 0) + deduction
+                                }
+                            });
+
+                            // Create Movement record
+                            await tx.inventory_movements.create({
+                                data: {
+                                    dealer_id: dealerId,
+                                    product_id: reqItem.product_id!,
+                                    batch_id: batch.id,
+                                    movement_type: 'stock_out',
+                                    quantity_before: batch.current_quantity,
+                                    quantity_change: -deduction,
+                                    quantity_after: newBatchQty,
+                                    reference_type: 'requisition',
+                                    reference_id: reqItem.id,
+                                    reason: `QC Auto-Approval Deduction`,
+                                    performed_by: user.userId
+                                }
+                            });
+
+                            remainingToDeduct -= deduction;
+                        }
+
+                        // Update Overall Product Stock
+                        const actualDeducted = requestedQuantity - remainingToDeduct;
+                        const oldStock = product?.stock_quantity || 0;
+                        const newStock = oldStock - actualDeducted;
+
+                        if (product) {
+                            await tx.products.update({
+                                where: { id: reqItem.product_id },
+                                data: {
+                                    stock_quantity: newStock,
+                                    stock_status: newStock <= 0 ? 'out_of_stock' : (newStock <= (product.low_stock_threshold || 5) ? 'low_stock' : 'in_stock')
+                                }
+                            });
+                        }
+
+                        // Mark requisition as approved/issued
+                        await tx.service_requisitions.update({
+                            where: { id: reqItem.id },
+                            data: {
+                                status: 'approved',
+                                approved_at: new Date(),
+                                approved_by: user.userId,
+                                notes: (reqItem.notes || '') + "\nAuto-approved during QC pass."
+                            }
+                        });
+                    }
+                }
+
+                // B. Mark all tasks as completed
+                await tx.service_tasks.updateMany({
+                    where: { job_card_id: jobId },
+                    data: { status: 'completed' }
+                });
+
+                // C. Release any occupied ramps
+                await tx.service_ramps.updateMany({
+                    where: { current_ticket_id: jobCard.ticket_id, dealer_id: dealerId },
+                    data: { status: 'idle', current_ticket_id: null }
+                });
+            }
+
             // Update Job Card status and end time if approved
             await tx.job_cards.update({
                 where: { id: jobId },
@@ -129,14 +238,6 @@ export async function POST(
                     ...(status === 'approved' ? { service_end_time: new Date() } : {})
                 }
             });
-
-            // If approved, mark all tasks as completed
-            if (status === 'approved') {
-                await tx.service_tasks.updateMany({
-                    where: { job_card_id: jobId },
-                    data: { status: 'completed' }
-                });
-            }
 
             // Log Job History
             await tx.job_state_history.create({
@@ -150,6 +251,8 @@ export async function POST(
             });
 
             return updatedQc;
+        }, {
+            timeout: 30000 // High timeout for inventory operations
         });
 
         // Broadcast realtime event
