@@ -36,7 +36,22 @@
       "Read(//d/suzuzy_web_site/servicestuff-rn/src/components/**)",
       "Read(//d/suzuzy_web_site/servicestuff-rn/src/components/ui/**)",
       "mcp__filesystem__create_directory",
-      "Bash(du -sh servicestuff-rn/node_modules/*)"
+      "Bash(du -sh servicestuff-rn/node_modules/*)",
+      "Read(//d/suzuzy_web_site/apps/portal/src/app/api/v1/workshop/staff/**)",
+      "Read(//d/suzuzy_web_site/apps/portal/**)",
+      "Bash(git commit -m ':*)",
+      "mcp__filesystem__read_text_file",
+      "Read(//c/Users/IT/.claude/plans/**)",
+      "Read(//d/suzuzy_web_site/apps/portal/prisma/**)",
+      "Bash(ls d:/suzuzy_web_site/*.py d:/suzuzy_web_site/categorized_files/*.csv)",
+      "mcp__filesystem__list_directory",
+      "mcp__filesystem__search_files"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\IT\\.claude\\projects\\d--suzuzy_web_site\\memory",
+      "c:\\Users\\IT\\.claude\\plans",
+      "d:\\suzuzy_web_site\\apps\\portal\\src\\app\\api\\v1\\workshop\\staff\\[id]",
+      "d:\\suzuzy_web_site\\apps\\portal\\src\\app\\service-admin\\(dashboard)\\workshop\\technicians\\[id]"
     ]
   }
 }

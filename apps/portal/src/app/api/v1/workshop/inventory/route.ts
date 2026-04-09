@@ -32,8 +32,12 @@ export async function GET(req: NextRequest) {
 
         const { searchParams } = new URL(req.url);
         const includeMovements = searchParams.get('movements') === 'true';
+        const search = searchParams.get('search');
+        const categoryId = searchParams.get('categoryId');
+        const bikeModelId = searchParams.get('bikeModelId');
 
         if (includeMovements) {
+            // ... (keep existing movement logic)
             const movements = await prisma.inventory_movements.findMany({
                 where: {
                     dealer_id: dealerId
@@ -48,11 +52,37 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ success: true, data: serialize(movements) });
         }
 
+        // Build filtering where clause
+        const where: any = {
+            dealer_id: dealerId,
+            status: 'approved',
+        };
+
+        if (search) {
+            where.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { sku: { contains: search, mode: 'insensitive' } },
+                { part_number: { contains: search, mode: 'insensitive' } }
+            ];
+        }
+
+        if (categoryId) {
+            where.OR = [
+                { category_id: categoryId },
+                { sub_category_id: categoryId }
+            ];
+        }
+
+        if (bikeModelId) {
+            where.product_bike_models = {
+                some: {
+                    bike_model_id: bikeModelId
+                }
+            };
+        }
+
         const products = await prisma.products.findMany({
-            where: {
-                dealer_id: dealerId,
-                status: 'approved',
-            },
+            where,
             include: {
                 brands: true,
                 categories_products_category_idTocategories: true,

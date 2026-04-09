@@ -15,24 +15,46 @@ import {
     Trash2,
     TrendingUp,
     ArrowUpRight,
-    ArrowDownRight
+    ArrowDownRight,
+    RefreshCw,
+    Database
 } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumb";
 import { useInventoryStore } from "@/stores/service-admin/inventoryStore";
 import { cn } from "@/lib/utils";
 import { Product } from "@/types/service-admin/inventory";
 import Image from "next/image";
+import { ProductSyncWizard } from "@/components/service-admin/inventory/ProductSyncWizard";
 
 export default function InventoryProductsPage() {
-    const { products, addProduct, updateProduct, fetchProducts } = useInventoryStore();
+    const {
+        products,
+        bikeModels,
+        categories,
+        fetchProducts,
+        fetchBikeModels,
+        fetchCategories,
+        addProduct,
+        updateProduct,
+        isLoading
+    } = useInventoryStore();
+
     const [searchQuery, setSearchQuery] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('all');
+    const [bikeModelFilter, setBikeModelFilter] = useState('all');
+
+    const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const [panelMode, setPanelMode] = useState<'form' | 'import' | 'sync'>('form');
 
     React.useEffect(() => {
-        fetchProducts();
-    }, [fetchProducts]);
-    const [categoryFilter, setCategoryFilter] = useState('all');
-    const [isPanelOpen, setIsPanelOpen] = useState(false);
-    const [panelMode, setPanelMode] = useState<'form' | 'import'>('form');
+        fetchProducts({
+            search: searchQuery,
+            categoryId: categoryFilter === 'all' ? undefined : categoryFilter,
+            bikeModelId: bikeModelFilter === 'all' ? undefined : bikeModelFilter
+        });
+        fetchBikeModels();
+        fetchCategories();
+    }, [fetchProducts, fetchBikeModels, fetchCategories, searchQuery, categoryFilter, bikeModelFilter]);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
     // Form State
@@ -85,6 +107,11 @@ export default function InventoryProductsPage() {
 
     const handleOpenImport = () => {
         setPanelMode('import');
+        setIsPanelOpen(true);
+    };
+
+    const handleOpenSync = () => {
+        setPanelMode('sync');
         setIsPanelOpen(true);
     };
 
@@ -177,6 +204,9 @@ export default function InventoryProductsPage() {
                     <p className="text-ink-muted mt-2 font-medium">Manage spare parts, lubricants, and accessories.</p>
                 </div>
                 <div className="flex gap-3">
+                    <Button variant="outline" onClick={handleOpenSync} className="gap-2 bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 shadow-sm hover:bg-indigo-100 transition-colors">
+                        <Database size={18} /> Advanced Sync
+                    </Button>
                     <Button variant="outline" onClick={handleOpenImport} className="gap-2 bg-white dark:bg-dark-card shadow-sm hover:border-brand hover:text-brand">
                         <Import size={18} /> Import CSV
                     </Button>
@@ -191,27 +221,36 @@ export default function InventoryProductsPage() {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted" size={18} />
                     <input
                         type="text"
-                        placeholder="Search by Name, SKU, Brand..."
+                        placeholder="Search by Part Number, Name, SKU..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full bg-white dark:bg-dark-card border border-surface-border dark:border-dark-border rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:border-brand transition-all text-sm font-bold shadow-sm"
                     />
                 </div>
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
-                    {['all', 'parts', 'oil-consumables', 'accessories'].map(cat => (
-                        <button
-                            key={cat}
-                            onClick={() => setCategoryFilter(cat)}
-                            className={cn(
-                                "px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all border",
-                                categoryFilter === cat
-                                    ? "bg-brand text-white border-brand shadow-lg shadow-brand/20"
-                                    : "bg-white dark:bg-dark-card border-surface-border dark:border-dark-border text-ink-muted hover:border-brand hover:text-brand"
-                            )}
-                        >
-                            {cat.replace('-', ' ')}
-                        </button>
-                    ))}
+                <div className="flex gap-2">
+                    <select
+                        value={bikeModelFilter}
+                        onChange={(e) => setBikeModelFilter(e.target.value)}
+                        className="bg-white dark:bg-dark-card border border-surface-border dark:border-dark-border rounded-xl px-4 py-3 text-xs font-black uppercase focus:outline-none focus:border-brand shadow-sm min-w-[150px]"
+                    >
+                        <option value="all">All Models</option>
+                        {bikeModels.map(bm => (
+                            <option key={bm.id} value={bm.id}>{bm.name}</option>
+                        ))}
+                    </select>
+
+                    <select
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                        className="bg-white dark:bg-dark-card border border-surface-border dark:border-dark-border rounded-xl px-4 py-3 text-xs font-black uppercase focus:outline-none focus:border-brand shadow-sm min-w-[150px]"
+                    >
+                        <option value="all">All Categories</option>
+                        {categories.map(cat => (
+                            <option key={cat.id} value={cat.id}>
+                                {cat.level === 1 ? '— ' : ''}{cat.name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
@@ -285,10 +324,12 @@ export default function InventoryProductsPage() {
             <SidePanel
                 isOpen={isPanelOpen}
                 onClose={() => setIsPanelOpen(false)}
-                title={panelMode === 'import' ? "Import Inventory" : (editingProduct ? "Edit Product" : "New Product")}
-                width="max-w-xl"
+                title={panelMode === 'sync' ? "Advanced Parts Sync" : (panelMode === 'import' ? "Import Inventory" : (editingProduct ? "Edit Product" : "New Product"))}
+                width={panelMode === 'sync' ? "max-w-4xl" : "max-w-xl"}
             >
-                {panelMode === 'import' ? (
+                {panelMode === 'sync' ? (
+                    <ProductSyncWizard onClose={() => setIsPanelOpen(false)} />
+                ) : panelMode === 'import' ? (
                     <div className="h-full">
                         <CSVImportPanel
                             onImport={handleImport}

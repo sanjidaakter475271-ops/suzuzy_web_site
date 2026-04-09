@@ -1,16 +1,22 @@
 import { create } from 'zustand';
-import { Product, StockAdjustment, PartsIssue } from '@/types/service-admin/inventory';
+import { Product, StockAdjustment, PartsIssue, SyncPreviewResult, SyncOptions } from '@/types/service-admin/inventory';
 
 interface InventoryState {
     products: Product[];
     adjustments: StockAdjustment[];
     partsIssues: PartsIssue[];
+    bikeModels: any[];
+    categories: any[];
     isLoading: boolean;
     error: string | null;
 
-    fetchProducts: () => Promise<void>;
+    fetchProducts: (params?: { search?: string; categoryId?: string; bikeModelId?: string }) => Promise<void>;
     fetchAdjustments: () => Promise<void>;
     fetchRequisitions: () => Promise<void>;
+    fetchBikeModels: () => Promise<void>;
+    fetchCategories: () => Promise<void>;
+    previewSync: (rows: any[]) => Promise<SyncPreviewResult | null>;
+    executeSync: (rows: any[], options: SyncOptions) => Promise<{ created: number; updated: number; skipped: number } | null>;
     approveRequisition: (id: string) => Promise<void>;
     rejectRequisition: (id: string, reason: string) => Promise<void>;
     addProduct: (product: any) => Promise<void>;
@@ -22,19 +28,85 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     products: [],
     adjustments: [],
     partsIssues: [],
+    bikeModels: [],
+    categories: [],
     isLoading: false,
     error: null,
 
-    fetchProducts: async () => {
+    fetchProducts: async (params) => {
         set({ isLoading: true });
         try {
-            const res = await fetch('/api/v1/workshop/inventory');
+            const query = new URLSearchParams();
+            if (params?.search) query.append('search', params.search);
+            if (params?.categoryId) query.append('categoryId', params.categoryId);
+            if (params?.bikeModelId) query.append('bikeModelId', params.bikeModelId);
+
+            const res = await fetch(`/api/v1/workshop/inventory?${query.toString()}`);
             const data = await res.json();
             if (data.success) {
                 set({ products: data.data, isLoading: false });
             }
         } catch (error: any) {
             set({ error: error.message, isLoading: false });
+        }
+    },
+
+    fetchBikeModels: async () => {
+        try {
+            const res = await fetch('/api/v1/workshop/inventory/bike-models');
+            const data = await res.json();
+            if (data.success) set({ bikeModels: data.data });
+        } catch (error) {
+            console.error("Error fetching bike models:", error);
+        }
+    },
+
+    fetchCategories: async () => {
+        try {
+            const res = await fetch('/api/v1/workshop/inventory/categories');
+            const data = await res.json();
+            if (data.success) set({ categories: data.data });
+        } catch (error) {
+            console.error("Error fetching categories:", error);
+        }
+    },
+
+    previewSync: async (rows) => {
+        set({ isLoading: true });
+        try {
+            const res = await fetch('/api/v1/workshop/inventory/sync/preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rows })
+            });
+            const data = await res.json();
+            set({ isLoading: false });
+            if (data.success) return data.data;
+            throw new Error(data.error);
+        } catch (error: any) {
+            set({ error: error.message, isLoading: false });
+            return null;
+        }
+    },
+
+    executeSync: async (rows, options) => {
+        set({ isLoading: true });
+        try {
+            const res = await fetch('/api/v1/workshop/inventory/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rows, options })
+            });
+            const data = await res.json();
+            set({ isLoading: false });
+            if (data.success) {
+                await get().fetchProducts();
+                return data.data;
+            }
+            throw new Error(data.error);
+        } catch (error: any) {
+            set({ error: error.message, isLoading: false });
+            return null;
         }
     },
 

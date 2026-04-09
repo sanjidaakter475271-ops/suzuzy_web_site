@@ -38,3 +38,38 @@ export interface PartsIssue {
     issuedAt: string; // Changed from date to match usage
     status: 'pending' | 'approved' | 'rejected'; // Added
 }
+
+export interface SyncPreviewRow {
+    bike_model: string;
+    category: string;
+    sub_category: string;
+    part_number: string;
+    description: string;
+    price: string;
+    stock: string;
+    action: 'CREATE' | 'UPDATE' | 'SKIP';
+    existing_name?: string;
+    changes?: string[];
+    is_location_code?: boolean;
+    detected_location?: string;
+}
+
+export interface SyncPreviewResult {
+    summary: {
+        total: number;
+        new_products: number;
+        updates: number;
+        skipped: number;
+        new_categories: number;
+        new_bike_models: number;
+    };
+    categories_to_create: string[];
+    bike_models_to_create: string[];
+    products: SyncPreviewRow[];
+}
+
+export interface SyncOptions {
+    update_stock: boolean;
+    update_prices: boolean;
+    create_bike_model_links: boolean;
+}

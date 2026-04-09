@@ -6,7 +6,7 @@ import {
     Briefcase, Calendar, Clock, 
     TrendingUp, Star, Zap, Hammer,
     Activity, ShieldCheck, FileText,
-    ExternalLink, AlertCircle, PhoneCall, Trash2
+    ExternalLink, AlertCircle, PhoneCall, Trash2, Maximize2
 } from 'lucide-react';
 import { 
     Sheet, 
@@ -22,6 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Technician } from '@/types/service-admin/workshop';
 import { format } from 'date-fns';
+import { ServiceTree } from './ServiceTree';
 
 interface Technician360PanelProps {
     technician: Technician | null;
@@ -148,11 +149,21 @@ export const Technician360Panel: React.FC<Technician360PanelProps> = ({
                                     </div>
                                 </section>
 
-                                {/* Deployment Stream */}
+                                {/* Workload Stream */}
                                 <section className="space-y-4">
-                                    <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em] flex items-center gap-2">
-                                        <Zap size={14} className="text-brand" /> Active Workload stream
-                                    </h4>
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em] flex items-center gap-2">
+                                            <Zap size={14} className="text-brand" /> Active Workload stream
+                                        </h4>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => window.open(`/service-admin/workshop/technicians/${technician.id}/visual-tree`, '_blank')}
+                                            className="h-8 rounded-xl border-brand/20 bg-brand/5 text-brand text-[8px] font-black uppercase tracking-widest hover:bg-brand hover:text-white transition-all gap-2"
+                                        >
+                                            <Maximize2 size={12} /> View Details
+                                        </Button>
+                                    </div>
                                     {technician.job_cards && technician.job_cards.length > 0 ? (
                                         <div className="space-y-3">
                                             {technician.job_cards.map((job: any, idx: number) => (
