@@ -17,10 +17,8 @@ import Breadcrumb from '@/components/service-admin/Breadcrumb';
 
 const InventoryOverviewPage = () => {
     const menuItems = [
-        { title: "All Products", icon: Box, path: "/service-admin/inventory/products", color: "bg-brand", desc: "View and manage complete parts catalog." },
-        { title: "Stock Adjustment", icon: PackagePlus, path: "/service-admin/inventory/stock-adjustment", color: "bg-success", desc: "Add stock or write off damaged items." },
-        { title: "Issue to Workshop", icon: Wrench, path: "/service-admin/inventory/parts-issue", color: "bg-blue-500", desc: "Allocate parts to active job cards." },
-        { title: "Low Stock Alerts", icon: AlertTriangle, path: "/service-admin/inventory/low-stock", color: "bg-danger", desc: "Items below minimum threshold." },
+        { title: "Product Catalog", icon: Box, path: "/service-admin/inventory/products", color: "bg-brand", desc: "View and manage complete parts catalog & track low stock." },
+        { title: "Stock Operations", icon: Wrench, path: "/service-admin/inventory/operations", color: "bg-success", desc: "Manage workshop requests and manual stock adjustments." },
         { title: "Valuation Report", icon: BarChart3, path: "/service-admin/inventory/valuation", color: "bg-purple-600", desc: "Total inventory value and aging analysis." },
     ];
 

@@ -47,6 +47,7 @@ export default function InventoryProductsPage() {
 
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [bikeModelFilter, setBikeModelFilter] = useState('all');
+    const [showLowStock, setShowLowStock] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
 
     const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -61,7 +62,7 @@ export default function InventoryProductsPage() {
     // Reset to page 1 if any filter changes
     React.useEffect(() => {
         setCurrentPage(1);
-    }, [debouncedSearch, categoryFilter, bikeModelFilter]);
+    }, [debouncedSearch, categoryFilter, bikeModelFilter, showLowStock]);
 
     // Fetch products based on filters and page
     React.useEffect(() => {
@@ -69,10 +70,11 @@ export default function InventoryProductsPage() {
             search: debouncedSearch,
             categoryId: categoryFilter === 'all' ? undefined : categoryFilter,
             bikeModelId: bikeModelFilter === 'all' ? undefined : bikeModelFilter,
+            stockStatus: showLowStock ? 'low' : undefined,
             page: currentPage,
             limit: 50
         });
-    }, [fetchProducts, debouncedSearch, categoryFilter, bikeModelFilter, currentPage]);
+    }, [fetchProducts, debouncedSearch, categoryFilter, bikeModelFilter, showLowStock, currentPage]);
 
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
@@ -238,6 +240,18 @@ export default function InventoryProductsPage() {
                     />
                 </div>
                 <div className="flex gap-2">
+                    <button
+                        onClick={() => setShowLowStock(!showLowStock)}
+                        className={cn(
+                            "flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-black uppercase transition-all shadow-sm border",
+                            showLowStock
+                                ? "bg-danger text-white border-danger shadow-danger/20"
+                                : "bg-white dark:bg-dark-card border-surface-border dark:border-dark-border text-ink-muted hover:border-danger hover:text-danger"
+                        )}
+                    >
+                        <AlertTriangle size={14} />
+                        Critical Stock
+                    </button>
                     <select
                         value={bikeModelFilter}
                         onChange={(e) => setBikeModelFilter(e.target.value)}

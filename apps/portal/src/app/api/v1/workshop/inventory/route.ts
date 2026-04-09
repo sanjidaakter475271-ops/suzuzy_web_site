@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
         const search = searchParams.get('search');
         const categoryId = searchParams.get('categoryId');
         const bikeModelId = searchParams.get('bikeModelId');
+        const stockStatus = searchParams.get('stockStatus');
 
         // Pagination params
         const page = parseInt(searchParams.get('page') || '1', 10);
@@ -83,6 +84,10 @@ export async function GET(req: NextRequest) {
                     bike_model_id: bikeModelId
                 }
             };
+        }
+
+        if (stockStatus === 'low') {
+            where.stock_quantity = { lte: 5 }; // Using default threshold for simplicity
         }
 
         // Parallel query for paginated results and total count

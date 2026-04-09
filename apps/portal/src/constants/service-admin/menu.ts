@@ -122,10 +122,8 @@ export const SIDEBAR_MENU: MenuGroup[] = [
                 title: "Inventory",
                 icon: Package,
                 subItems: [
-                    { title: "Product List", path: "/service-admin/inventory/products" },
-                    { title: "Stock Adjustment", path: "/service-admin/inventory/stock-adjustment" },
-                    { title: "Low Stock Alerts", path: "/service-admin/inventory/low-stock" },
-                    { title: "Parts Issue", path: "/service-admin/inventory/parts-issue" },
+                    { title: "Product Catalog", path: "/service-admin/inventory/products" },
+                    { title: "Stock Operations", path: "/service-admin/inventory/operations" },
                 ]
             },
         ],

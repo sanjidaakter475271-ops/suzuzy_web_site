@@ -14,7 +14,7 @@ interface InventoryState {
     isLoading: boolean;
     error: string | null;
 
-    fetchProducts: (params?: { search?: string; categoryId?: string; bikeModelId?: string; page?: number; limit?: number }) => Promise<void>;
+    fetchProducts: (params?: { search?: string; categoryId?: string; bikeModelId?: string; stockStatus?: string; page?: number; limit?: number }) => Promise<void>;
     fetchAdjustments: () => Promise<void>;
     fetchRequisitions: () => Promise<void>;
     fetchBikeModels: () => Promise<void>;
@@ -51,6 +51,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
             if (params?.search) query.append('search', params.search);
             if (params?.categoryId) query.append('categoryId', params.categoryId);
             if (params?.bikeModelId) query.append('bikeModelId', params.bikeModelId);
+            if (params?.stockStatus) query.append('stockStatus', params.stockStatus);
             if (params?.page) query.append('page', params.page.toString());
             if (params?.limit) query.append('limit', params.limit.toString());
 
