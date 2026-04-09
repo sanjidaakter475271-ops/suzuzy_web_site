@@ -2,7 +2,7 @@ export interface Product {
     id: string;
     sku: string;
     name: string;
-    category: 'parts' | 'accessories' | 'oil-consumables';
+    category: 'parts' | 'accessories' | 'oil-consumables' | string;
     brand: string;
     price: number;
     costPrice: number;
@@ -13,20 +13,26 @@ export interface Product {
     unit?: string; // e.g., 'pair', 'ea', 'pcs'
     code?: string;
     status: 'in-stock' | 'low-stock' | 'out-of-stock';
+    specifications?: {
+        warehouse_bin?: string;
+        [key: string]: any;
+    };
 }
 
 export interface StockAdjustment {
     id: string;
     productId: string;
+    productName?: string;
     type: 'in' | 'out' | 'adjustment';
     quantity: number; // Changed from qty to match usage
     reason: string;
     date: string;
-    performedBy: string; // Added
+    performedBy?: string; // Added optional
 }
 
 export interface PartsIssueItem {
     productId: string;
+    productName?: string;
     qty: number;
 }
 

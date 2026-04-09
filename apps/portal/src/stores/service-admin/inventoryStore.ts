@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { toast } from 'sonner';
 import { Product, StockAdjustment, PartsIssue, SyncPreviewResult, SyncOptions } from '@/types/service-admin/inventory';
 
 let currentAbortController: AbortController | null = null;
@@ -67,6 +68,8 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
                     summary: data.summary || { totalValue: 0, lowStockCount: 0, totalItems: 0 },
                     isLoading: false
                 });
+            } else {
+                set({ error: data.error || 'Failed to fetch products', isLoading: false });
             }
         } catch (error: any) {
             if (error.name !== 'AbortError') {
@@ -166,9 +169,10 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
             });
             const data = await res.json();
             if (!data.success) throw new Error(data.error);
+            toast.success("Product added successfully");
             await get().fetchProducts();
         } catch (error: any) {
-            alert(error.message);
+            toast.error(error.message || "Failed to add product");
         }
     },
 
@@ -181,9 +185,10 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
             });
             const data = await res.json();
             if (!data.success) throw new Error(data.error);
+            toast.success("Product updated successfully");
             await get().fetchProducts();
         } catch (error: any) {
-            alert(error.message);
+            toast.error(error.message || "Failed to update product");
         }
     },
 
@@ -206,6 +211,8 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
                     status: r.status
                 }));
                 set({ partsIssues: issues, isLoading: false });
+            } else {
+                set({ error: result.error, isLoading: false });
             }
         } catch (error: any) {
             set({ error: error.message, isLoading: false });
@@ -221,9 +228,10 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
             });
             const data = await res.json();
             if (!data.success) throw new Error(data.error);
+            toast.success("Requisition approved successfully");
             await get().fetchRequisitions();
         } catch (error: any) {
-            alert(error.message);
+            toast.error(error.message || "Failed to approve requisition");
         }
     },
 
@@ -236,9 +244,10 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
             });
             const data = await res.json();
             if (!data.success) throw new Error(data.error);
+            toast.success("Requisition rejected");
             await get().fetchRequisitions();
         } catch (error: any) {
-            alert(error.message);
+            toast.error(error.message || "Failed to reject requisition");
         }
     },
 
@@ -253,12 +262,13 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
             const data = await res.json();
             if (!data.success) throw new Error(data.error);
 
+            toast.success(`Stock ${type === 'in' ? 'added' : 'removed'} successfully`);
             await get().fetchProducts();
             await get().fetchAdjustments();
             set({ isLoading: false });
         } catch (error: any) {
             set({ error: error.message, isLoading: false });
-            alert(error.message);
+            toast.error(error.message || "Failed to update stock");
         }
     }
 }));

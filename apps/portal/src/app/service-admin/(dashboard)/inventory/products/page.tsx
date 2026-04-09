@@ -17,7 +17,8 @@ import {
     ArrowUpRight,
     ArrowDownRight,
     RefreshCw,
-    Database
+    Database,
+    MapPin
 } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumb";
 import { useInventoryStore } from "@/stores/service-admin/inventoryStore";
@@ -83,35 +84,40 @@ export default function InventoryProductsPage() {
         id: '',
         name: '',
         sku: '',
-        category: 'parts',
+        category: '', // will be set dynamically or left empty for prompt
         brand: '',
         price: 0,
         costPrice: 0,
         stock: 0,
         minStock: 5,
         status: 'in-stock',
-        image: ''
+        image: '',
+        specifications: { warehouse_bin: '' }
     });
 
     const handleOpenPanel = (product?: Product) => {
         setPanelMode('form');
         if (product) {
             setEditingProduct(product);
-            setFormData(product);
+            setFormData({
+                ...product,
+                specifications: product.specifications || { warehouse_bin: '' }
+            });
         } else {
             setEditingProduct(null);
             setFormData({
                 id: '',
                 name: '',
                 sku: '',
-                category: 'parts',
+                category: categories.length > 0 ? categories[0].id : '',
                 brand: '',
                 price: 0,
                 costPrice: 0,
                 stock: 0,
                 minStock: 5,
                 status: 'in-stock',
-                image: ''
+                image: '',
+                specifications: { warehouse_bin: '' }
             });
         }
         setIsPanelOpen(true);
@@ -293,6 +299,11 @@ export default function InventoryProductsPage() {
                                                 <AlertTriangle size={10} /> Low Stock
                                             </span>
                                         )}
+                                        {product.specifications?.warehouse_bin && (
+                                            <span className="text-[10px] font-black uppercase text-brand tracking-widest bg-brand/5 px-2 py-0.5 rounded border border-brand/20 flex items-center gap-1">
+                                                <MapPin size={10} /> Bin: {product.specifications.warehouse_bin}
+                                            </span>
+                                        )}
                                     </div>
                                     <h3 className="text-lg font-black text-ink-heading dark:text-white line-clamp-2 group-hover:text-brand transition-colors leading-tight mr-2">
                                         {product.name}
@@ -431,12 +442,15 @@ export default function InventoryProductsPage() {
                                 <label className="text-[10px] font-black uppercase tracking-widest text-ink-muted ml-1">Category</label>
                                 <select
                                     value={formData.category}
-                                    onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
+                                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                                     className="w-full bg-surface-page dark:bg-dark-page border-2 border-surface-border dark:border-dark-border rounded-2xl px-5 py-4 text-sm font-bold focus:border-brand outline-none transition-all appearance-none cursor-pointer"
                                 >
-                                    <option value="parts">Spare Parts</option>
-                                    <option value="accessories">Accessories</option>
-                                    <option value="oil-consumables">Oil & Consumables</option>
+                                    <option value="" disabled>Select Category</option>
+                                    {categories.map(cat => (
+                                        <option key={cat.id} value={cat.name}>
+                                            {cat.level === 1 ? '— ' : ''}{cat.name}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="space-y-2">
@@ -449,6 +463,22 @@ export default function InventoryProductsPage() {
                                     className="w-full bg-surface-page dark:bg-dark-page border-2 border-surface-border dark:border-dark-border rounded-2xl px-5 py-4 text-sm font-bold focus:border-brand outline-none transition-all placeholder:text-ink-muted/40"
                                 />
                             </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-ink-muted ml-1 flex items-center gap-1">
+                                <MapPin size={12} className="text-brand" /> Warehouse Bin / Location
+                            </label>
+                            <input
+                                type="text"
+                                value={formData.specifications?.warehouse_bin || ''}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    specifications: { ...formData.specifications, warehouse_bin: e.target.value }
+                                })}
+                                placeholder="e.g. C-5-12"
+                                className="w-full bg-surface-page dark:bg-dark-page border-2 border-surface-border dark:border-dark-border rounded-2xl px-5 py-4 text-sm font-bold focus:border-brand outline-none transition-all placeholder:text-ink-muted/40"
+                            />
                         </div>
 
                         <div className="p-4 rounded-2xl bg-surface-page/50 dark:bg-dark-page/50 border border-surface-border dark:border-dark-border space-y-4">
