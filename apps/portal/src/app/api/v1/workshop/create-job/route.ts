@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
             vehicle_reg_no,
             vehicle_model,
             vehicle_chassis_no,
+            vehicle_mileage,
             service_type,
             complaints,
             custom_complaint,
@@ -97,6 +98,20 @@ export async function POST(req: NextRequest) {
                     estimated_completion_at: estimated_completion ? new Date(estimated_completion) : null
                 },
             });
+
+            // E. Create Initial Service History for mileage tracking
+            if (vehicle_mileage) {
+                await tx.service_history.create({
+                    data: {
+                        vehicle_id: vehicle.id,
+                        ticket_id: serviceTicket.id,
+                        job_card_id: jobCard.id,
+                        service_date: new Date(),
+                        mileage: parseInt(vehicle_mileage.toString()),
+                        summary: `Intake mileage: ${vehicle_mileage}`,
+                    }
+                });
+            }
 
             // D. Update Ramp if assigned
             if (ramp_id) {

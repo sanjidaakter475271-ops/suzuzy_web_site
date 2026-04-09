@@ -330,7 +330,11 @@ export default function JobCardDetail() {
                         </View>
                         <View style={{ width: '50%' }}>
                             <Text style={styles.label}>Mileage</Text>
-                            <Text style={styles.value}>{job.vehicle?.mileage ? `${job.vehicle.mileage} KM` : '---'}</Text>
+                            <Text style={styles.value}>
+                                {job.vehicle?.mileage !== undefined && job.vehicle?.mileage !== null
+                                    ? `${job.vehicle.mileage} KM`
+                                    : '---'}
+                            </Text>
                         </View>
                         <View style={{ width: '50%' }}>
                             <Text style={styles.label}>Color</Text>

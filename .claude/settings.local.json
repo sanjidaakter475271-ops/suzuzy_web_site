@@ -45,7 +45,8 @@
       "Read(//d/suzuzy_web_site/apps/portal/prisma/**)",
       "Bash(ls d:/suzuzy_web_site/*.py d:/suzuzy_web_site/categorized_files/*.csv)",
       "mcp__filesystem__list_directory",
-      "mcp__filesystem__search_files"
+      "mcp__filesystem__search_files",
+      "mcp__filesystem__edit_file"
     ],
     "additionalDirectories": [
       "C:\\Users\\IT\\.claude\\projects\\d--suzuzy_web_site\\memory",

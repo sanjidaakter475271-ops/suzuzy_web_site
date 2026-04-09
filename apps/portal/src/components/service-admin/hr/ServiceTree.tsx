@@ -37,6 +37,7 @@ interface TreeNodeData extends Record<string, unknown> {
     model?: string;
     regNo?: string;
     date?: string;
+    mileage?: string;
     totalAmount?: string;
     parts?: any[];
     jobId?: string;
@@ -115,8 +116,10 @@ const ServiceDateNode = ({ data, selected }: NodeProps<Node<TreeNodeData>>) => (
                 <Calendar size={14} className="text-amber-500" />
             </div>
             <div>
-                <p className="text-[8px] font-bold uppercase tracking-wider text-amber-500/60">Service Date</p>
-                <h4 className="text-xs font-black italic">{data.date}</h4>
+                <p className="text-[8px] font-bold uppercase tracking-wider text-amber-500/60">{data.date}</p>
+                <h4 className="text-xs font-black italic tracking-tighter text-amber-500">
+                    {data.mileage ? `${data.mileage} KM` : '---'}
+                </h4>
             </div>
         </div>
     </GlassNode>
@@ -296,7 +299,10 @@ export const ServiceTree: React.FC<ServiceTreeProps> = ({ staffId }) => {
                     newNodes.push({
                         id: jobNodeId,
                         type: 'serviceDate',
-                        data: { date: format(new Date(job.created_at), 'MMM dd, yyyy') },
+                        data: {
+                            date: format(new Date(job.created_at), 'MMM dd, yyyy'),
+                            mileage: job.service_history?.[0]?.mileage?.toString()
+                        },
                         position: { x: 0, y: 0 },
                     });
 

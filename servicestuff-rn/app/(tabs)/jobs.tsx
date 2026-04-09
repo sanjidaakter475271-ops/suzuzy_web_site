@@ -33,12 +33,23 @@ export default function MyJobs() {
     useEffect(() => {
         fetchJobs();
 
+        const socket = SocketService.getInstance();
+        const handleSync = () => {
+            console.log("[JOBS] Synchronizing list via remote signal...");
+            fetchJobs();
+        };
+
+        socket.on('job_cards:changed', handleSync);
+        socket.on('notification:new', handleSync);
+
         const unsubscribe = NetInfo.addEventListener(state => {
             setIsOnline(state.isConnected ?? true);
         });
 
         return () => {
             unsubscribe();
+            socket.off('job_cards:changed', handleSync);
+            socket.off('notification:new', handleSync);
         };
     }, [fetchJobs]);
 

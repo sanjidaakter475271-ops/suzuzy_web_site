@@ -45,6 +45,12 @@ export async function GET(
                                 products: true
                             }
                         },
+                        service_history: {
+                            orderBy: {
+                                created_at: 'desc'
+                            },
+                            take: 1
+                        },
                         service_tasks: true
                     },
                     orderBy: {

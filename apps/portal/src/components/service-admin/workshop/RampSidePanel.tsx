@@ -6,7 +6,7 @@ import { useWorkshopStore } from '@/stores/service-admin/workshopStore';
 import {
     X, Hammer, User, Car, Clock, Settings2, ShieldCheck,
     Play, Pause, CheckCircle2, Trash2, Calendar, Activity,
-    ArrowRight, Sparkles, AlertCircle, History
+    ArrowRight, Sparkles, AlertCircle, History, PowerOff
 } from 'lucide-react';
 import { Button } from '@/components/service-admin/ui';
 import { cn } from '@/lib/utils';
@@ -87,15 +87,19 @@ const RampSidePanel: React.FC<RampSidePanelProps> = ({ ramp, onClose, onAssignCl
                     </button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-4 lg:gap-5">
                     {[
-                        { l: 'Efficiency', v: '92%', c: 'text-emerald-500' },
-                        { l: 'Uptime', v: '99.8%', c: 'text-indigo-500' },
-                        { l: 'Stability', v: 'Optimum', c: 'text-brand' }
+                        { l: 'Efficiency', v: '92%', c: 'text-emerald-500', b: 'border-emerald-500/20', bg: 'bg-emerald-500/5' },
+                        { l: 'Uptime', v: '99.8%', c: 'text-indigo-500', b: 'border-indigo-500/20', bg: 'bg-indigo-500/5' },
+                        { l: 'Stability', v: 'Optimum', c: 'text-brand', b: 'border-brand/20', bg: 'bg-brand/5' }
                     ].map((s, i) => (
-                        <div key={i} className="px-5 py-3 bg-white dark:bg-black/20 rounded-2xl border border-surface-border dark:border-white/5 flex flex-col items-center gap-1.5 shadow-sm animate-in fade-in duration-1000" style={{ animationDelay: `${i * 200}ms` }}>
-                            <span className="text-[8px] font-black text-ink-muted uppercase tracking-[0.2em]">{s.l}</span>
-                            <span className={cn("text-[11px] font-black uppercase tracking-tighter", s.c)}>{s.v}</span>
+                        <div key={i} className={cn(
+                            "relative overflow-hidden px-4 py-4 rounded-[1.8rem] border flex flex-col items-center gap-2 shadow-sm animate-in fade-in duration-1000 transition-all hover:scale-105 backdrop-blur-md",
+                            s.b, s.bg
+                        )} style={{ animationDelay: `${i * 200}ms` }}>
+                            <div className={cn("absolute -top-4 -right-4 w-12 h-12 rounded-full blur-[20px] opacity-40", s.bg)} />
+                            <span className="text-[8px] lg:text-[9px] font-black text-ink-muted uppercase tracking-[0.3em] opacity-80 z-10">{s.l}</span>
+                            <span className={cn("text-[12px] lg:text-[14px] font-black uppercase tracking-widest z-10", s.c)}>{s.v}</span>
                         </div>
                     ))}
                 </div>
@@ -132,15 +136,21 @@ const RampSidePanel: React.FC<RampSidePanelProps> = ({ ramp, onClose, onAssignCl
                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-[1500ms] delay-[400ms]">
                             <div className="group relative">
                                 <div className="absolute inset-0 bg-brand/10 rounded-[2.5rem] blur-[40px] opacity-0 group-hover:opacity-100 transition-opacity duration-[1200ms]" />
-                                <div className="relative p-7 bg-white dark:bg-white/[0.03] border border-surface-border dark:border-white/10 rounded-[2.5rem] flex items-center gap-6 backdrop-blur-xl transition-all duration-1000 group-hover:border-brand/40">
-                                    <div className="w-16 h-16 rounded-[1.8rem] bg-brand text-white flex items-center justify-center shadow-2xl transition-transform duration-1000 group-hover:rotate-[360deg]">
-                                        <Car size={32} strokeWidth={1.5} />
+                                <div className="relative p-6 lg:p-7 bg-white dark:bg-white/[0.02] border border-surface-border dark:border-white/10 rounded-[2.5rem] flex flex-col sm:flex-row items-start sm:items-center gap-5 lg:gap-6 backdrop-blur-xl transition-all duration-1000 group-hover:border-brand/40 overflow-hidden">
+                                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-brand opacity-80" />
+                                    <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-[1.5rem] lg:rounded-[1.8rem] bg-brand/10 text-brand flex items-center justify-center shadow-inner transition-transform duration-1000 group-hover:rotate-[360deg] border border-brand/20 shrink-0">
+                                        <Car size={28} className="lg:w-[32px] lg:h-[32px]" strokeWidth={1.5} />
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-[10px] font-black text-ink-muted uppercase tracking-[0.3em] mb-1.5 opacity-60">Vehicle Deployment</p>
-                                        <h4 className="text-2xl font-black text-ink-heading dark:text-white truncate tracking-tighter uppercase">{ramp.vehicleRegNo}</h4>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <span className="text-[10px] font-black text-brand/80 px-2 py-0.5 border border-brand/20 rounded-md uppercase tracking-wider bg-brand/5">J-ID: {ramp.currentJobCardId}</span>
+                                    <div className="flex-1 min-w-0 w-full">
+                                        <p className="text-[9px] lg:text-[10px] font-black text-ink-muted uppercase tracking-[0.4em] mb-1.5 opacity-70">Vehicle Deployment</p>
+                                        <h4 className="text-xl lg:text-3xl font-black text-ink-heading dark:text-white truncate tracking-tighter uppercase drop-shadow-sm">{ramp.vehicleRegNo}</h4>
+                                        <div className="flex flex-wrap items-center gap-2 lg:gap-3 mt-3">
+                                            <span className="text-[9px] lg:text-[10px] font-black text-brand px-2.5 py-1 border border-brand/30 rounded-lg uppercase tracking-[0.2em] bg-brand/10 shadow-inner">
+                                                J-ID: {ramp.currentJobCardId || <span className="opacity-50 ml-1">UNASSIGNED</span>}
+                                            </span>
+                                            {!ramp.currentJobCardId && (
+                                                <span className="text-[9px] font-black text-amber-500 px-2 py-1 border border-amber-500/20 bg-amber-500/10 rounded-lg uppercase tracking-widest flex items-center gap-1.5"><AlertCircle size={10} strokeWidth={3} /> PENDING JOB</span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -148,21 +158,22 @@ const RampSidePanel: React.FC<RampSidePanelProps> = ({ ramp, onClose, onAssignCl
 
                             <div className="group relative">
                                 <div className="absolute inset-0 bg-emerald-500/10 rounded-[2.5rem] blur-[40px] opacity-0 group-hover:opacity-100 transition-opacity duration-[1200ms]" />
-                                <div className="relative p-7 bg-white dark:bg-white/[0.03] border border-surface-border dark:border-white/10 rounded-[2.5rem] flex items-center gap-6 backdrop-blur-xl transition-all duration-1000 group-hover:border-emerald-500/40">
+                                <div className="relative p-6 lg:p-7 bg-white dark:bg-white/[0.02] border border-surface-border dark:border-white/10 rounded-[2.5rem] flex flex-col sm:flex-row items-start sm:items-center gap-5 lg:gap-6 backdrop-blur-xl transition-all duration-1000 group-hover:border-emerald-500/40 overflow-hidden">
+                                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500 opacity-80" />
                                     <div className="relative shrink-0 transition-transform duration-1000 group-hover:scale-110">
                                         <img
                                             src={technician?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'T')}&background=EAB308&color=fff`}
-                                            className="w-16 h-16 rounded-[1.8rem] object-cover ring-4 ring-emerald-500/10 shadow-2xl"
+                                            className="w-14 h-14 lg:w-16 lg:h-16 rounded-[1.5rem] lg:rounded-[1.8rem] object-cover ring-[3px] lg:ring-4 ring-emerald-500/20 shadow-2xl bg-surface-page"
                                             loading="lazy"
                                             alt="tech"
                                         />
-                                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 border-[5px] border-white dark:border-[#0a0a0b] rounded-full shadow-lg" />
+                                        <div className="absolute -bottom-1 -right-1 w-5 h-5 lg:w-6 lg:h-6 bg-emerald-500 border-[4px] lg:border-[5px] border-white dark:border-[#0a0a0b] rounded-full shadow-lg" />
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-[10px] font-black text-ink-muted uppercase tracking-[0.3em] mb-1.5 opacity-60">Module Specialist</p>
-                                        <h4 className="text-2xl font-black text-ink-heading dark:text-white truncate tracking-tighter uppercase">{technician?.name || 'Authorized Personnel'}</h4>
-                                        <div className="flex items-center gap-4 mt-2 text-ink-muted text-[10px] font-black tracking-widest uppercase">
-                                            <span className="flex items-center gap-1.5 text-emerald-500"><Sparkles size={12} /> Rank A</span>
+                                    <div className="flex-1 min-w-0 w-full">
+                                        <p className="text-[9px] lg:text-[10px] font-black text-ink-muted uppercase tracking-[0.4em] mb-1.5 opacity-70">Module Specialist</p>
+                                        <h4 className="text-xl lg:text-3xl font-black text-ink-heading dark:text-white truncate tracking-tighter uppercase drop-shadow-sm">{technician?.name || 'Authorized Personnel'}</h4>
+                                        <div className="flex items-center gap-4 mt-3 text-ink-muted text-[9px] lg:text-[10px] font-black tracking-widest uppercase">
+                                            <span className="flex items-center gap-1.5 text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20"><Sparkles size={12} /> Rank A</span>
                                             <span className="opacity-40">Lv: 7</span>
                                         </div>
                                     </div>
@@ -244,19 +255,41 @@ const RampSidePanel: React.FC<RampSidePanelProps> = ({ ramp, onClose, onAssignCl
             </div>
 
             {/* Premium Control Footer - Ultra Smooth */}
-            <div className="p-10 border-t border-surface-border dark:border-white/5 relative z-10 bg-white dark:bg-[#0a0a0b] animate-in slide-in-from-bottom-8 duration-[1500ms] delay-[1000ms]">
+            <div className="p-8 lg:p-10 border-t border-surface-border dark:border-white/5 relative z-10 bg-white dark:bg-[#0a0a0b]/80 backdrop-blur-2xl animate-in slide-in-from-bottom-8 duration-[1500ms] delay-[1000ms]">
                 {ramp.status === 'occupied' ? (
-                    <Button variant="danger" className="w-full py-8 rounded-[2.5rem] text-[12px] font-black uppercase tracking-[0.5em] shadow-2xl shadow-danger/20 hover:-translate-y-2 transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-95 group/btn" onClick={() => { if (window.confirm("Release?")) releaseRamp(ramp.id); onClose(); }}>
-                        <Trash2 size={24} className="mr-3 group-hover/btn:rotate-12 transition-transform duration-1000" /> Disconnect Terminal
-                    </Button>
+                    <button 
+                        className="relative w-full py-6 lg:py-8 rounded-[2.5rem] text-[11px] lg:text-[13px] font-black uppercase tracking-[0.5em] text-white overflow-hidden transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-95 group/btn shadow-[0_20px_50px_-10px_rgba(239,68,68,0.5)] hover:shadow-[0_30px_60px_-10px_rgba(239,68,68,0.6)] border border-red-400/50" 
+                        onClick={() => { if (window.confirm("Release Terminal and Finalize Operations?")) { releaseRamp(ramp.id); onClose(); } }}
+                    >
+                        {/* Button Background Gradients */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-red-600 via-rose-500 to-red-600 bg-[length:200%_auto] animate-gradient" />
+                        <div className="absolute inset-0 bg-black/10 group-hover/btn:bg-transparent transition-colors duration-500" />
+                        
+                        {/* Button Content */}
+                        <div className="relative z-10 flex items-center justify-center">
+                            <PowerOff size={24} className="mr-4 group-hover/btn:scale-110 transition-transform duration-700" strokeWidth={2.5} /> 
+                            <span>Disconnect Terminal</span>
+                        </div>
+                    </button>
                 ) : ramp.status === 'available' ? (
-                    <Button className="w-full py-8 rounded-[2.5rem] text-[12px] font-black uppercase tracking-[0.6em] shadow-[0_30px_60px_rgba(234,179,8,0.3)] hover:-translate-y-2 transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-95 group/btn" onClick={onAssignClick}>
-                        <Play size={24} className="mr-3 group-hover/btn:translate-x-1 transition-transform duration-1000" /> Initialize Stream
-                    </Button>
+                    <button 
+                        className="relative w-full py-6 lg:py-8 rounded-[2.5rem] text-[11px] lg:text-[13px] font-black uppercase tracking-[0.5em] text-white overflow-hidden transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-95 group/btn shadow-[0_20px_50px_-10px_rgba(234,179,8,0.5)] hover:shadow-[0_30px_60px_-10px_rgba(234,179,8,0.6)] border border-brand/50" 
+                        onClick={onAssignClick}
+                    >
+                        {/* Button Background Gradients */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-brand via-amber-400 to-brand bg-[length:200%_auto] animate-gradient" />
+                        <div className="absolute inset-0 bg-black/10 group-hover/btn:bg-transparent transition-colors duration-500" />
+                        
+                        {/* Button Content */}
+                        <div className="relative z-10 flex items-center justify-center">
+                            <Play size={24} className="mr-4 group-hover/btn:translate-x-1 transition-transform duration-700" strokeWidth={2.5} /> 
+                            <span>Initialize Stream</span>
+                        </div>
+                    </button>
                 ) : (
-                    <div className="text-center p-6 py-8 rounded-[2.5rem] bg-amber-500/5 border border-amber-500/10 animate-pulse duration-[3000ms]">
-                        <p className="text-[12px] font-black text-amber-600 uppercase tracking-[0.6em] mb-1">Maintenance Locked</p>
-                        <p className="text-[9px] font-bold text-amber-500/40 uppercase tracking-widest">Manual Override Required</p>
+                    <div className="text-center p-6 py-8 rounded-[2.5rem] bg-amber-500/5 border border-amber-500/20 shadow-inner animate-pulse duration-[3000ms]">
+                        <p className="text-[11px] lg:text-[12px] font-black text-amber-500 uppercase tracking-[0.6em] mb-2 drop-shadow-sm">Maintenance Locked</p>
+                        <p className="text-[8px] lg:text-[9px] font-bold text-amber-500/60 uppercase tracking-[0.3em]">Manual Override Required</p>
                     </div>
                 )}
             </div>

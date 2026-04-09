@@ -16,13 +16,21 @@ export async function GET(req: NextRequest) {
         const user = await getCurrentUser();
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+        const dealerId = user.dealerId;
+        if (!dealerId && user.role !== 'super_admin') {
+            return NextResponse.json({ error: "Dealer context required" }, { status: 400 });
+        }
+
         const todayStart = startOfDay(new Date());
         const todayEnd = endOfDay(new Date());
 
         const staff = await prisma.service_staff.findMany({
             where: {
-                dealer_id: user.dealerId,
-                is_active: true
+                is_active: true,
+                OR: [
+                    { dealer_id: dealerId },
+                    { status: 'pending', dealer_id: null }
+                ]
             },
             include: {
                 profiles: {
@@ -37,18 +45,7 @@ export async function GET(req: NextRequest) {
                     },
                     select: {
                         id: true,
-                        status: true,
-                        service_tickets: {
-                            select: {
-                                service_number: true,
-                                service_vehicles: {
-                                    select: {
-                                        engine_number: true,
-                                        chassis_number: true
-                                    }
-                                }
-                            }
-                        }
+                        status: true
                     }
                 },
                 technician_attendance: {
@@ -58,18 +55,15 @@ export async function GET(req: NextRequest) {
                             lte: todayEnd
                         }
                     },
-                    include: {
-                        attendance_shifts: true
+                    select: {
+                        id: true,
+                        clock_in: true,
+                        clock_out: true,
+                        status: true
                     },
                     orderBy: {
                         clock_in: 'desc'
                     }
-                },
-                leave_requests: {
-                    orderBy: {
-                        created_at: 'desc'
-                    },
-                    take: 5
                 }
             }
         });
@@ -78,11 +72,10 @@ export async function GET(req: NextRequest) {
         const formattedStaff = staff.map(member => {
             const sessions = (member as any).technician_attendance || [];
             const activeSession = sessions.find((s: any) => !s.clock_out);
-            const activeShift = activeSession?.attendance_shifts?.find((sh: any) => !sh.end_time);
 
             let status = 'offline';
             if (activeSession) {
-                status = activeShift ? 'active' : 'break';
+                status = 'active'; // Simplified for stability
             } else if (sessions.length > 0) {
                 status = 'checked_out';
             }
@@ -97,8 +90,11 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json({ success: true, data: formattedStaff });
     } catch (error: any) {
-        console.error("[STAFF_GET_ERROR]", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("[STAFF_GET_ERROR] Raw error:", error);
+        return NextResponse.json({
+            success: false,
+            error: error.message || "Internal server error"
+        }, { status: 500 });
     }
 }
 

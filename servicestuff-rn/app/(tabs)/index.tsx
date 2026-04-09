@@ -107,6 +107,24 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchDashboardData();
+
+    // Setup Real-time Matrix Uplink
+    const socket = SocketService.getInstance();
+
+    const handleRemoteUpdate = () => {
+      console.log("[DASHBOARD] Remote signal detected, synchronizing state...");
+      fetchDashboardData(false);
+    };
+
+    socket.on('job_cards:changed', handleRemoteUpdate);
+    socket.on('attendance:changed', handleRemoteUpdate);
+    socket.on('notification:new', handleRemoteUpdate);
+
+    return () => {
+      socket.off('job_cards:changed', handleRemoteUpdate);
+      socket.off('attendance:changed', handleRemoteUpdate);
+      socket.off('notification:new', handleRemoteUpdate);
+    };
   }, []);
 
   const onRefresh = useCallback(() => {

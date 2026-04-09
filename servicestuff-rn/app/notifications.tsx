@@ -137,9 +137,9 @@ export default function Notifications() {
         const styles_type = getTypeStyles(item.type || 'info');
         return (
             <MotiView
-                from={{ opacity: 0, translateX: -20 }}
-                animate={{ opacity: 1, translateX: 0 }}
-                transition={{ type: 'timing', duration: 300, delay: index * 50 }}
+                from={{ opacity: 0, scale: 0.9, translateY: 20 }}
+                animate={{ opacity: 1, scale: 1, translateY: 0 }}
+                transition={{ type: 'timing', duration: 400, delay: index * 80 }}
             >
                 <TouchableOpacity
                     onPress={() => {
@@ -152,7 +152,7 @@ export default function Notifications() {
                     ]}
                     activeOpacity={0.7}
                 >
-                    {!item.read && <View style={styles.unreadDot} />}
+                    {!item.read && <View style={styles.unreadPulse} />}
 
                     <View style={{ flexDirection: 'row', gap: 16 }}>
                         <View style={[styles.iconContainer, { backgroundColor: styles_type.bg, borderColor: styles_type.border }]}>
@@ -160,26 +160,31 @@ export default function Notifications() {
                         </View>
 
                         <View style={{ flex: 1 }}>
-                            <Text style={[styles.notifTitle, item.read ? styles.textDim : styles.textBright]}>
-                                {item.title}
-                            </Text>
-                            <Text style={styles.notifMessage}>{item.message}</Text>
-
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}>
-                                <Clock size={10} color={COLORS.textTertiary} />
-                                <Text style={styles.timestamp}>
-                                    {item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Text style={[styles.notifTitle, item.read ? styles.textDim : styles.textBright]}>
+                                    {item.title}
                                 </Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                    <Clock size={8} color={COLORS.textTertiary} />
+                                    <Text style={styles.timestamp}>
+                                        {item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}
+                                    </Text>
+                                </View>
+                            </View>
+
+                            <Text style={styles.notifMessage} numberOfLines={2}>{item.message}</Text>
+
+                            <View style={styles.cardFooter}>
+                                <View style={styles.tagLine} />
+                                <TouchableOpacity
+                                    onPress={() => deleteNotification(item.id)}
+                                    style={styles.actionIcon}
+                                >
+                                    <Trash2 size={12} color={COLORS.textTertiary} />
+                                </TouchableOpacity>
                             </View>
                         </View>
                     </View>
-
-                    <TouchableOpacity
-                        onPress={() => deleteNotification(item.id)}
-                        style={styles.deleteBtn}
-                    >
-                        <Trash2 size={16} color={COLORS.textTertiary} />
-                    </TouchableOpacity>
                 </TouchableOpacity>
             </MotiView>
         );
@@ -187,14 +192,20 @@ export default function Notifications() {
 
     return (
         <View style={{ flex: 1, backgroundColor: COLORS.pageBg }}>
-            <TopBar title="Notifications" />
+            <TopBar title="Pulse Notifications" />
 
             <View style={{ flex: 1 }}>
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Recent Updates</Text>
+                    <View>
+                        <Text style={styles.sectionTitle}>Agent Intelligence Stream</Text>
+                        <Text style={{ fontSize: 9, color: COLORS.accent, fontWeight: 'bold', marginTop: 2, textTransform: 'uppercase' }}>
+                            {notifications.length} Signals Captured
+                        </Text>
+                    </View>
                     {notifications.length > 0 && (
-                        <TouchableOpacity onPress={clearAll}>
-                            <Text style={styles.clearAllText}>Clear All</Text>
+                        <TouchableOpacity onPress={clearAll} style={styles.clearBtn}>
+                            <Trash2 size={14} color={COLORS.danger} />
+                            <Text style={styles.clearAllText}>Wipe Stream</Text>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -207,59 +218,137 @@ export default function Notifications() {
                         renderItem={renderItem}
                         // @ts-ignore
                         estimatedItemSize={120}
-                        contentContainerStyle={{ padding: 16 }}
+                        contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
-                                <View style={styles.emptyIconBg}><BellOff size={48} color={COLORS.borderStrong} /></View>
-                                <Text style={styles.emptyTitle}>No Notifications</Text>
-                                <Text style={styles.emptySub}>You're all caught up!</Text>
+                                <View style={styles.emptyIconBg}>
+                                    <BellOff size={32} color={COLORS.textTertiary} strokeWidth={1} />
+                                </View>
+                                <Text style={styles.emptyTitle}>Stream is Silent</Text>
+                                <Text style={styles.emptySub}>No active signals detected in your sector.</Text>
                             </View>
                         }
                     />
                 )}
             </View>
 
-            {/* Push Promo */}
-            <View style={styles.promoCard}>
+            {/* Premium Control Center Promo */}
+            <MotiView
+                from={{ translateY: 100 }}
+                animate={{ translateY: 0 }}
+                style={styles.promoCard}
+            >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                    <View style={styles.promoIconBg}><Bell size={24} color={COLORS.white} /></View>
+                    <View style={styles.promoIconBg}>
+                        <MotiView
+                            from={{ scale: 1, opacity: 0.5 }}
+                            animate={{ scale: 1.2, opacity: 1 }}
+                            transition={{ type: 'timing', duration: 1000, loop: true }}
+                        >
+                            <Bell size={20} color={COLORS.white} />
+                        </MotiView>
+                    </View>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.promoTitle}>Push Notifications</Text>
-                        <Text style={styles.promoSub}>Get live job alerts even when the app is closed.</Text>
+                        <Text style={styles.promoTitle}>Real-time Matrix Uplink</Text>
+                        <Text style={styles.promoSub}>Enable background synchronization for live job deployments.</Text>
                     </View>
                 </View>
-                <TouchableOpacity style={styles.promoBtn}>
-                    <Text style={styles.promoBtnText}>Enable Device Alerts</Text>
+                <TouchableOpacity style={styles.promoBtn} activeOpacity={0.8}>
+                    <Text style={styles.promoBtnText}>Synchronize Device</Text>
                 </TouchableOpacity>
-            </View>
+            </MotiView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16 },
+    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', paddingHorizontal: 24, paddingVertical: 20 },
     sectionTitle: { fontSize: 10, fontWeight: '900', color: COLORS.textTertiary, textTransform: 'uppercase', letterSpacing: 2 },
-    clearAllText: { fontSize: 10, fontWeight: '900', color: COLORS.danger, textTransform: 'uppercase' },
-    notifCard: { backgroundColor: COLORS.cardBg, borderRadius: 24, padding: 20, marginBottom: 12, borderWidth: 1, borderColor: COLORS.border, position: 'relative', overflow: 'hidden', ...SHADOWS.sm },
-    notifRead: { opacity: 0.8, backgroundColor: COLORS.cardBgAlt },
-    notifUnread: { backgroundColor: COLORS.cardBg, borderColor: COLORS.primary + '20' },
-    unreadDot: { position: 'absolute', top: 16, right: 16, width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.primary },
-    iconContainer: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-    notifTitle: { fontSize: 14, fontWeight: 'bold' },
+    clearBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.danger + '10', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+    clearAllText: { fontSize: 9, fontWeight: '900', color: COLORS.danger, textTransform: 'uppercase' },
+    notifCard: {
+        backgroundColor: COLORS.cardBg,
+        borderRadius: 24,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        position: 'relative',
+        overflow: 'hidden',
+        ...SHADOWS.sm
+    },
+    notifRead: { opacity: 0.6, backgroundColor: COLORS.cardBgAlt },
+    notifUnread: { backgroundColor: COLORS.cardBg, borderColor: COLORS.accent + '30' },
+    unreadPulse: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: 4,
+        height: '100%',
+        backgroundColor: COLORS.accent
+    },
+    iconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1
+    },
+    notifTitle: { fontSize: 13, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
     textDim: { color: COLORS.textSecondary },
     textBright: { color: COLORS.textPrimary },
-    notifMessage: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4, lineHeight: 18 },
-    timestamp: { fontSize: 9, fontWeight: '900', color: COLORS.textTertiary, textTransform: 'uppercase' },
-    deleteBtn: { position: 'absolute', bottom: 12, right: 12, padding: 8 },
+    notifMessage: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4, lineHeight: 18, fontWeight: '500' },
+    timestamp: { fontSize: 8, fontWeight: 'bold', color: COLORS.textTertiary, textTransform: 'uppercase' },
+    cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
+    tagLine: { flex: 1, hieght: 1, backgroundColor: COLORS.border, marginRight: 20, opacity: 0.5 },
+    actionIcon: { padding: 4 },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 100 },
-    emptyIconBg: { width: 80, height: 80, backgroundColor: COLORS.cardBgAlt, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 24, borderWidth: 1, borderColor: COLORS.border },
+    emptyIconBg: {
+        width: 80,
+        height: 80,
+        backgroundColor: COLORS.cardBgAlt,
+        borderRadius: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderStyle: 'dashed'
+    },
     emptyTitle: { fontSize: 14, fontWeight: '900', color: COLORS.textTertiary, textTransform: 'uppercase', letterSpacing: 2 },
-    emptySub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4, fontWeight: 'bold' },
-    promoCard: { margin: 16, marginBottom: Platform.OS === 'ios' ? 40 : 24, backgroundColor: COLORS.primarySurface, borderRadius: 32, padding: 20, borderWidth: 1, borderColor: COLORS.primary + '20' },
-    promoIconBg: { width: 48, height: 48, backgroundColor: COLORS.primary, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-    promoTitle: { fontSize: 14, fontWeight: 'bold', color: COLORS.textPrimary },
-    promoSub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
-    promoBtn: { width: '100%', backgroundColor: COLORS.primary, paddingVertical: 12, borderRadius: 12, alignItems: 'center', marginTop: 16 },
-    promoBtnText: { color: COLORS.white, fontWeight: 'bold', fontSize: 12 }
+    emptySub: { fontSize: 11, color: COLORS.textSecondary, marginTop: 6, fontWeight: 'bold', textAlign: 'center', paddingHorizontal: 40 },
+    promoCard: {
+        position: 'absolute',
+        bottom: 24,
+        left: 16,
+        right: 16,
+        backgroundColor: '#111',
+        borderRadius: 32,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: COLORS.accent + '30',
+        ...SHADOWS.lg
+    },
+    promoIconBg: {
+        width: 48,
+        height: 48,
+        backgroundColor: COLORS.accent,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    promoTitle: { fontSize: 14, fontWeight: '900', color: COLORS.white, textTransform: 'uppercase', letterSpacing: 0.5 },
+    promoSub: { fontSize: 11, color: COLORS.textTertiary, marginTop: 2, fontWeight: '500' },
+    promoBtn: {
+        width: '100%',
+        backgroundColor: COLORS.accent,
+        paddingVertical: 14,
+        borderRadius: 16,
+        alignItems: 'center',
+        marginTop: 16,
+        ...SHADOWS.md
+    },
+    promoBtnText: { color: COLORS.white, fontWeight: '900', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }
 });
 
