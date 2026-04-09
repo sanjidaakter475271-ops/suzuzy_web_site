@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma/client";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { z } from "zod";
+import { startOfDay, endOfDay } from "date-fns";
 
 const createSchema = z.object({
     name: z.string().min(1),
@@ -15,16 +16,88 @@ export async function GET(req: NextRequest) {
         const user = await getCurrentUser();
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+        const todayStart = startOfDay(new Date());
+        const todayEnd = endOfDay(new Date());
+
         const staff = await prisma.service_staff.findMany({
             where: {
                 dealer_id: user.dealerId,
                 is_active: true
             },
-            include: { profiles: true }
+            include: {
+                profiles: {
+                    select: {
+                        full_name: true,
+                        email: true
+                    }
+                },
+                job_cards: {
+                    where: {
+                        status: { notIn: ['delivered', 'cancelled'] }
+                    },
+                    select: {
+                        id: true,
+                        status: true,
+                        service_tickets: {
+                            select: {
+                                service_number: true,
+                                service_vehicles: {
+                                    select: {
+                                        engine_number: true,
+                                        chassis_number: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                technician_attendance: {
+                    where: {
+                        clock_in: {
+                            gte: todayStart,
+                            lte: todayEnd
+                        }
+                    },
+                    include: {
+                        attendance_shifts: true
+                    },
+                    orderBy: {
+                        clock_in: 'desc'
+                    }
+                },
+                leave_requests: {
+                    orderBy: {
+                        created_at: 'desc'
+                    },
+                    take: 5
+                }
+            }
         });
 
-        return NextResponse.json({ success: true, data: staff });
+        // Format the data for the comprehensive view
+        const formattedStaff = staff.map(member => {
+            const sessions = (member as any).technician_attendance || [];
+            const activeSession = sessions.find((s: any) => !s.clock_out);
+            const activeShift = activeSession?.attendance_shifts?.find((sh: any) => !sh.end_time);
+
+            let status = 'offline';
+            if (activeSession) {
+                status = activeShift ? 'active' : 'break';
+            } else if (sessions.length > 0) {
+                status = 'checked_out';
+            }
+
+            return {
+                ...member,
+                currentStatus: status,
+                activeJobsCount: (member as any).job_cards?.length || 0,
+                todaySessions: sessions
+            };
+        });
+
+        return NextResponse.json({ success: true, data: formattedStaff });
     } catch (error: any) {
+        console.error("[STAFF_GET_ERROR]", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

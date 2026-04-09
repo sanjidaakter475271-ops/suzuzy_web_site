@@ -30,6 +30,7 @@ interface WorkshopState {
     error: string | null;
 
     fetchWorkshopData: () => Promise<void>;
+    fetchStaffData: () => Promise<void>;
     addJobCard: (jobCard: Partial<JobCard>) => Promise<void>;
     updateJobCardStatus: (id: string, status: JobCard['status']) => Promise<void>;
     assignTechnician: (jobCardId: string, technicianId: string) => Promise<void>;
@@ -92,7 +93,17 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
                 avatar: s.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`,
                 activeJobs: cardsRaw.filter((c: any) => c.technician_id === s.id && c.status === 'in_progress').length,
                 capacity: 5,
-                status: s.status === 'active' || s.status === 'approved' ? 'active' : s.status === 'pending' ? 'pending' : 'busy'
+                status: s.status === 'active' || s.status === 'approved' ? 'active' : s.status === 'pending' ? 'pending' : 'busy',
+                // Enhanced fields
+                email: s.profiles?.email || s.email,
+                phone: s.phone,
+                designation: s.designation,
+                currentStatus: s.currentStatus || 'offline',
+                hometown: s.profiles?.hometown,
+                emergencyPhone: s.profiles?.emergency_phone,
+                todaySessions: s.todaySessions || [],
+                job_cards: s.job_cards || [],
+                leave_requests: s.leave_requests || []
             }));
 
             // 3. Map Job Cards
@@ -163,6 +174,40 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
 
         } catch (error: any) {
             console.error("Workshop fetch error:", error);
+            set({ error: error.message, isLoading: false });
+        }
+    },
+
+    fetchStaffData: async () => {
+        set({ isLoading: true, error: null });
+        try {
+            const res = await fetch('/api/v1/workshop/staff');
+            const result = await res.json();
+
+            if (!result.success) throw new Error(result.error || "Failed to fetch staff data");
+
+            const technicians: Technician[] = result.data.map((s: any) => ({
+                id: s.id,
+                name: s.name,
+                avatar: s.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`,
+                activeJobs: s.activeJobsCount || 0,
+                capacity: 5,
+                status: s.status === 'active' || s.status === 'approved' ? 'active' : s.status === 'pending' ? 'pending' : 'busy',
+                // Enhanced fields
+                email: s.profiles?.email || s.email,
+                phone: s.phone,
+                designation: s.designation,
+                currentStatus: s.currentStatus || 'offline',
+                hometown: s.profiles?.hometown,
+                emergencyPhone: s.profiles?.emergency_phone,
+                todaySessions: s.todaySessions || [],
+                job_cards: s.job_cards || [],
+                leave_requests: s.leave_requests || []
+            }));
+
+            set({ technicians, isLoading: false });
+        } catch (error: any) {
+            console.error("[WORKSHOP_STORE] fetchStaffData error:", error);
             set({ error: error.message, isLoading: false });
         }
     },

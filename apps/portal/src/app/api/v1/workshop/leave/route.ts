@@ -25,8 +25,7 @@ export async function GET(request: NextRequest) {
                         profiles: {
                             select: {
                                 full_name: true,
-                                email: true,
-                                avatar_url: true
+                                email: true
                             }
                         }
                     }
@@ -41,17 +40,17 @@ export async function GET(request: NextRequest) {
         const formattedRequests = leaveRequests.map(req => ({
             id: req.id,
             staffId: req.staff_id,
-            technicianName: req.service_staff.profiles?.full_name || "Unknown",
-            technicianEmail: req.service_staff.profiles?.email || "",
-            technicianAvatar: req.service_staff.profiles?.avatar_url || "",
+            technicianName: (req as any).service_staff?.profiles?.full_name || (req as any).service_staff?.name || "Unknown",
+            technicianEmail: (req as any).service_staff?.profiles?.email || (req as any).service_staff?.email || "",
+            technicianAvatar: "", // Avatar not currently available in profiles schema
             leaveType: req.leave_type,
             startDate: req.start_date,
             endDate: req.end_date,
             reason: req.reason,
             status: req.status,
             createdAt: req.created_at,
-            hometown: req.hometown,
-            emergencyPhone: req.emergency_phone
+            hometown: (req as any).hometown,
+            emergencyPhone: (req as any).emergency_phone
         }));
 
         return NextResponse.json({

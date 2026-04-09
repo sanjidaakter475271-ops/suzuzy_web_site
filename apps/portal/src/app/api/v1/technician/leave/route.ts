@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
                 hometown: hometown,
                 emergency_phone: phoneNumber,
                 status: "pending",
-            },
+            } as any,
         });
 
         return NextResponse.json({

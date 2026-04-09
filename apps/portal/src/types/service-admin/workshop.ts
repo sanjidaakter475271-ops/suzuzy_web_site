@@ -51,6 +51,16 @@ export interface Technician {
     activeJobs: number;
     capacity: number;
     status: 'active' | 'on-leave' | 'busy' | 'pending';
+    // Enhanced HR Fields
+    email?: string;
+    phone?: string;
+    designation?: string;
+    currentStatus?: 'active' | 'break' | 'checked_out' | 'offline';
+    hometown?: string;
+    emergencyPhone?: string;
+    todaySessions?: any[];
+    job_cards?: any[];
+    leave_requests?: any[];
 }
 
 export interface QCChecklistItem {
