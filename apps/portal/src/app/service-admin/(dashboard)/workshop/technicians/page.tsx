@@ -2,11 +2,10 @@
 
 import React, { memo, useCallback, useMemo, useState, useEffect } from 'react';
 import {
-    Users, Clock, AlertTriangle, Plus,
-    Trash2, LayoutGrid, LayoutList, Search,
-    ShieldCheck, ArrowRight, X, Phone,
-    Activity, Calendar, FileText, Zap,
-    RefreshCw, Filter
+    Users, Clock, Plus,
+    Trash2, LayoutGrid, Search,
+    ShieldCheck, Activity, FileText,
+    RefreshCw
 } from 'lucide-react';
 import Breadcrumb from '@/components/service-admin/Breadcrumb';
 import { Card, CardContent } from '@/components/service-admin/ui';
@@ -166,6 +165,7 @@ const TechnicianCommandCenter = () => {
                                     tech={tech}
                                     onClick={() => handleTechClick(tech)}
                                     onDelete={() => { if (confirm('Remove agent from stream?')) deleteTechnician(tech.id); }}
+                                    onApprove={() => { if (confirm('Authorize this agent?')) approveTechnician(tech.id); }}
                                 />
                             ))}
                         </div>
@@ -186,13 +186,15 @@ const TechnicianCommandCenter = () => {
                 technician={selectedTechnician}
                 isOpen={!!selectedTechId}
                 onClose={handleCloseSidePanel}
+                onApprove={(id) => { if (confirm('Authorize this agent?')) approveTechnician(id); }}
+                onDelete={(id) => { if (confirm('Remove agent from stream?')) deleteTechnician(id); }}
             />
         </div>
     );
 };
 
 // Internal TechCard for the Fleet Grid
-const TechCard = memo(({ tech, onClick, onDelete }: any) => {
+const TechCard = memo(({ tech, onClick, onDelete, onApprove }: any) => {
     const workloadPercentage = (tech.activeJobs / tech.capacity) * 100;
     const isPending = tech.status === 'pending';
 
@@ -229,43 +231,61 @@ const TechCard = memo(({ tech, onClick, onDelete }: any) => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 mb-5 animate-in fade-in slide-in-from-bottom-1 duration-500 delay-150">
-                    <div className="p-3.5 bg-surface-page dark:bg-white/5 rounded-[1.8rem] text-center border border-transparent group-hover:border-brand/20 transition-all duration-500 shadow-sm">
-                        <span className="text-[7px] font-black text-ink-muted/40 uppercase tracking-widest">Jobs Today</span>
-                        <p className="text-xl font-black text-brand tracking-tighter tabular-nums">{tech.activeJobs || 0}</p>
-                    </div>
-                    <div className="p-3.5 bg-surface-page dark:bg-white/5 rounded-[1.8rem] text-center border border-transparent group-hover:border-emerald-500/20 transition-all duration-500 shadow-sm">
-                        <span className="text-[7px] font-black text-ink-muted/40 uppercase tracking-widest">Efficiency</span>
-                        <p className="text-xl font-black text-success tracking-tighter tabular-nums">94%</p>
-                    </div>
-                </div>
-
-                <div className="space-y-2.5 mb-5 animate-in fade-in slide-in-from-bottom-1 duration-500 delay-200">
-                    <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-[0.3em] text-ink-muted/60">
-                        <span className="truncate">Workload stream</span>
-                        <span className={cn("shrink-0", workloadPercentage > 80 ? 'text-danger' : 'text-brand')}>
-                            {tech.activeJobs}/{tech.capacity} UNIT
-                        </span>
-                    </div>
-                    <div className="h-1.5 w-full bg-surface-page dark:bg-white/10 rounded-full overflow-hidden shadow-inner">
-                        <div
-                            className={cn("h-full transition-all duration-1000 ease-out rounded-full", workloadPercentage > 80 ? 'bg-danger shadow-[0_0_6px_#ef4444]' : 'bg-brand shadow-[0_0_6px_#eab308]') }
-                            style={{ width: `${Math.max(workloadPercentage, 10)}%` }}
-                        >
-                            <div className="w-full h-full bg-white/20 animate-pulse" />
+                {isPending ? (
+                    <div className="flex-1 flex flex-col justify-center gap-4">
+                        <div className="p-5 rounded-[2rem] bg-indigo-500/5 border border-indigo-500/10 text-indigo-500 text-center space-y-2">
+                            <Clock size={24} className="mx-auto opacity-30 animate-pulse" />
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">Uplink Pending</p>
+                            <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">Awaiting security clearance from central command</p>
                         </div>
+                        <Button
+                            onClick={(e: any) => { e.stopPropagation(); onApprove?.(); }}
+                            className="w-full bg-brand text-white py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl shadow-brand/30 transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2"
+                        >
+                            <ShieldCheck size={14} /> Authorize Agent
+                        </Button>
                     </div>
-                </div>
+                ) : (
+                    <>
+                        <div className="grid grid-cols-2 gap-3 mb-5 animate-in fade-in slide-in-from-bottom-1 duration-500 delay-150">
+                            <div className="p-3.5 bg-surface-page dark:bg-white/5 rounded-[1.8rem] text-center border border-transparent group-hover:border-brand/20 transition-all duration-500 shadow-sm">
+                                <span className="text-[7px] font-black text-ink-muted/40 uppercase tracking-widest">Jobs Today</span>
+                                <p className="text-xl font-black text-brand tracking-tighter tabular-nums">{tech.activeJobs || 0}</p>
+                            </div>
+                            <div className="p-3.5 bg-surface-page dark:bg-white/5 rounded-[1.8rem] text-center border border-transparent group-hover:border-emerald-500/20 transition-all duration-500 shadow-sm">
+                                <span className="text-[7px] font-black text-ink-muted/40 uppercase tracking-widest">Efficiency</span>
+                                <p className="text-xl font-black text-success tracking-tighter tabular-nums">94%</p>
+                            </div>
+                        </div>
 
-                <div className="mt-auto pt-4 border-t border-surface-border dark:border-white/10 flex items-center justify-between animate-in fade-in duration-500 delay-300">
-                    <div className="flex items-center gap-2 text-ink-muted/30 italic">
-                        <Activity size={12} className={cn("group-hover:text-brand transition-colors duration-500", tech.currentStatus === 'active' && "animate-pulse")} />
-                        <span className="text-[8px] font-black uppercase tracking-[0.3em]">{tech.currentStatus || 'Offline'}</span>
-                    </div>
-                    <button className="text-[10px] font-black uppercase text-brand tracking-widest truncate group-hover:translate-x-1 transition-transform">
-                        Access 360 stream
-                    </button>
-                </div>
+                        <div className="space-y-2.5 mb-5 animate-in fade-in slide-in-from-bottom-1 duration-500 delay-200">
+                            <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-[0.3em] text-ink-muted/60">
+                                <span className="truncate">Workload stream</span>
+                                <span className={cn("shrink-0", workloadPercentage > 80 ? 'text-danger' : 'text-brand')}>
+                                    {tech.activeJobs}/{tech.capacity} UNIT
+                                </span>
+                            </div>
+                            <div className="h-1.5 w-full bg-surface-page dark:bg-white/10 rounded-full overflow-hidden shadow-inner">
+                                <div
+                                    className={cn("h-full transition-all duration-1000 ease-out rounded-full", workloadPercentage > 80 ? 'bg-danger shadow-[0_0_6px_#ef4444]' : 'bg-brand shadow-[0_0_6px_#eab308]') }
+                                    style={{ width: `${Math.max(workloadPercentage, 10)}%` }}
+                                >
+                                    <div className="w-full h-full bg-white/20 animate-pulse" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-auto pt-4 border-t border-surface-border dark:border-white/10 flex items-center justify-between animate-in fade-in duration-500 delay-300">
+                            <div className="flex items-center gap-2 text-ink-muted/30 italic">
+                                <Activity size={12} className={cn("group-hover:text-brand transition-colors duration-500", tech.currentStatus === 'active' && "animate-pulse")} />
+                                <span className="text-[8px] font-black uppercase tracking-[0.3em]">{tech.currentStatus || 'Offline'}</span>
+                            </div>
+                            <button className="text-[10px] font-black uppercase text-brand tracking-widest truncate group-hover:translate-x-1 transition-transform">
+                                Access 360 stream
+                            </button>
+                        </div>
+                    </>
+                )}
             </CardContent>
 
             <div className="absolute top-4 right-4 flex flex-col gap-2 transition-all duration-500 opacity-0 group-hover:opacity-100 translate-x-3 group-hover:translate-x-0 z-20">

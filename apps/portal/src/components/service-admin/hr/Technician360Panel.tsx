@@ -6,7 +6,7 @@ import {
     Briefcase, Calendar, Clock, 
     TrendingUp, Star, Zap, Hammer,
     Activity, ShieldCheck, FileText,
-    ExternalLink, AlertCircle, PhoneCall
+    ExternalLink, AlertCircle, PhoneCall, Trash2
 } from 'lucide-react';
 import { 
     Sheet, 
@@ -27,14 +27,20 @@ interface Technician360PanelProps {
     technician: Technician | null;
     isOpen: boolean;
     onClose: () => void;
+    onApprove?: (id: string) => void;
+    onDelete?: (id: string) => void;
 }
 
-export const Technician360Panel: React.FC<Technician360PanelProps> = ({ 
-    technician, 
-    isOpen, 
-    onClose 
+export const Technician360Panel: React.FC<Technician360PanelProps> = ({
+    technician,
+    isOpen,
+    onClose,
+    onApprove,
+    onDelete
 }) => {
     if (!technician) return null;
+
+    const isPending = technician.status === 'pending';
 
     const statusColors = {
         active: "bg-emerald-500",
@@ -269,6 +275,34 @@ export const Technician360Panel: React.FC<Technician360PanelProps> = ({
                         </Tabs>
                     </div>
                 </ScrollArea>
+
+                {/* Management Actions Footer */}
+                <div className="p-8 border-t border-white/5 bg-[#0d0d0f] flex gap-4 relative z-20">
+                    {isPending ? (
+                        <Button
+                            onClick={() => onApprove?.(technician.id)}
+                            className="flex-1 bg-brand hover:bg-brand-dark text-white rounded-2xl h-14 font-black uppercase tracking-widest transition-all shadow-lg shadow-brand/20 gap-2"
+                        >
+                            <ShieldCheck size={18} /> Authorize Agent
+                        </Button>
+                    ) : (
+                        <Button
+                            variant="outline"
+                            className="flex-1 border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 rounded-2xl h-14 font-black uppercase tracking-widest transition-all gap-2"
+                        >
+                            <PhoneCall size={18} /> Direct Uplink
+                        </Button>
+                    )}
+
+                    <Button
+                        onClick={() => onDelete?.(technician.id)}
+                        variant="outline"
+                        className="w-14 h-14 rounded-2xl border-rose-500/20 bg-rose-500/5 text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-lg"
+                        title={isPending ? "Reject Application" : "Remove Agent"}
+                    >
+                        <Trash2 size={20} />
+                    </Button>
+                </div>
             </SheetContent>
         </Sheet>
     );
