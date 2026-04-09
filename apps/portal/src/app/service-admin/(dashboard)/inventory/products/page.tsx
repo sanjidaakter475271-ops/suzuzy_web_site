@@ -395,7 +395,7 @@ export default function InventoryProductsPage() {
                             </div>
                         </CardContent>
                     </Card>
-                ))}
+                )))}
             </div>
 
             {/* Pagination Controls */}
