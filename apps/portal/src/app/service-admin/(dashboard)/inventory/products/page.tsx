@@ -25,12 +25,15 @@ import { cn } from "@/lib/utils";
 import { Product } from "@/types/service-admin/inventory";
 import Image from "next/image";
 import { ProductSyncWizard } from "@/components/service-admin/inventory/ProductSyncWizard";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 export default function InventoryProductsPage() {
     const {
         products,
         bikeModels,
         categories,
+        pagination,
+        summary,
         fetchProducts,
         fetchBikeModels,
         fetchCategories,
@@ -40,21 +43,37 @@ export default function InventoryProductsPage() {
     } = useInventoryStore();
 
     const [searchQuery, setSearchQuery] = useState('');
+    const debouncedSearch = useDebouncedValue(searchQuery, 400);
+
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [bikeModelFilter, setBikeModelFilter] = useState('all');
+    const [currentPage, setCurrentPage] = useState(1);
 
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [panelMode, setPanelMode] = useState<'form' | 'import' | 'sync'>('form');
 
+    // Load metadata once
     React.useEffect(() => {
-        fetchProducts({
-            search: searchQuery,
-            categoryId: categoryFilter === 'all' ? undefined : categoryFilter,
-            bikeModelId: bikeModelFilter === 'all' ? undefined : bikeModelFilter
-        });
         fetchBikeModels();
         fetchCategories();
-    }, [fetchProducts, fetchBikeModels, fetchCategories, searchQuery, categoryFilter, bikeModelFilter]);
+    }, [fetchBikeModels, fetchCategories]);
+
+    // Reset to page 1 if any filter changes
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [debouncedSearch, categoryFilter, bikeModelFilter]);
+
+    // Fetch products based on filters and page
+    React.useEffect(() => {
+        fetchProducts({
+            search: debouncedSearch,
+            categoryId: categoryFilter === 'all' ? undefined : categoryFilter,
+            bikeModelId: bikeModelFilter === 'all' ? undefined : bikeModelFilter,
+            page: currentPage,
+            limit: 50
+        });
+    }, [fetchProducts, debouncedSearch, categoryFilter, bikeModelFilter, currentPage]);
+
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
     // Form State
@@ -71,15 +90,6 @@ export default function InventoryProductsPage() {
         status: 'in-stock',
         image: ''
     });
-
-    const filteredProducts = products.filter(p =>
-        (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.sku.toLowerCase().includes(searchQuery.toLowerCase())) &&
-        (categoryFilter === 'all' || p.category === categoryFilter)
-    );
-
-    const totalValue = products.reduce((acc, p) => acc + (p.price * p.stock), 0);
-    const lowStockCount = products.filter(p => p.status === 'low-stock').length;
 
     const handleOpenPanel = (product?: Product) => {
         setPanelMode('form');
@@ -166,7 +176,7 @@ export default function InventoryProductsPage() {
                     </div>
                     <p className="text-sm font-bold opacity-80 uppercase tracking-widest mb-1">Total Items</p>
                     <div className="flex items-baseline gap-2">
-                        <h2 className="text-4xl font-black">{products.length}</h2>
+                        <h2 className="text-4xl font-black">{summary?.totalItems || 0}</h2>
                         <span className="bg-white/20 px-2 py-0.5 rounded-lg text-xs font-bold flex items-center gap-1">
                             <ArrowUpRight size={12} /> +5%
                         </span>
@@ -178,8 +188,8 @@ export default function InventoryProductsPage() {
                     </div>
                     <p className="text-sm font-bold text-ink-muted uppercase tracking-widest mb-1">Low Stock Alerts</p>
                     <div className="flex items-baseline gap-2">
-                        <h2 className="text-4xl font-black text-ink-heading dark:text-white">{lowStockCount}</h2>
-                        {lowStockCount > 0 && (
+                        <h2 className="text-4xl font-black text-ink-heading dark:text-white">{summary?.lowStockCount || 0}</h2>
+                        {(summary?.lowStockCount || 0) > 0 && (
                             <span className="bg-warning/10 text-warning px-2 py-0.5 rounded-lg text-xs font-bold">Needs Action</span>
                         )}
                     </div>
@@ -190,7 +200,7 @@ export default function InventoryProductsPage() {
                     </div>
                     <p className="text-sm font-bold text-ink-muted uppercase tracking-widest mb-1">Inventory Value</p>
                     <div className="flex items-baseline gap-2">
-                        <h2 className="text-4xl font-black text-ink-heading dark:text-white">৳{(totalValue / 1000).toFixed(1)}k</h2>
+                        <h2 className="text-4xl font-black text-ink-heading dark:text-white">৳{((summary?.totalValue || 0) / 1000).toFixed(1)}k</h2>
                         <span className="bg-success/10 text-success px-2 py-0.5 rounded-lg text-xs font-bold flex items-center gap-1">
                             <ArrowUpRight size={12} /> Stable
                         </span>
@@ -255,7 +265,7 @@ export default function InventoryProductsPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredProducts.map((product) => (
+                {products.map((product) => (
                     <Card key={product.id} className="hover:border-brand transition-all group rounded-[2rem] overflow-hidden border-surface-border dark:border-dark-border shadow-card hover:shadow-xl hover:shadow-brand/5 dark:hover:shadow-none duration-300">
                         <CardContent className="p-6 space-y-4">
                             <div className="flex justify-between items-start">
@@ -319,6 +329,33 @@ export default function InventoryProductsPage() {
                     </Card>
                 ))}
             </div>
+
+            {/* Pagination Controls */}
+            {pagination && pagination.totalPages > 1 && (
+                <div className="flex items-center justify-between mt-8 p-4 bg-white dark:bg-dark-card border border-surface-border dark:border-dark-border rounded-2xl shadow-sm">
+                    <p className="text-xs font-bold text-ink-muted">
+                        Showing page <span className="text-brand">{pagination.page}</span> of {pagination.totalPages} ({summary?.totalItems || 0} total items)
+                    </p>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            disabled={pagination.page <= 1 || isLoading}
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            className="bg-surface-page dark:bg-dark-page text-xs font-bold px-4 py-2"
+                        >
+                            Previous
+                        </Button>
+                        <Button
+                            variant="outline"
+                            disabled={pagination.page >= pagination.totalPages || isLoading}
+                            onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
+                            className="bg-surface-page dark:bg-dark-page text-xs font-bold px-4 py-2"
+                        >
+                            Next
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             {/* Side Panel */}
             <SidePanel

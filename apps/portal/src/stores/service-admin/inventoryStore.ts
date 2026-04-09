@@ -1,8 +1,12 @@
 import { create } from 'zustand';
 import { Product, StockAdjustment, PartsIssue, SyncPreviewResult, SyncOptions } from '@/types/service-admin/inventory';
 
+let currentAbortController: AbortController | null = null;
+
 interface InventoryState {
     products: Product[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+    summary: { totalValue: number; lowStockCount: number; totalItems: number };
     adjustments: StockAdjustment[];
     partsIssues: PartsIssue[];
     bikeModels: any[];
@@ -10,7 +14,7 @@ interface InventoryState {
     isLoading: boolean;
     error: string | null;
 
-    fetchProducts: (params?: { search?: string; categoryId?: string; bikeModelId?: string }) => Promise<void>;
+    fetchProducts: (params?: { search?: string; categoryId?: string; bikeModelId?: string; page?: number; limit?: number }) => Promise<void>;
     fetchAdjustments: () => Promise<void>;
     fetchRequisitions: () => Promise<void>;
     fetchBikeModels: () => Promise<void>;
@@ -26,6 +30,8 @@ interface InventoryState {
 
 export const useInventoryStore = create<InventoryState>((set, get) => ({
     products: [],
+    pagination: { page: 1, limit: 50, total: 0, totalPages: 1 },
+    summary: { totalValue: 0, lowStockCount: 0, totalItems: 0 },
     adjustments: [],
     partsIssues: [],
     bikeModels: [],
@@ -34,20 +40,37 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     error: null,
 
     fetchProducts: async (params) => {
+        if (currentAbortController) {
+            currentAbortController.abort();
+        }
+        currentAbortController = new AbortController();
+
         set({ isLoading: true });
         try {
             const query = new URLSearchParams();
             if (params?.search) query.append('search', params.search);
             if (params?.categoryId) query.append('categoryId', params.categoryId);
             if (params?.bikeModelId) query.append('bikeModelId', params.bikeModelId);
+            if (params?.page) query.append('page', params.page.toString());
+            if (params?.limit) query.append('limit', params.limit.toString());
 
-            const res = await fetch(`/api/v1/workshop/inventory?${query.toString()}`);
+            const res = await fetch(`/api/v1/workshop/inventory?${query.toString()}`, {
+                signal: currentAbortController.signal
+            });
+
             const data = await res.json();
             if (data.success) {
-                set({ products: data.data, isLoading: false });
+                set({
+                    products: data.data,
+                    pagination: data.pagination || { page: 1, limit: 50, total: 0, totalPages: 1 },
+                    summary: data.summary || { totalValue: 0, lowStockCount: 0, totalItems: 0 },
+                    isLoading: false
+                });
             }
         } catch (error: any) {
-            set({ error: error.message, isLoading: false });
+            if (error.name !== 'AbortError') {
+                set({ error: error.message, isLoading: false });
+            }
         }
     },
 

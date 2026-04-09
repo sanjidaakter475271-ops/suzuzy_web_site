@@ -30,14 +30,18 @@ export async function GET(req: NextRequest) {
         const dealerId = user.dealerId;
         if (!dealerId) return NextResponse.json({ error: "Dealer context required" }, { status: 400 });
 
-        const { searchParams } = new URL(req.url);
+        const searchParams = new URL(req.url).searchParams;
         const includeMovements = searchParams.get('movements') === 'true';
         const search = searchParams.get('search');
         const categoryId = searchParams.get('categoryId');
         const bikeModelId = searchParams.get('bikeModelId');
 
+        // Pagination params
+        const page = parseInt(searchParams.get('page') || '1', 10);
+        const limit = parseInt(searchParams.get('limit') || '50', 10);
+        const skip = (page - 1) * limit;
+
         if (includeMovements) {
-            // ... (keep existing movement logic)
             const movements = await prisma.inventory_movements.findMany({
                 where: {
                     dealer_id: dealerId
@@ -81,19 +85,45 @@ export async function GET(req: NextRequest) {
             };
         }
 
-        const products = await prisma.products.findMany({
-            where,
-            include: {
-                brands: true,
-                categories_products_category_idTocategories: true,
-                product_variants: true,
-                product_images: {
-                    where: { is_primary: true },
-                    take: 1
+        // Parallel query for paginated results and total count
+        const [products, totalItems, allStatsRaw] = await Promise.all([
+            prisma.products.findMany({
+                where,
+                skip,
+                take: limit,
+                include: {
+                    brands: true,
+                    categories_products_category_idTocategories: true,
+                    // REMOVED: product_variants to drastically reduce payload size
+                    product_images: {
+                        where: { is_primary: true },
+                        take: 1
+                    }
+                },
+                orderBy: { name: 'asc' }
+            }),
+            prisma.products.count({ where }),
+            // Fetch minimal data for all filtered items to calculate global stats accurately
+            prisma.products.findMany({
+                where,
+                select: {
+                    stock_quantity: true,
+                    base_price: true,
+                    low_stock_threshold: true
                 }
-            },
-            orderBy: { name: 'asc' }
-        });
+            })
+        ]);
+
+        // Calculate summary stats
+        let totalValue = 0;
+        let lowStockCount = 0;
+        for (const item of allStatsRaw) {
+            const stock = item.stock_quantity || 0;
+            totalValue += stock * Number(item.base_price || 0);
+            if (stock <= (item.low_stock_threshold || 5) && stock > 0) {
+                lowStockCount++;
+            }
+        }
 
         // Add price mapping for consistency if needed by frontend
         const formattedProducts = products.map(p => {
@@ -116,17 +146,25 @@ export async function GET(req: NextRequest) {
                 minStock: threshold,
                 image: p.product_images?.[0]?.image_url,
                 status: status,
-                variants: p.product_variants.map(v => ({
-                    id: v.id,
-                    sku: v.sku,
-                    price: Number(v.price || p.base_price),
-                    stock: v.stock_quantity,
-                    attributes: v.attributes
-                }))
+                variants: [] // Omitted for performance
             };
         });
 
-        return NextResponse.json({ success: true, data: formattedProducts });
+        return NextResponse.json({
+            success: true,
+            data: formattedProducts,
+            pagination: {
+                total: totalItems,
+                page,
+                limit,
+                totalPages: Math.ceil(totalItems / limit)
+            },
+            summary: {
+                totalValue,
+                lowStockCount,
+                totalItems
+            }
+        });
 
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
