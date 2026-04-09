@@ -286,31 +286,31 @@ export default function InventoryProductsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {isLoading && products.length === 0 ? (
-                    // Loading Skeletons
+                    // Inventory Skeletons
                     Array.from({ length: 6 }).map((_, idx) => (
-                        <Card key={`skeleton-${idx}`} className="rounded-[2rem] overflow-hidden border-surface-border dark:border-dark-border shadow-card animate-pulse">
-                            <CardContent className="p-6 space-y-4">
+                        <Card key={`skeleton-${idx}`} className="rounded-[2.5rem] overflow-hidden border-surface-border dark:border-white/5 shadow-card animate-pulse bg-white dark:bg-white/5 h-[350px]">
+                            <CardContent className="p-8 space-y-6">
                                 <div className="flex justify-between items-start">
                                     <div className="space-y-2">
-                                        <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-16"></div>
-                                        <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-48"></div>
-                                        <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-24"></div>
+                                        <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-24" />
+                                        <div className="h-7 bg-slate-200 dark:bg-slate-800 rounded w-48" />
+                                        <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-32" />
                                     </div>
-                                    <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-800"></div>
+                                    <div className="w-14 h-14 rounded-2xl bg-slate-200 dark:bg-slate-800 shrink-0" />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4 py-4 border-y border-surface-border dark:border-dark-border/50">
+                                <div className="grid grid-cols-2 gap-4 py-6 border-y border-surface-border dark:border-white/5">
                                     <div className="space-y-2">
-                                        <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-16"></div>
-                                        <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-12"></div>
+                                        <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-20" />
+                                        <div className="h-8 bg-slate-200 dark:bg-slate-800 rounded w-16" />
                                     </div>
                                     <div className="space-y-2 text-right flex flex-col items-end">
-                                        <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-16"></div>
-                                        <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-16"></div>
+                                        <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-20" />
+                                        <div className="h-8 bg-slate-200 dark:bg-slate-800 rounded w-24" />
                                     </div>
                                 </div>
-                                <div className="flex gap-3 pt-2">
-                                    <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-xl flex-1"></div>
-                                    <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-xl flex-1"></div>
+                                <div className="flex gap-4 pt-4">
+                                    <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-xl flex-1" />
+                                    <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-xl flex-1" />
                                 </div>
                             </CardContent>
                         </Card>

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/service-admin/ui';
 import { ChevronLeft, History, FileText, Download, Calendar, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 export default function CustomerRecordsPage() {
     const [records, setRecords] = useState<any[]>([]);
@@ -20,7 +21,9 @@ export default function CustomerRecordsPage() {
 
     const handleDownload = (id: string) => {
         // Implement invoice download logic or alert
-        alert(`Downloading Invoice for Job #${id}`);
+        toast.info("Downloading Invoice", {
+            description: `Preparing your invoice for Job #${id}...`
+        });
     };
 
     return (

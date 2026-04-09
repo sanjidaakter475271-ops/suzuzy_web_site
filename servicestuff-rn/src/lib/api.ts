@@ -114,6 +114,8 @@ export const TechnicianAPI = {
     deleteRequisition: (id: string, config?: AxiosRequestConfig) => api.delete(`/requisitions/${id}`, config),
     getCategories: (config?: AxiosRequestConfig) => api.get('/categories', config),
     getProductsByCategory: (categoryId: string, config?: AxiosRequestConfig) => api.get(`/products?categoryId=${categoryId}`, config),
+    searchProducts: (params: { categoryId?: string; search?: string; limit?: number }, config?: AxiosRequestConfig) =>
+        api.get('/products', { params, ...config }),
     getProductDetail: (id: string, config?: AxiosRequestConfig) => api.get(`/products/${id}`, config),
     getProductVariants: (productId: string, config?: AxiosRequestConfig) => api.get(`/products/${productId}/variants`, config),
 

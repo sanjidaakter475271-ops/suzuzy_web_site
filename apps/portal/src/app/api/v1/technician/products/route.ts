@@ -16,17 +16,33 @@ export async function GET(req: NextRequest) {
 
         const { searchParams } = new URL(req.url);
         const categoryId = searchParams.get('categoryId');
+        const search = searchParams.get('search') || searchParams.get('q');
+        const limit = parseInt(searchParams.get('limit') || '50', 10);
 
-        if (!categoryId) {
-            return NextResponse.json({ error: 'categoryId is required' }, { status: 400 });
+        if (!categoryId && !search) {
+            return NextResponse.json({ error: 'categoryId or search query is required' }, { status: 400 });
+        }
+
+        const whereClause: any = {
+            dealer_id: technician.dealerId,
+            status: 'approved'
+        };
+
+        if (categoryId) {
+            whereClause.category_id = categoryId;
+        }
+
+        if (search) {
+            whereClause.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { sku: { contains: search, mode: 'insensitive' } },
+                { part_number: { contains: search, mode: 'insensitive' } }
+            ];
         }
 
         const products = await prisma.products.findMany({
-            where: {
-                category_id: categoryId,
-                dealer_id: technician.dealerId,
-                status: 'approved'
-            },
+            where: whereClause,
+            take: limit,
             select: {
                 id: true,
                 name: true,

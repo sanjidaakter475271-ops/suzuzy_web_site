@@ -12,6 +12,7 @@ import { Card, CardContent } from '@/components/service-admin/ui';
 import { useWorkshopStore } from '@/stores/service-admin/workshopStore';
 import { cn } from '@/lib/utils';
 import { Technician } from '@/types/service-admin/workshop';
+import { confirmAction } from '@/lib/confirm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -159,15 +160,54 @@ const TechnicianCommandCenter = () => {
                 <Tabs value={activeTab} className="w-full mt-0">
                     <TabsContent value="fleet" className="mt-0 outline-none">
                         <div className="grid gap-4 lg:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            {filteredTechs.map((tech) => (
-                                <TechCard
-                                    key={tech.id}
-                                    tech={tech}
-                                    onClick={() => handleTechClick(tech)}
-                                    onDelete={() => { if (confirm('Remove agent from stream?')) deleteTechnician(tech.id); }}
-                                    onApprove={() => { if (confirm('Authorize this agent?')) approveTechnician(tech.id); }}
-                                />
-                            ))}
+                            {isLoading ? (
+                                // Fleet Skeletons
+                                Array.from({ length: 8 }).map((_, idx) => (
+                                    <Card key={`skeleton-${idx}`} className="h-[380px] rounded-[2.8rem] border-2 border-surface-border dark:border-white/5 animate-pulse">
+                                        <CardContent className="p-6 space-y-6">
+                                            <div className="flex items-center gap-5">
+                                                <div className="w-16 h-16 rounded-[1.8rem] bg-slate-200 dark:bg-slate-800" />
+                                                <div className="flex-1 space-y-2">
+                                                    <div className="h-5 bg-slate-200 dark:bg-slate-800 rounded w-32" />
+                                                    <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-20" />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="h-14 bg-slate-200 dark:bg-slate-800 rounded-[1.8rem]" />
+                                                <div className="h-14 bg-slate-200 dark:bg-slate-800 rounded-[1.8rem]" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded w-full" />
+                                                <div className="h-1.5 bg-slate-200 dark:bg-slate-800 rounded w-full" />
+                                            </div>
+                                            <div className="mt-auto h-8 bg-slate-200 dark:bg-slate-800 rounded-xl w-full" />
+                                        </CardContent>
+                                    </Card>
+                                ))
+                            ) : (
+                                filteredTechs.map((tech) => (
+                                    <TechCard
+                                        key={tech.id}
+                                        tech={tech}
+                                        onClick={() => handleTechClick(tech)}
+                                        onDelete={() => {
+                                            confirmAction({
+                                                title: "Remove Agent",
+                                                description: "Remove this agent from the active fleet stream?",
+                                                variant: 'danger',
+                                                onConfirm: () => deleteTechnician(tech.id)
+                                            });
+                                        }}
+                                        onApprove={() => {
+                                            confirmAction({
+                                                title: "Authorize Agent",
+                                                description: "Grant operational clearance to this technician?",
+                                                onConfirm: () => approveTechnician(tech.id)
+                                            });
+                                        }}
+                                    />
+                                ))
+                            )}
                         </div>
                     </TabsContent>
 
@@ -186,8 +226,21 @@ const TechnicianCommandCenter = () => {
                 technician={selectedTechnician}
                 isOpen={!!selectedTechId}
                 onClose={handleCloseSidePanel}
-                onApprove={(id) => { if (confirm('Authorize this agent?')) approveTechnician(id); }}
-                onDelete={(id) => { if (confirm('Remove agent from stream?')) deleteTechnician(id); }}
+                onApprove={(id) => {
+                    confirmAction({
+                        title: "Authorize Agent",
+                        description: "Grant operational clearance to this technician?",
+                        onConfirm: () => approveTechnician(id)
+                    });
+                }}
+                onDelete={(id) => {
+                    confirmAction({
+                        title: "Remove Agent",
+                        description: "Remove this agent from the active fleet stream?",
+                        variant: 'danger',
+                        onConfirm: () => deleteTechnician(id)
+                    });
+                }}
             />
         </div>
     );

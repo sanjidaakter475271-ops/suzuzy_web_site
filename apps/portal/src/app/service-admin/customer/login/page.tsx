@@ -8,6 +8,7 @@ import { Phone, Lock, ChevronRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import { toast } from 'sonner';
 
 const CustomerLoginPage = () => {
     const { login } = useCustomerStore();
@@ -35,9 +36,14 @@ const CustomerLoginPage = () => {
         setLoading(false);
 
         if (success) {
+            toast.success("Login Successful", {
+                description: "Welcome to your service dashboard."
+            });
             router.push('/service-admin/customer/dashboard');
         } else {
-            alert('Invalid OTP (Try 1234)');
+            toast.error("Authentication Failed", {
+                description: "Invalid OTP entered. Please try again (Try 1234)."
+            });
         }
     };
 

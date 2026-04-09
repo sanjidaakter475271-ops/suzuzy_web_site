@@ -17,7 +17,14 @@ import { cn } from '@/lib/utils'; // Assuming utils exists
 
 const CustomerListPage = () => {
     const { customers } = useCRMStore();
+    const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+
+    // Simulate initial load
+    React.useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 1000);
+        return () => clearTimeout(timer);
+    }, []);
 
     const filteredCustomers = customers.filter(c =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -51,7 +58,30 @@ const CustomerListPage = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredCustomers.map((customer) => (
+                {isLoading ? (
+                    Array.from({ length: 6 }).map((_, idx) => (
+                        <Card key={idx} className="animate-pulse">
+                            <CardContent className="p-6 space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800" />
+                                    <div className="space-y-2">
+                                        <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-24" />
+                                        <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-16" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2 py-2">
+                                    <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-full" />
+                                    <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
+                                </div>
+                                <div className="pt-4 border-t border-surface-border dark:border-dark-border/50 flex justify-between">
+                                    <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-20" />
+                                    <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-12" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))
+                ) : (
+                    filteredCustomers.map((customer) => (
                     <Card key={customer.id} className="hover:border-brand transition-all group cursor-pointer">
                         <CardContent className="p-6 space-y-4">
                             <div className="flex justify-between items-start">
@@ -99,7 +129,7 @@ const CustomerListPage = () => {
                             </div>
                         </CardContent>
                     </Card>
-                ))}
+                )))}
             </div>
         </div>
     );

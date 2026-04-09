@@ -3,6 +3,71 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma/client";
 import { broadcast } from "@/lib/socket-server";
 
+export async function GET(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const user = await getCurrentUser();
+        if (!user || !user.dealerId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const { id } = await params;
+
+        const job = await prisma.job_cards.findUnique({
+            where: { id },
+            include: {
+                service_tickets: {
+                    include: {
+                        service_vehicles: {
+                            include: { bike_models: true }
+                        },
+                        profiles: true
+                    }
+                },
+                service_tasks: true,
+                service_requisitions: {
+                    include: {
+                        products: true
+                    }
+                },
+                qc_requests: {
+                    where: { status: 'pending' },
+                    orderBy: { created_at: 'desc' },
+                    take: 1
+                }
+            }
+        });
+
+        if (!job || (job.dealer_id !== user.dealerId && user.role !== 'super_admin')) {
+            return NextResponse.json({ error: "Job card not found or forbidden" }, { status: 404 });
+        }
+
+        // Helper to convert Prisma Decimals to Numbers
+        const serialize = (obj: any): any => {
+            if (obj === null || obj === undefined) return obj;
+            if (Array.isArray(obj)) return obj.map(serialize);
+            if (typeof obj === 'object') {
+                if (obj.constructor && obj.constructor.name === 'Decimal') {
+                    return Number(obj);
+                }
+                const newObj: any = {};
+                for (const key in obj) {
+                    newObj[key] = serialize(obj[key]);
+                }
+                return newObj;
+            }
+            return obj;
+        };
+
+        return NextResponse.json({ success: true, data: serialize(job) });
+    } catch (error: any) {
+        console.error("[JOB_CARD_GET_ERROR]", error);
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+}
+
 export async function PATCH(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }

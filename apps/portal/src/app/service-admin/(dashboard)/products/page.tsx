@@ -6,6 +6,7 @@ import { Plus, Search, Filter, Edit, Trash2, Package, Tag, TrendingUp, Download,
 import Image from "next/image";
 import Breadcrumb from "@/components/Breadcrumb";
 import { cn } from "@/lib/utils";
+import { confirmAction } from "@/lib/confirm";
 
 interface Product {
     id: number;
@@ -96,9 +97,12 @@ export default function ProductsPage() {
     };
 
     const handleDelete = (id: number) => {
-        if (confirm('Delete this product?')) {
-            setProducts(products.filter(p => p.id !== id));
-        }
+        confirmAction({
+            title: "Delete Product",
+            description: "Are you sure you want to permanently delete this product? This action cannot be undone.",
+            variant: 'danger',
+            onConfirm: () => setProducts(products.filter(p => p.id !== id))
+        });
     };
 
     return (

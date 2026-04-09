@@ -18,6 +18,8 @@ import { Card, CardContent } from '@/components/service-admin/ui';
 import { useAppointmentStore } from '@/stores/service-admin/appointmentStore';
 import { cn } from '@/lib/utils';
 import { Appointment } from '@/types/service-admin/index';
+import { confirmAction } from '@/lib/confirm';
+import { toast } from 'sonner';
 
 const ReschedulePage = () => {
     const { appointments, fetchAppointments, isLoading, updateStatus, reschedule } = useAppointmentStore();
@@ -46,9 +48,12 @@ const ReschedulePage = () => {
     };
 
     const handleCancel = (id: string) => {
-        if (confirm('Are you sure you want to cancel this appointment?')) {
-            updateStatus(id, 'cancelled');
-        }
+        confirmAction({
+            title: "Cancel Appointment",
+            description: "Are you sure you want to cancel this appointment? This action will notify the customer.",
+            variant: 'danger',
+            onConfirm: () => updateStatus(id, 'cancelled')
+        });
     };
 
     return (
@@ -164,7 +169,12 @@ const ReschedulePage = () => {
                                             <Trash2 size={14} />
                                         </button>
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); alert('Messaging feature coming soon!'); }}
+                                            onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                toast.info("Coming Soon", {
+                                                    description: "Messaging feature is currently under development."
+                                                }); 
+                                            }}
                                             className="py-2 px-3 border border-surface-border dark:border-dark-border rounded-xl text-xs font-bold text-blue-500 hover:bg-blue-50 hover:border-blue-500 transition-all"
                                             title="Message Customer"
                                         >

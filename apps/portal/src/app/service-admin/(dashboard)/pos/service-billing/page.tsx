@@ -18,7 +18,7 @@ import { useWorkshopStore } from '@/stores/service-admin/workshopStore';
 import { cn } from '@/lib/utils';
 
 const ServiceBillingPage = () => {
-    const { jobCards } = useWorkshopStore();
+    const { jobCards, isLoading } = useWorkshopStore();
     const [searchQuery, setSearchQuery] = useState('');
 
     // Filter jobs that are ready for billing
@@ -55,7 +55,28 @@ const ServiceBillingPage = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {billableJobs.map((job) => (
+                {isLoading && jobCards.length === 0 ? (
+                    // Billing Skeletons
+                    Array.from({ length: 6 }).map((_, idx) => (
+                        <Card key={idx} className="rounded-[2.5rem] border-2 border-surface-border dark:border-white/5 animate-pulse bg-white dark:bg-white/5 h-[350px]">
+                            <CardContent className="p-8 space-y-6">
+                                <div className="flex justify-between items-start">
+                                    <div className="space-y-2">
+                                        <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-16" />
+                                        <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-48" />
+                                    </div>
+                                    <div className="w-20 h-6 bg-slate-200 dark:bg-slate-800 rounded-xl" />
+                                </div>
+                                <div className="h-20 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
+                                <div className="pt-6 border-t border-surface-border dark:border-dark-border/50 flex gap-3">
+                                    <div className="h-12 bg-slate-200 dark:bg-slate-800 rounded-2xl flex-1" />
+                                    <div className="h-12 bg-slate-200 dark:bg-slate-800 rounded-2xl w-12" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))
+                ) : (
+                    billableJobs.map((job) => (
                     <Card key={job.id} className="rounded-[2.5rem] border-2 border-transparent hover:border-brand/20 transition-all duration-500 hover:shadow-2xl group overflow-hidden bg-white dark:bg-dark-card">
                         <CardContent className="p-8 space-y-6">
                             <div className="flex justify-between items-start">
@@ -105,9 +126,9 @@ const ServiceBillingPage = () => {
                             </div>
                         </CardContent>
                     </Card>
-                ))}
+                )))}
 
-                {billableJobs.length === 0 && (
+                {billableJobs.length === 0 && !isLoading && (
                     <div className="col-span-full py-24 flex flex-col items-center justify-center text-center space-y-6 bg-white dark:bg-dark-card rounded-[3rem] border-4 border-dashed border-surface-border dark:border-dark-border shadow-inner">
                         <div className="p-6 bg-slate-50 dark:bg-black/20 rounded-full text-slate-300">
                             <AlertCircle size={64} />

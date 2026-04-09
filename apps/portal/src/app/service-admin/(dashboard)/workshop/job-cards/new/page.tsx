@@ -94,9 +94,14 @@ const CreateJobCard = () => {
             });
 
             // Success redirect
+            toast.success("Job Card Created", {
+                description: `Case #${vehicle.regNo} has been initialized.`
+            });
             router.push('/service-admin/workshop/job-cards');
         } catch (error: any) {
-            alert(error.message || "Failed to create job card. Please try again.");
+            toast.error("Creation Failed", {
+                description: error.message || "Failed to create job card. Please try again."
+            });
         } finally {
             setIsSubmitting(false);
         }

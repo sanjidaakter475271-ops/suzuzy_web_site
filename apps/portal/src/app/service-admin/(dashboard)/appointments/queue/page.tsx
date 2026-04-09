@@ -196,9 +196,18 @@ const QueuePage = () => {
                 </div>
 
                 {/* LOADING STATE */}
-                {isLoading && (
-                    <div className="flex items-center justify-center py-20">
-                        <Loader2 className="animate-spin text-brand" size={32} />
+                {isLoading && appointments.length === 0 && (
+                    <div className="space-y-10 animate-pulse">
+                        {[1, 2].map((i) => (
+                            <div key={i} className="space-y-4">
+                                <div className="h-20 bg-slate-200 dark:bg-white/5 rounded-3xl w-full" />
+                                <div className="space-y-3 pl-4 ml-6">
+                                    {[1, 2, 3].map((j) => (
+                                        <div key={j} className="h-24 bg-slate-200 dark:bg-white/5 rounded-2xl w-full" />
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
 

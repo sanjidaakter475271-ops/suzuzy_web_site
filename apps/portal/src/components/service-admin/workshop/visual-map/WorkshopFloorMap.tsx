@@ -45,7 +45,7 @@ import { DraggableRamp } from './DraggableRamp';
 
 export function WorkshopFloorMap() {
   const { rampData, stats } = useVisualMapData();
-  const { fetchWorkshopData, updateJobCardStatus } = useWorkshopStore();
+  const { fetchWorkshopData, updateJobCardStatus, isLoading } = useWorkshopStore();
   const { isConnected } = useSocket();
 
   const [selectedRamp, setSelectedRamp] = useState<RampData | null>(null);
@@ -209,70 +209,78 @@ export function WorkshopFloorMap() {
 
           <div className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar flex items-center">
             <div className="w-full min-w-max px-16 py-12 relative flex justify-center">
-              <div className="relative inline-block">
-                {/* DYNAMIC SVG PIPELINE */}
-                <svg className="absolute top-[280px] left-0 w-full h-[100px] pointer-events-none -z-10" overflow="visible">
-                  <defs>
-                    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orientation="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#C75B12" /></marker>
-                    <marker id="arrow-active" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orientation="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#10b981" /></marker>
-                  </defs>
+              {isLoading && rampData.length === 0 ? (
+                <div className="flex gap-12 animate-pulse">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="w-[280px] h-[350px] bg-slate-200 dark:bg-white/5 rounded-[3rem]" />
+                  ))}
+                </div>
+              ) : (
+                <div className="relative inline-block">
+                  {/* DYNAMIC SVG PIPELINE */}
+                  <svg className="absolute top-[280px] left-0 w-full h-[100px] pointer-events-none -z-10" overflow="visible">
+                    <defs>
+                      <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orientation="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#C75B12" /></marker>
+                      <marker id="arrow-active" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orientation="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#10b981" /></marker>
+                    </defs>
 
-                  {/* Flow Path: Entry to Bays */}
-                  <path d={`M ${ENTRY_CENTER + 60} 20 H ${RAMPS_START - 10}`} stroke="#C75B12" strokeWidth="2.5" fill="transparent" markerEnd="url(#arrow)" strokeDasharray="5,5" />
+                    {/* Flow Path: Entry to Bays */}
+                    <path d={`M ${ENTRY_CENTER + 60} 20 H ${RAMPS_START - 10}`} stroke="#C75B12" strokeWidth="2.5" fill="transparent" markerEnd="url(#arrow)" strokeDasharray="5,5" />
 
-                  {/* Ramp Connections */}
-                  {filteredRamps.map((ramp, idx) => {
-                    const xPos = RAMPS_START + (idx * (RAMP_WIDTH + GAP)) + (RAMP_WIDTH / 2);
-                    const isOp = ramp.status === 'active';
-                    return (
-                      <g key={`pipe-${ramp.id}`}>
-                        <path d={`M ${xPos} 20 V -40`} stroke={isOp ? '#10b981' : '#cbd5e1'} strokeWidth="3" markerEnd={isOp ? "url(#arrow-active)" : "url(#arrow)"} />
-                        <circle cx={xPos} cy="20" r="6" className={cn("transition-colors duration-500", isOp ? "fill-emerald-500 shadow-[0_0_15px_#10b981]" : "fill-brand")} />
-                        {idx < filteredRamps.length - 1 && (
-                          <path d={`M ${xPos + (RAMP_WIDTH/2)} 20 H ${xPos + (RAMP_WIDTH/2) + GAP - 10}`} stroke="#C75B12" strokeWidth="2.5" fill="transparent" markerEnd="url(#arrow)" strokeDasharray="5,5" />
-                        )}
-                      </g>
-                    );
-                  })}
+                    {/* Ramp Connections */}
+                    {filteredRamps.map((ramp, idx) => {
+                      const xPos = RAMPS_START + (idx * (RAMP_WIDTH + GAP)) + (RAMP_WIDTH / 2);
+                      const isOp = ramp.status === 'active';
+                      return (
+                        <g key={`pipe-${ramp.id}`}>
+                          <path d={`M ${xPos} 20 V -40`} stroke={isOp ? '#10b981' : '#cbd5e1'} strokeWidth="3" markerEnd={isOp ? "url(#arrow-active)" : "url(#arrow)"} />
+                          <circle cx={xPos} cy="20" r="6" className={cn("transition-colors duration-500", isOp ? "fill-emerald-500 shadow-[0_0_15px_#10b981]" : "fill-brand")} />
+                          {idx < filteredRamps.length - 1 && (
+                            <path d={`M ${xPos + (RAMP_WIDTH/2)} 20 H ${xPos + (RAMP_WIDTH/2) + GAP - 10}`} stroke="#C75B12" strokeWidth="2.5" fill="transparent" markerEnd="url(#arrow)" strokeDasharray="5,5" />
+                          )}
+                        </g>
+                      );
+                    })}
 
-                  {/* Path to Stages */}
-                  <path d={`M ${RAMPS_START + RAMPS_TOTAL_WIDTH} 20 H ${QC_CENTER - 70}`} stroke={searchInQC ? '#a855f7' : '#C75B12'} strokeWidth={searchInQC ? '4' : '2.5'} fill="transparent" markerEnd="url(#arrow)" strokeDasharray={searchInQC ? "0" : "5,5"} />
-                  <path d={`M ${QC_CENTER + 70} 20 H ${FINANCE_CENTER - 70}`} stroke={searchInFinance ? '#f59e0b' : '#C75B12'} strokeWidth={searchInFinance ? '4' : '2.5'} fill="transparent" markerEnd="url(#arrow)" strokeDasharray={searchInFinance ? "0" : "5,5"} />
-                  <path d={`M ${FINANCE_CENTER + 70} 20 H ${EXIT_CENTER - 60}`} stroke="#C75B12" strokeWidth="2.5" fill="transparent" markerEnd="url(#arrow)" strokeDasharray="5,5" />
-                </svg>
+                    {/* Path to Stages */}
+                    <path d={`M ${RAMPS_START + RAMPS_TOTAL_WIDTH} 20 H ${QC_CENTER - 70}`} stroke={searchInQC ? '#a855f7' : '#C75B12'} strokeWidth={searchInQC ? '4' : '2.5'} fill="transparent" markerEnd="url(#arrow)" strokeDasharray={searchInQC ? "0" : "5,5"} />
+                    <path d={`M ${QC_CENTER + 70} 20 H ${FINANCE_CENTER - 70}`} stroke={searchInFinance ? '#f59e0b' : '#C75B12'} strokeWidth={searchInFinance ? '4' : '2.5'} fill="transparent" markerEnd="url(#arrow)" strokeDasharray={searchInFinance ? "0" : "5,5"} />
+                    <path d={`M ${FINANCE_CENTER + 70} 20 H ${EXIT_CENTER - 60}`} stroke="#C75B12" strokeWidth="2.5" fill="transparent" markerEnd="url(#arrow)" strokeDasharray="5,5" />
+                  </svg>
 
-                {/* Nodes Container */}
-                <div className="flex items-start gap-12 relative min-h-[450px]">
-                  <div className="mt-[215px] shrink-0" style={{ width: `${STAGE_NODE_WIDTH}px` }}>
-                    <StageNode {...WORKSHOP_STAGES.ENTRY} icon={<LogIn className="text-emerald-500 h-8 w-8" />} />
-                  </div>
+                  {/* Nodes Container */}
+                  <div className="flex items-start gap-12 relative min-h-[450px]">
+                    <div className="mt-[215px] shrink-0" style={{ width: `${STAGE_NODE_WIDTH}px` }}>
+                      <StageNode {...WORKSHOP_STAGES.ENTRY} icon={<LogIn className="text-emerald-500 h-8 w-8" />} />
+                    </div>
 
-                  <div className="flex gap-12 shrink-0">
-                    <AnimatePresence mode="popLayout">
-                      {filteredRamps.map((ramp) => (
-                        <motion.div key={ramp.id} layout className="w-[280px] shrink-0">
-                          <DraggableRamp ramp={ramp} onClick={setSelectedRamp} />
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                    {filteredRamps.length === 0 && (
-                      <div className="w-[280px] h-[350px] border-4 border-dashed border-surface-border dark:border-white/5 rounded-[3rem] flex items-center justify-center text-ink-muted opacity-20 italic font-black text-xs uppercase tracking-widest">Sector Standby</div>
-                    )}
-                  </div>
+                    <div className="flex gap-12 shrink-0">
+                      <AnimatePresence mode="popLayout">
+                        {filteredRamps.map((ramp) => (
+                          <motion.div key={ramp.id} layout className="w-[280px] shrink-0">
+                            <DraggableRamp ramp={ramp} onClick={setSelectedRamp} />
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                      {filteredRamps.length === 0 && (
+                        <div className="w-[280px] h-[350px] border-4 border-dashed border-surface-border dark:border-white/5 rounded-[3rem] flex items-center justify-center text-ink-muted opacity-20 italic font-black text-xs uppercase tracking-widest">Sector Standby</div>
+                      )}
+                    </div>
 
-                  <div className="mt-[200px] shrink-0" style={{ width: `${QC_WIDTH}px` }}>
-                    <StageNode {...WORKSHOP_STAGES.QC} highlight={searchInQC} icon={<ClipboardCheck className={cn("h-10 w-10", searchInQC ? "text-white" : "text-purple-500")} />} badge={stats.qcPendingRamps} onClick={() => setActiveQueue({ id: 'qc', label: WORKSHOP_STAGES.QC.queueLabel, color: 'purple', items: stats.qcQueue })} />
-                  </div>
+                    <div className="mt-[200px] shrink-0" style={{ width: `${QC_WIDTH}px` }}>
+                      <StageNode {...WORKSHOP_STAGES.QC} highlight={searchInQC} icon={<ClipboardCheck className={cn("h-10 w-10", searchInQC ? "text-white" : "text-purple-500")} />} badge={stats.qcPendingRamps} onClick={() => setActiveQueue({ id: 'qc', label: WORKSHOP_STAGES.QC.queueLabel, color: 'purple', items: stats.qcQueue })} />
+                    </div>
 
-                  <div className="mt-[200px] shrink-0" style={{ width: `${QC_WIDTH}px` }}>
-                    <StageNode {...WORKSHOP_STAGES.FINANCE} highlight={searchInFinance} icon={<CreditCard className={cn("h-10 w-10", searchInFinance ? "text-white" : "text-amber-500")} />} badge={stats.financePendingCount} onClick={() => setActiveQueue({ id: 'finance', label: WORKSHOP_STAGES.FINANCE.queueLabel, color: 'amber', items: stats.financeQueue })} />
-                  </div>
+                    <div className="mt-[200px] shrink-0" style={{ width: `${QC_WIDTH}px` }}>
+                      <StageNode {...WORKSHOP_STAGES.FINANCE} highlight={searchInFinance} icon={<CreditCard className={cn("h-10 w-10", searchInFinance ? "text-white" : "text-amber-500")} />} badge={stats.financePendingCount} onClick={() => setActiveQueue({ id: 'finance', label: WORKSHOP_STAGES.FINANCE.queueLabel, color: 'amber', items: stats.financeQueue })} />
+                    </div>
 
-                  <div className="mt-[215px] shrink-0 pr-12" style={{ width: `${STAGE_NODE_WIDTH}px` }}>
-                    <StageNode {...WORKSHOP_STAGES.EXIT} icon={<LogOut className="text-rose-500 h-8 w-8" />} />
+                    <div className="mt-[215px] shrink-0 pr-12" style={{ width: `${STAGE_NODE_WIDTH}px` }}>
+                      <StageNode {...WORKSHOP_STAGES.EXIT} icon={<LogOut className="text-rose-500 h-8 w-8" />} />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 

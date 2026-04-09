@@ -45,12 +45,33 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
     const [variants, setVariants] = useState<ProductVariant[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [cart, setCart] = useState<{ product: ProductDetail; variant?: ProductVariant; quantity: number }[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         fetchCategories();
     }, []);
+
+    // Debounce search query
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // Handle Global Search
+    useEffect(() => {
+        if (debouncedSearch.length >= 2) {
+            searchGlobalProducts(debouncedSearch);
+        } else if (debouncedSearch.length === 0 && !selectedCategory && step === 'products') {
+            setStep('category');
+            setProducts([]);
+        } else if (debouncedSearch.length === 0 && selectedCategory && step === 'products') {
+            fetchProducts(selectedCategory.id);
+        }
+    }, [debouncedSearch]);
 
     const fetchCategories = async () => {
         setLoading(true);
@@ -80,6 +101,22 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
         }
     };
 
+    const searchGlobalProducts = async (query: string) => {
+        setLoading(true);
+        try {
+            const res = await TechnicianAPI.searchProducts({ search: query, limit: 50 });
+            if (res.data.success) {
+                setProducts(res.data.data);
+                if (step === 'category') setStep('products');
+                setSelectedCategory(null); // It's a global search now
+            }
+        } catch (err) {
+            console.error("Failed to search products globally:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const fetchVariants = async (productId: string) => {
         setLoading(true);
         try {
@@ -98,6 +135,7 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
     };
 
     const handleCategorySelect = (category: Category) => {
+        setSearchQuery(''); // Clear search when selecting a specific category
         setSelectedCategory(category);
         fetchProducts(category.id);
         setStep('products');
@@ -174,7 +212,15 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
         <View style={styles.header}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 {step !== 'category' ? (
-                    <TouchableOpacity onPress={() => setStep(step === 'variants' ? 'products' : 'category')} style={{ padding: 8, marginLeft: -8 }}>
+                    <TouchableOpacity onPress={() => {
+                        if (step === 'variants') {
+                            setStep('products');
+                        } else {
+                            setStep('category');
+                            setSearchQuery(''); // clear search to return to category grid
+                            setSelectedCategory(null);
+                        }
+                    }} style={{ padding: 8, marginLeft: -8 }}>
                         <ArrowLeft size={24} color={COLORS.textTertiary} />
                     </TouchableOpacity>
                 ) : (
@@ -182,7 +228,7 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
                 )}
                 <View>
                     <Text style={styles.headerTitle}>
-                        {step === 'category' ? 'Select category' : step === 'variants' ? 'Select Variant' : selectedCategory?.name}
+                        {step === 'category' ? 'Select category' : step === 'variants' ? 'Select Variant' : (selectedCategory?.name || 'Search Results')}
                     </Text>
                     <Text style={styles.headerStep}>
                         Step {step === 'category' ? '1' : step === 'products' ? '2' : '3'} of 3
@@ -220,17 +266,22 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
                     <View style={{ flex: 1 }}>
                         {renderHeader()}
 
-                        {step === 'products' && (
+                        {(step === 'category' || step === 'products') && (
                             <View style={styles.searchBarContainer}>
                                 <View style={styles.searchBar}>
                                     <Search size={18} color={COLORS.textTertiary} />
                                     <TextInput
                                         style={styles.searchInput}
-                                        placeholder="Search by part name or SKU..."
+                                        placeholder={step === 'category' ? "Search across all parts..." : "Filter category..."}
                                         placeholderTextColor={COLORS.textTertiary}
                                         value={searchQuery}
                                         onChangeText={setSearchQuery}
                                     />
+                                    {searchQuery.length > 0 && (
+                                        <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
+                                            <X size={16} color={COLORS.textTertiary} />
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             </View>
                         )}
@@ -292,6 +343,7 @@ export const PartsSelectionModal: React.FC<PartsSelectionModalProps> = ({ jobId,
                                                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                                         <View style={{ flex: 1 }}>
                                                             <Text style={styles.productName}>{item.name}</Text>
+                                                            <Text style={{ fontSize: 12, color: COLORS.textTertiary, fontFamily: TYPOGRAPHY.bold, marginTop: 2 }}>{item.part_number || item.sku || 'No SKU'}</Text>
                                                             <Text style={styles.productBrand}>{item.brand || 'No Brand'}</Text>
                                                         </View>
                                                         <View style={{ alignItems: 'flex-end' }}>

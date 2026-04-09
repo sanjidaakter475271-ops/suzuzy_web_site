@@ -63,8 +63,24 @@ const CustomerLiveTracking = () => {
     };
 
     if (loading) return (
-        <div className="min-h-screen flex items-center justify-center">
-            <Loader2 className="animate-spin text-brand" size={48} />
+        <div className="min-h-screen bg-slate-50 dark:bg-black/40">
+            <div className="bg-white dark:bg-dark-card border-b border-surface-border dark:border-dark-border p-6 animate-pulse">
+                <div className="max-w-4xl mx-auto flex items-center justify-between">
+                    <div className="w-10 h-10 bg-slate-200 dark:bg-slate-800 rounded-xl" />
+                    <div className="space-y-2">
+                        <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded w-20 mx-auto" />
+                        <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-48 mx-auto" />
+                    </div>
+                    <div className="w-10 h-10 bg-slate-200 dark:bg-slate-800 rounded-full" />
+                </div>
+            </div>
+            <div className="max-w-4xl mx-auto p-6 space-y-8 animate-pulse">
+                <div className="h-64 bg-white dark:bg-dark-card rounded-[2.5rem] border border-surface-border dark:border-white/5" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="h-80 bg-white dark:bg-dark-card rounded-[2.5rem] border border-surface-border dark:border-white/5" />
+                    <div className="h-80 bg-brand rounded-[2.5rem] opacity-20" />
+                </div>
+            </div>
         </div>
     );
 

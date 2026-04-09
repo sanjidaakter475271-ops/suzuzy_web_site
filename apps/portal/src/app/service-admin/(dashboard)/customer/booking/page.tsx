@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/service-admin/ui';
 import { ChevronLeft, Calendar, Clock, Bike, Wrench, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 export default function CustomerBookingPage() {
     const [vehicles, setVehicles] = useState<any[]>([]);
@@ -53,12 +54,19 @@ export default function CustomerBookingPage() {
             const data = await res.json();
             if (data.success) {
                 setSuccess(true);
+                toast.success("Booking Request Sent", {
+                    description: "Your appointment has been successfully requested."
+                });
             } else {
-                alert(data.error || 'Failed to book appointment');
+                toast.error("Booking Failed", {
+                    description: data.error || 'Failed to book appointment'
+                });
             }
         } catch (err) {
             console.error(err);
-            alert('Server error occurred');
+            toast.error("System Error", {
+                description: 'An unexpected server error occurred.'
+            });
         } finally {
             setIsSubmitting(false);
         }

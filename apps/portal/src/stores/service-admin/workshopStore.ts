@@ -27,9 +27,17 @@ interface WorkshopState {
     serviceTypes: ServiceType[];
     ramps: Ramp[];
     isLoading: boolean;
+    isJobsLoading: boolean;
     error: string | null;
+    jobPagination: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    } | null;
 
     fetchWorkshopData: () => Promise<void>;
+    fetchPaginatedJobs: (params?: { page?: number; limit?: number; status?: string; search?: string }) => Promise<void>;
     fetchStaffData: () => Promise<void>;
     addJobCard: (jobCard: Partial<JobCard>) => Promise<void>;
     updateJobCardStatus: (id: string, status: JobCard['status']) => Promise<void>;
@@ -38,6 +46,7 @@ interface WorkshopState {
     assignJobToRamp: (rampId: string, jobCardId: string, technicianId: string) => Promise<void>;
     releaseRamp: (rampId: string) => Promise<void>;
     autoAssignRamp: (jobCardId: string) => Promise<void>;
+    assignDedicatedTechnician: (rampId: string, technicianId: string) => Promise<void>;
     updateJobCardItems: (id: string, items: any[]) => Promise<void>;
     approveTechnician: (id: string) => Promise<void>;
     addTechnician: (data: Partial<Technician>) => Promise<void>;
@@ -45,6 +54,7 @@ interface WorkshopState {
     addRamp: (data: Partial<Ramp>) => Promise<void>;
     deleteJobCard: (id: string) => Promise<void>;
     addServiceTask: (jobCardId: string, description: string, cost: number) => Promise<void>;
+    fetchJobById: (id: string) => Promise<void>;
 }
 
 let lastFetchTime = 0;
@@ -56,7 +66,9 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
     serviceTypes: [],
     ramps: [],
     isLoading: false,
+    isJobsLoading: false,
     error: null,
+    jobPagination: null,
 
     fetchWorkshopData: async () => {
         const now = Date.now();
@@ -178,6 +190,78 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
         }
     },
 
+    fetchPaginatedJobs: async (params = {}) => {
+        const { page = 1, limit = 20, status = 'all', search = '' } = params;
+        set({ isJobsLoading: true });
+        try {
+            const queryParams = new URLSearchParams({
+                page: page.toString(),
+                limit: limit.toString(),
+                status,
+                search
+            });
+
+            const res = await fetch(`/api/v1/workshop/jobs?${queryParams}`);
+            const result = await res.json();
+
+            if (!result.success) throw new Error(result.error || "Failed to fetch jobs");
+
+            const mappedJobs: JobCard[] = result.data.map((card: any) => {
+                const ticket = card.service_tickets;
+                const vehicle = ticket?.service_vehicles;
+                const customer = ticket?.profiles;
+
+                return {
+                    id: card.id,
+                    ticketId: card.ticket_id,
+                    jobNo: ticket?.service_number || 'J-' + card.id.substr(0, 4),
+                    customerId: customer?.id || '',
+                    customerName: customer?.full_name || 'Unknown',
+                    customerPhone: customer?.phone || ticket?.service_vehicles?.phone_number || '',
+                    customerAddress: ticket?.service_vehicles?.district_city || '',
+                    vehicleId: vehicle?.id || '',
+                    vehicleModel: vehicle?.bike_models?.name || 'Unknown Model',
+                    vehicleRegNo: vehicle?.engine_number || 'Unknown',
+                    complaints: ticket?.service_description || '',
+                    complaintChecklist: [],
+                    items: card.service_tasks?.map((t: any) => ({
+                        description: t.name || 'Additional Task',
+                        status: t.status || 'pending',
+                        cost: Number(t.description?.replace('Cost: ', '') || 0)
+                    })) || [],
+                    requisitions: card.service_requisitions?.map((r: any) => ({
+                        id: r.id,
+                        description: r.products?.name || 'Unknown Part',
+                        qty: r.quantity,
+                        status: r.status,
+                        cost: Number(r.total_price || 0)
+                    })) || [],
+                    status: mapJobStatus(card.status),
+                    qc_requests: card.qc_requests,
+                    assignedTechnicianId: card.technician_id,
+                    assignedRampId: undefined, // Ramps are fetched separately in overview
+                    laborCost: 0,
+                    partsCost: card.service_requisitions?.reduce((acc: number, r: any) => acc + Number(r.total_price || 0), 0) || 0,
+                    discount: 0,
+                    total: (card.service_tasks?.reduce((acc: number, t: any) => acc + Number(t.rate || 0), 0) || 0) +
+                        (card.service_requisitions?.reduce((acc: number, r: any) => acc + Number(r.total_price || 0), 0) || 0),
+                    warrantyType: 'paid',
+                    createdAt: card.created_at,
+                    updatedAt: card.updated_at
+                };
+            });
+
+            set({
+                jobCards: mappedJobs,
+                jobPagination: result.pagination,
+                isJobsLoading: false
+            });
+        } catch (error: any) {
+            console.error("[WORKSHOP_STORE] fetchPaginatedJobs error:", error);
+            set({ error: error.message, isJobsLoading: false });
+        }
+    },
+
     fetchStaffData: async () => {
         set({ isLoading: true, error: null });
         try {
@@ -280,7 +364,12 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
             }));
 
             // Sync with server for full data consistency (like updatedAt)
-            await get().fetchWorkshopData();
+            // If the status is 'delivered' or 'completed', overview might not return it. Let's fetch it specifically.
+            if (backendStatus === 'delivered' || backendStatus === 'completed') {
+                await get().fetchJobById(id);
+            } else {
+                await get().fetchWorkshopData();
+            }
         } catch (error: any) {
             console.error(error);
         }
@@ -352,23 +441,36 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
 
     assignJobToRamp: async (rampId, jobCardId, technicianId) => {
         const job = get().jobCards.find(j => j.id === jobCardId);
-        if (!job || !job.ticketId) return;
 
         try {
             await fetch(`/api/v1/service_ramps/${rampId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    current_ticket_id: job.ticketId,
+                    current_ticket_id: job?.ticketId || null,
                     status: 'occupied',
-                    technician_name: 'Unknown', // Ideally fetch name
-                    // staff_id: technicianId // update dedicated tech? maybe not
+                    staff_id: technicianId
                 })
             });
 
             await get().fetchWorkshopData();
         } catch (error: any) {
             console.error(error);
+        }
+    },
+
+    assignDedicatedTechnician: async (rampId, technicianId) => {
+        try {
+            await fetch(`/api/v1/service_ramps/${rampId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    staff_id: technicianId
+                })
+            });
+            await get().fetchWorkshopData();
+        } catch (error: any) {
+            console.error("[WORKSHOP_STORE] assignDedicatedTechnician error:", error);
         }
     },
 
@@ -479,6 +581,69 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
         } catch (error: any) {
             console.error(error);
             set({ error: error.message });
+        }
+    },
+
+    fetchJobById: async (id: string) => {
+        try {
+            const res = await fetch(`/api/v1/workshop/jobs/${id}`);
+            const result = await res.json();
+            if (!result.success) throw new Error(result.error);
+
+            const card = result.data;
+            const ticket = card.service_tickets;
+            const vehicle = ticket?.service_vehicles;
+            const customer = ticket?.profiles;
+
+            const mappedJob: JobCard = {
+                id: card.id,
+                ticketId: card.ticket_id,
+                jobNo: ticket?.service_number || 'J-' + card.id.substr(0, 4),
+                customerId: customer?.id || '',
+                customerName: customer?.full_name || 'Unknown',
+                customerPhone: customer?.phone || ticket?.service_vehicles?.phone_number || '',
+                customerAddress: ticket?.service_vehicles?.district_city || '',
+                vehicleId: vehicle?.id || '',
+                vehicleModel: vehicle?.bike_models?.name || 'Unknown Model',
+                vehicleRegNo: vehicle?.engine_number || 'Unknown',
+                complaints: ticket?.service_description || '',
+                complaintChecklist: [],
+                items: card.service_tasks?.map((t: any) => ({
+                    description: t.name || 'Additional Task',
+                    status: t.status || 'pending',
+                    cost: Number(t.description?.replace('Cost: ', '') || 0)
+                })) || [],
+                requisitions: card.service_requisitions?.map((r: any) => ({
+                    id: r.id,
+                    description: r.products?.name || 'Unknown Part',
+                    qty: r.quantity,
+                    status: r.status,
+                    cost: Number(r.total_price || 0)
+                })) || [],
+                status: mapJobStatus(card.status),
+                qc_requests: card.qc_requests,
+                assignedTechnicianId: card.technician_id,
+                assignedRampId: undefined, // Would need ramp fetching if required
+                laborCost: 0,
+                partsCost: card.service_requisitions?.reduce((acc: number, r: any) => acc + Number(r.total_price || 0), 0) || 0,
+                discount: 0,
+                total: (card.service_tasks?.reduce((acc: number, t: any) => acc + Number(t.rate || 0), 0) || 0) +
+                    (card.service_requisitions?.reduce((acc: number, r: any) => acc + Number(r.total_price || 0), 0) || 0),
+                warrantyType: 'paid',
+                createdAt: card.created_at,
+                updatedAt: card.updated_at
+            };
+
+            set(state => {
+                const exists = state.jobCards.some(j => j.id === id);
+                if (exists) {
+                    return { jobCards: state.jobCards.map(j => j.id === id ? mappedJob : j) };
+                } else {
+                    return { jobCards: [...state.jobCards, mappedJob] };
+                }
+            });
+        } catch (error) {
+            console.error("fetchJobById error:", error);
         }
     }
 }));

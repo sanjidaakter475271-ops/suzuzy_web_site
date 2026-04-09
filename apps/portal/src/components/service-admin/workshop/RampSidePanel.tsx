@@ -6,18 +6,20 @@ import { useWorkshopStore } from '@/stores/service-admin/workshopStore';
 import {
     X, Hammer, User, Car, Clock, Settings2, ShieldCheck,
     Play, Pause, CheckCircle2, Trash2, Calendar, Activity,
-    ArrowRight, Sparkles, AlertCircle, History, PowerOff
+    ArrowRight, Sparkles, AlertCircle, History, PowerOff, UserPlus
 } from 'lucide-react';
 import { Button } from '@/components/service-admin/ui';
 import { cn } from '@/lib/utils';
+import { confirmAction } from '@/lib/confirm';
 
 interface RampSidePanelProps {
     ramp: Ramp | null;
     onClose: () => void;
     onAssignClick: () => void;
+    onTechDetailClick?: (techId: string) => void;
 }
 
-const RampSidePanel: React.FC<RampSidePanelProps> = ({ ramp, onClose, onAssignClick }) => {
+const RampSidePanel: React.FC<RampSidePanelProps> = ({ ramp, onClose, onAssignClick, onTechDetailClick }) => {
     const updateRampStatus = useWorkshopStore(state => state.updateRampStatus);
     const releaseRamp = useWorkshopStore(state => state.releaseRamp);
     const technicians = useWorkshopStore(state => state.technicians);
@@ -25,8 +27,8 @@ const RampSidePanel: React.FC<RampSidePanelProps> = ({ ramp, onClose, onAssignCl
     const [elapsedTime, setElapsedTime] = useState<string>('00:00:00');
 
     const technician = useMemo(() =>
-        technicians.find(t => t.id === ramp?.assignedTechnicianId),
-        [technicians, ramp?.assignedTechnicianId]);
+        technicians.find(t => t.id === ramp?.assignedTechnicianId || t.id === ramp?.dedicatedTechnicianId),
+        [technicians, ramp?.assignedTechnicianId, ramp?.dedicatedTechnicianId]);
 
     useEffect(() => {
         if (!ramp || ramp.status !== 'occupied' || !ramp.startTime) {
@@ -107,6 +109,66 @@ const RampSidePanel: React.FC<RampSidePanelProps> = ({ ramp, onClose, onAssignCl
 
             {/* Content Body with Staggered Entry */}
             <div className="flex-1 overflow-y-auto p-10 pt-4 custom-scrollbar space-y-10 relative z-10 scroll-smooth">
+                {/* Always show Assigned Specialist if available */}
+                {technician ? (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-5 duration-[1200ms]">
+                        <h5 className="text-[10px] font-black text-ink-muted/40 uppercase tracking-[0.5em] flex items-center gap-3">
+                            <ShieldCheck size={16} className="text-brand/40" />
+                            Assigned Specialist
+                        </h5>
+                        <div
+                            className="group relative cursor-pointer"
+                            onClick={() => onTechDetailClick?.(technician.id)}
+                        >
+                            <div className="absolute inset-0 bg-emerald-500/10 rounded-[2.5rem] blur-[40px] opacity-0 group-hover:opacity-100 transition-opacity duration-[1200ms]" />
+                            <div className="relative p-6 lg:p-7 bg-white dark:bg-white/[0.02] border border-surface-border dark:border-white/10 rounded-[2.5rem] flex flex-col sm:flex-row items-start sm:items-center gap-5 lg:gap-6 backdrop-blur-xl transition-all duration-1000 group-hover:border-emerald-500/40 overflow-hidden shadow-sm">
+                                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500 opacity-80" />
+                                <div className="relative shrink-0 transition-transform duration-1000 group-hover:scale-110">
+                                    <img
+                                        src={technician.avatar}
+                                        className="w-14 h-14 lg:w-16 lg:h-16 rounded-[1.5rem] lg:rounded-[1.8rem] object-cover ring-[3px] lg:ring-4 ring-emerald-500/20 shadow-2xl bg-surface-page"
+                                        loading="lazy"
+                                        alt="tech"
+                                    />
+                                    <div className={cn(
+                                        "absolute -bottom-1 -right-1 w-5 h-5 lg:w-6 lg:h-6 bg-emerald-500 border-[4px] lg:border-[5px] border-white dark:border-[#0a0a0b] rounded-full shadow-lg"
+                                    )} />
+                                </div>
+                                <div className="flex-1 min-w-0 w-full">
+                                    <p className="text-[9px] lg:text-[10px] font-black text-ink-muted uppercase tracking-[0.4em] mb-1.5 opacity-70">Module Specialist</p>
+                                    <div className="flex items-center justify-between gap-4">
+                                        <h4 className="text-xl lg:text-3xl font-black text-ink-heading dark:text-white truncate tracking-tighter uppercase drop-shadow-sm group-hover:text-brand transition-colors">{technician.name}</h4>
+                                        <ArrowRight className="text-brand opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 transition-all duration-700" size={20} />
+                                    </div>
+                                    <div className="flex items-center gap-4 mt-3 text-ink-muted text-[9px] lg:text-[10px] font-black tracking-widest uppercase">
+                                        <span className="flex items-center gap-1.5 text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20"><Sparkles size={12} /> Rank A</span>
+                                        <span className="opacity-40">Lv: 7</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-5 duration-[1200ms]">
+                        <h5 className="text-[10px] font-black text-ink-muted/40 uppercase tracking-[0.5em] flex items-center gap-3">
+                            <User size={16} className="text-brand/40" />
+                            Assigned Specialist
+                        </h5>
+                        <div
+                            className="p-10 rounded-[2.5rem] border-2 border-dashed border-surface-border dark:border-white/5 flex flex-col items-center justify-center text-center space-y-5 group cursor-pointer hover:border-brand/40 hover:bg-brand/[0.02] transition-all duration-700"
+                            onClick={onAssignClick}
+                        >
+                            <div className="w-16 h-16 rounded-[1.8rem] bg-surface-page dark:bg-white/5 flex items-center justify-center text-ink-muted/30 group-hover:scale-110 group-hover:rotate-12 group-hover:text-brand transition-all duration-700 border border-transparent group-hover:border-brand/20 shadow-sm">
+                                <UserPlus size={32} strokeWidth={1.5} />
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[11px] font-black text-ink-heading dark:text-white uppercase tracking-widest opacity-80 group-hover:text-brand transition-colors">No Specialist Assigned</p>
+                                <p className="text-[9px] font-bold text-ink-muted/40 uppercase tracking-widest">Click to authorize technician</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {ramp.status === 'occupied' ? (
                     <div className="space-y-10">
                         {/* Session Timer Card - Extra Smooth */}
@@ -132,11 +194,11 @@ const RampSidePanel: React.FC<RampSidePanelProps> = ({ ramp, onClose, onAssignCl
                             </div>
                         </div>
 
-                        {/* Details Grid */}
+                        {/* Vehicle Deployment Details */}
                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-[1500ms] delay-[400ms]">
                             <div className="group relative">
                                 <div className="absolute inset-0 bg-brand/10 rounded-[2.5rem] blur-[40px] opacity-0 group-hover:opacity-100 transition-opacity duration-[1200ms]" />
-                                <div className="relative p-6 lg:p-7 bg-white dark:bg-white/[0.02] border border-surface-border dark:border-white/10 rounded-[2.5rem] flex flex-col sm:flex-row items-start sm:items-center gap-5 lg:gap-6 backdrop-blur-xl transition-all duration-1000 group-hover:border-brand/40 overflow-hidden">
+                                <div className="relative p-6 lg:p-7 bg-white dark:bg-white/[0.02] border border-surface-border dark:border-white/10 rounded-[2.5rem] flex flex-col sm:flex-row items-start sm:items-center gap-5 lg:gap-6 backdrop-blur-xl transition-all duration-1000 group-hover:border-brand/40 overflow-hidden shadow-sm">
                                     <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-brand opacity-80" />
                                     <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-[1.5rem] lg:rounded-[1.8rem] bg-brand/10 text-brand flex items-center justify-center shadow-inner transition-transform duration-1000 group-hover:rotate-[360deg] border border-brand/20 shrink-0">
                                         <Car size={28} className="lg:w-[32px] lg:h-[32px]" strokeWidth={1.5} />
@@ -151,30 +213,6 @@ const RampSidePanel: React.FC<RampSidePanelProps> = ({ ramp, onClose, onAssignCl
                                             {!ramp.currentJobCardId && (
                                                 <span className="text-[9px] font-black text-amber-500 px-2 py-1 border border-amber-500/20 bg-amber-500/10 rounded-lg uppercase tracking-widest flex items-center gap-1.5"><AlertCircle size={10} strokeWidth={3} /> PENDING JOB</span>
                                             )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="group relative">
-                                <div className="absolute inset-0 bg-emerald-500/10 rounded-[2.5rem] blur-[40px] opacity-0 group-hover:opacity-100 transition-opacity duration-[1200ms]" />
-                                <div className="relative p-6 lg:p-7 bg-white dark:bg-white/[0.02] border border-surface-border dark:border-white/10 rounded-[2.5rem] flex flex-col sm:flex-row items-start sm:items-center gap-5 lg:gap-6 backdrop-blur-xl transition-all duration-1000 group-hover:border-emerald-500/40 overflow-hidden">
-                                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500 opacity-80" />
-                                    <div className="relative shrink-0 transition-transform duration-1000 group-hover:scale-110">
-                                        <img
-                                            src={technician?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'T')}&background=EAB308&color=fff`}
-                                            className="w-14 h-14 lg:w-16 lg:h-16 rounded-[1.5rem] lg:rounded-[1.8rem] object-cover ring-[3px] lg:ring-4 ring-emerald-500/20 shadow-2xl bg-surface-page"
-                                            loading="lazy"
-                                            alt="tech"
-                                        />
-                                        <div className="absolute -bottom-1 -right-1 w-5 h-5 lg:w-6 lg:h-6 bg-emerald-500 border-[4px] lg:border-[5px] border-white dark:border-[#0a0a0b] rounded-full shadow-lg" />
-                                    </div>
-                                    <div className="flex-1 min-w-0 w-full">
-                                        <p className="text-[9px] lg:text-[10px] font-black text-ink-muted uppercase tracking-[0.4em] mb-1.5 opacity-70">Module Specialist</p>
-                                        <h4 className="text-xl lg:text-3xl font-black text-ink-heading dark:text-white truncate tracking-tighter uppercase drop-shadow-sm">{technician?.name || 'Authorized Personnel'}</h4>
-                                        <div className="flex items-center gap-4 mt-3 text-ink-muted text-[9px] lg:text-[10px] font-black tracking-widest uppercase">
-                                            <span className="flex items-center gap-1.5 text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20"><Sparkles size={12} /> Rank A</span>
-                                            <span className="opacity-40">Lv: 7</span>
                                         </div>
                                     </div>
                                 </div>
@@ -257,9 +295,20 @@ const RampSidePanel: React.FC<RampSidePanelProps> = ({ ramp, onClose, onAssignCl
             {/* Premium Control Footer - Ultra Smooth */}
             <div className="p-8 lg:p-10 border-t border-surface-border dark:border-white/5 relative z-10 bg-white dark:bg-[#0a0a0b]/80 backdrop-blur-2xl animate-in slide-in-from-bottom-8 duration-[1500ms] delay-[1000ms]">
                 {ramp.status === 'occupied' ? (
-                    <button 
-                        className="relative w-full py-6 lg:py-8 rounded-[2.5rem] text-[11px] lg:text-[13px] font-black uppercase tracking-[0.5em] text-white overflow-hidden transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-95 group/btn shadow-[0_20px_50px_-10px_rgba(239,68,68,0.5)] hover:shadow-[0_30px_60px_-10px_rgba(239,68,68,0.6)] border border-red-400/50" 
-                        onClick={() => { if (window.confirm("Release Terminal and Finalize Operations?")) { releaseRamp(ramp.id); onClose(); } }}
+                    <button
+                        className="relative w-full py-6 lg:py-8 rounded-[2.5rem] text-[11px] lg:text-[13px] font-black uppercase tracking-[0.5em] text-white overflow-hidden transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-95 group/btn shadow-[0_20px_50px_-10px_rgba(239,68,68,0.5)] hover:shadow-[0_30px_60px_-10px_rgba(239,68,68,0.6)] border border-red-400/50"
+                        onClick={() => {
+                            confirmAction({
+                                title: "Release Terminal",
+                                description: "Are you sure you want to release this terminal and finalize all current operations?",
+                                variant: 'danger',
+                                confirmText: "Finalize & Release",
+                                onConfirm: () => {
+                                    releaseRamp(ramp.id);
+                                    onClose();
+                                }
+                            });
+                        }}
                     >
                         {/* Button Background Gradients */}
                         <div className="absolute inset-0 bg-gradient-to-r from-red-600 via-rose-500 to-red-600 bg-[length:200%_auto] animate-gradient" />

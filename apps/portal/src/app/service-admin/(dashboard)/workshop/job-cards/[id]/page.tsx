@@ -6,17 +6,20 @@ import { useWorkshopStore } from '@/stores/service-admin/workshopStore';
 import Breadcrumb from '@/components/service-admin/Breadcrumb';
 import { Button, Card, CardContent } from '@/components/service-admin/ui';
 import JobCardTimeline from '@/components/service-admin/workshop/JobCardTimeline';
+import { toast } from 'sonner';
+import { confirmAction } from '@/lib/confirm';
 import {
     User, Car, Phone, MapPin,
     ClipboardList, Wrench, ShieldCheck,
-    Printer, Trash2, ArrowLeft, RefreshCcw
+    Printer, Trash2, ArrowLeft, RefreshCcw,
+    CheckCircle2, Clock, ClipboardCheck, Truck, Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const JobCardDetailPage = () => {
     const { id } = useParams();
     const router = useRouter();
-    const { jobCards, updateJobCardStatus, fetchWorkshopData, deleteJobCard, addServiceTask, technicians, assignTechnician } = useWorkshopStore();
+    const { jobCards, updateJobCardStatus, fetchWorkshopData, fetchJobById, deleteJobCard, addServiceTask, technicians, assignTechnician } = useWorkshopStore();
     const [showDeleteModal, setShowDeleteModal] = React.useState(false);
     const [isDeleting, setIsDeleting] = React.useState(false);
 
@@ -27,6 +30,17 @@ const JobCardDetailPage = () => {
 
     const [showAssignTechModal, setShowAssignTechModal] = React.useState(false);
     const [isAssigningTech, setIsAssigningTech] = React.useState(false);
+    
+    const job = jobCards.find(j => j.id === id);
+    const [isFetchingDirect, setIsFetchingDirect] = React.useState(!job);
+
+    React.useEffect(() => {
+        if (!job && id) {
+            fetchJobById(id as string).finally(() => setIsFetchingDirect(false));
+        } else if (job) {
+            setIsFetchingDirect(false);
+        }
+    }, [job, id, fetchJobById]);
 
     const handleAssignTechnician = async (techId: string) => {
         setIsAssigningTech(true);
@@ -35,7 +49,9 @@ const JobCardDetailPage = () => {
             setShowAssignTechModal(false);
         } catch (error) {
             console.error('Failed to assign technician', error);
-            alert("Failed to assign technician");
+            toast.error("Assignment Failed", {
+                description: "Could not assign technician to this job."
+            });
         } finally {
             setIsAssigningTech(false);
         }
@@ -64,16 +80,26 @@ const JobCardDetailPage = () => {
         fetchHistory();
     }, [fetchHistory]);
 
-    const job = jobCards.find(j => j.id === id);
-
     const handleRefresh = async () => {
         await fetchWorkshopData();
+        if (id) await fetchJobById(id as string);
     };
 
+    if (isFetchingDirect) return (
+        <div className="p-12 text-center flex flex-col items-center justify-center space-y-4">
+            <RefreshCcw size={32} className="animate-spin text-brand" />
+            <h2 className="text-xl font-bold uppercase tracking-widest text-ink-muted">Locating Job Card...</h2>
+        </div>
+    );
+
     if (!job) return (
-        <div className="p-8 text-center">
-            <h2 className="text-2xl font-bold">Job Card not found</h2>
-            <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
+        <div className="p-8 text-center space-y-4">
+            <div className="w-20 h-20 bg-surface-card border border-surface-border rounded-full flex items-center justify-center mx-auto text-ink-muted/50 mb-6">
+                <ShieldCheck size={40} />
+            </div>
+            <h2 className="text-3xl font-black uppercase tracking-tighter">Job Card Not Found</h2>
+            <p className="text-ink-muted">The job you are looking for does not exist or you do not have permission to view it.</p>
+            <Button onClick={() => router.push('/service-admin/workshop/job-cards')} className="mt-8 px-8 rounded-full">Return to Directory</Button>
         </div>
     );
 
@@ -92,7 +118,9 @@ const JobCardDetailPage = () => {
             setTaskCost(0);
         } catch (error) {
             console.error('Failed to add task', error);
-            alert('Failed to add task');
+            toast.error("Task Error", {
+                description: "Failed to add service item."
+            });
         } finally {
             setIsAddingTask(false);
         }
@@ -105,7 +133,9 @@ const JobCardDetailPage = () => {
             router.push('/service-admin/workshop/job-cards');
         } catch (error) {
             console.error('Failed to delete job card');
-            alert('Failed to delete job card.');
+            toast.error("Deletion Failed", {
+                description: "Failed to delete job card."
+            });
         } finally {
             setIsDeleting(false);
             setShowDeleteModal(false);
@@ -386,24 +416,78 @@ const JobCardDetailPage = () => {
                     </Card>
 
                     {/* Quick Status Update */}
-                    <Card className="rounded-[2.5rem] border-2 border-brand/20 bg-brand/5">
-                        <CardContent className="p-8 space-y-6">
-                            <h3 className="text-xs font-black text-brand uppercase tracking-[0.2em] flex items-center gap-2">
-                                <RefreshCcw size={14} /> Update Status
+                    <Card className="rounded-[2.5rem] border-2 border-surface-border dark:border-dark-border bg-white dark:bg-black/20 overflow-hidden relative group">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
+                        <CardContent className="p-8 space-y-6 relative z-10">
+                            <h3 className="text-[10px] font-black text-ink-muted uppercase tracking-[0.3em] flex items-center gap-3">
+                                <Sparkles size={14} className="text-brand" /> Operational Status
                             </h3>
-                            <div className="grid grid-cols-1 gap-2">
-                                {['diagnosed', 'in_progress', 'qc_pending', 'completed', 'delivered'].map((s) => (
+                            <div className="flex flex-col gap-3">
+                                {[
+                                    { id: 'diagnosed', label: 'Diagnosed', icon: Clock, baseColor: 'text-blue-500', baseBorder: 'border-blue-500/20 hover:border-blue-500/40' },
+                                    { id: 'in_progress', label: 'In Progress', icon: Wrench, baseColor: 'text-amber-500', baseBorder: 'border-amber-500/20 hover:border-amber-500/40' },
+                                    { id: 'qc_pending', label: 'QC Pending', icon: ClipboardCheck, baseColor: 'text-purple-500', baseBorder: 'border-purple-500/20 hover:border-purple-500/40' },
+                                    { id: 'completed', label: 'Completed', icon: CheckCircle2, baseColor: 'text-emerald-500', baseBorder: 'border-emerald-500/20 hover:border-emerald-500/40' }
+                                ].map((s) => {
+                                    const isActive = job.status === s.id;
+                                    const Icon = s.icon;
+                                    return (
+                                        <button
+                                            key={s.id}
+                                            onClick={() => handleStatusUpdate(s.id)}
+                                            className={cn(
+                                                "w-full p-4 rounded-[1.2rem] flex items-center justify-between transition-all duration-500 border-2 outline-none group/status",
+                                                isActive 
+                                                    ? "bg-surface-page dark:bg-[#0a0a0b] shadow-xl scale-[1.02]" 
+                                                    : cn("bg-transparent hover:bg-surface-page dark:hover:bg-white/[0.02]", s.baseBorder)
+                                            )}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className={cn(
+                                                    "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500",
+                                                    isActive ? cn("bg-brand text-white shadow-lg shadow-brand/20", s.id === 'completed' && "bg-emerald-500 shadow-emerald-500/20") : cn("bg-surface-page dark:bg-white/5", s.baseColor)
+                                                )}>
+                                                    <Icon size={18} strokeWidth={isActive ? 3 : 2} className={cn("transition-transform duration-500", isActive && "scale-110")} />
+                                                </div>
+                                                <span className={cn(
+                                                    "text-[11px] font-black uppercase tracking-[0.2em] transition-colors duration-300",
+                                                    isActive ? (s.id === 'completed' ? "text-emerald-500" : "text-brand") : "text-ink-muted group-hover/status:text-ink-heading dark:group-hover/status:text-white"
+                                                )}>
+                                                    {s.label}
+                                                </span>
+                                            </div>
+                                            {isActive && (
+                                                <div className={cn("w-2 h-2 rounded-full shadow-lg", s.id === 'completed' ? "bg-emerald-500 shadow-emerald-500/50" : "bg-brand shadow-brand/50")} />
+                                            )}
+                                        </button>
+                                    );
+                                })}
+
+                                {/* Special Delivered Action Button */}
+                                <div className="pt-4 mt-2 border-t border-surface-border dark:border-white/5">
                                     <button
-                                        key={s}
-                                        onClick={() => handleStatusUpdate(s)}
+                                        onClick={() => handleStatusUpdate('delivered')}
+                                        disabled={job.status === 'delivered'}
                                         className={cn(
-                                            "w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
-                                            job.status === s ? "bg-brand text-white border-brand shadow-lg shadow-brand/20" : "bg-white dark:bg-dark-card border-transparent text-ink-muted hover:border-brand/30"
+                                            "relative w-full py-5 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.3em] overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-95 group/btn",
+                                            job.status === 'delivered' 
+                                                ? "bg-emerald-500 text-white shadow-xl shadow-emerald-500/20 border-2 border-emerald-400 cursor-default" 
+                                                : "text-white shadow-[0_15px_30px_-5px_rgba(234,179,8,0.4)] hover:shadow-[0_20px_40px_-5px_rgba(234,179,8,0.5)] border border-brand/50"
                                         )}
                                     >
-                                        {s.replace('-', ' ')}
+                                        {job.status !== 'delivered' && (
+                                            <>
+                                                <div className="absolute inset-0 bg-gradient-to-r from-brand via-amber-400 to-brand bg-[length:200%_auto] animate-gradient" />
+                                                <div className="absolute inset-0 bg-black/10 group-hover/btn:bg-transparent transition-colors duration-500" />
+                                            </>
+                                        )}
+                                        
+                                        <div className="relative z-10 flex items-center justify-center gap-3">
+                                            {job.status === 'delivered' ? <CheckCircle2 size={18} strokeWidth={3} /> : <Truck size={18} strokeWidth={2.5} className="group-hover/btn:translate-x-1 transition-transform duration-500" />}
+                                            <span>{job.status === 'delivered' ? 'Vehicle Delivered' : 'Mark as Delivered'}</span>
+                                        </div>
                                     </button>
-                                ))}
+                                </div>
                             </div>
                         </CardContent>
                     </Card>

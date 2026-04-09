@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Breadcrumb from "@/components/Breadcrumb";
 import { cn } from "@/lib/utils";
+import { confirmAction } from "@/lib/confirm";
 
 interface User {
     id: number;
@@ -25,9 +26,16 @@ const INITIAL_USERS: User[] = [
 ];
 
 export default function UsersPage() {
+    const [isLoading, setIsLoading] = useState(true);
     const [users, setUsers] = useState<User[]>(INITIAL_USERS);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
+
+    // Simulate initial load
+    React.useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 1000);
+        return () => clearTimeout(timer);
+    }, []);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -76,9 +84,12 @@ export default function UsersPage() {
     };
 
     const handleDelete = (id: number) => {
-        if (confirm('Are you sure you want to delete this user?')) {
-            setUsers(users.filter(u => u.id !== id));
-        }
+        confirmAction({
+            title: "Delete User",
+            description: "Are you sure you want to remove this user? They will lose all access rights immediately.",
+            variant: 'danger',
+            onConfirm: () => setUsers(users.filter(u => u.id !== id))
+        });
     };
 
     return (
@@ -142,7 +153,28 @@ export default function UsersPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-surface-border dark:divide-dark-border">
-                            {users.map((user) => (
+                            {isLoading ? (
+                                Array.from({ length: 5 }).map((_, idx) => (
+                                    <tr key={idx} className="animate-pulse">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-800" />
+                                                <div className="space-y-2">
+                                                    <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-24" />
+                                                    <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-32" />
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4"><div className="h-6 bg-slate-200 dark:bg-slate-800 rounded-lg w-20" /></td>
+                                        <td className="px-6 py-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded-lg w-16" /></td>
+                                        <td className="px-6 py-4 text-right flex justify-end gap-2">
+                                            <div className="w-8 h-8 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+                                            <div className="w-8 h-8 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                users.map((user) => (
                                 <tr key={user.id} className="hover:bg-surface-hover/50 dark:hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => handleOpenPanel(user)}>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-4">
@@ -181,7 +213,7 @@ export default function UsersPage() {
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                            )))}
                         </tbody>
                     </table>
                 </div>

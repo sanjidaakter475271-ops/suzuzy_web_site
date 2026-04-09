@@ -137,11 +137,37 @@ export default function RequisitionsPage() {
 
             {/* Content List */}
             <div className="space-y-6">
-                {isLoading ? (
-                    <div className="py-20 flex flex-col items-center justify-center space-y-4">
-                        <div className="w-12 h-12 border-4 border-brand/20 border-t-brand rounded-full animate-spin" />
-                        <p className="text-sm font-black uppercase tracking-widest text-ink-muted">Loading Requisitions...</p>
-                    </div>
+                {isLoading && requisitions.length === 0 ? (
+                    // Requisition Skeletons
+                    Array.from({ length: 3 }).map((_, idx) => (
+                        <div key={idx} className="bg-white dark:bg-white/5 border border-surface-border dark:border-white/10 rounded-[40px] overflow-hidden shadow-sm animate-pulse h-[300px]">
+                            <div className="flex flex-col lg:flex-row h-full">
+                                <div className="lg:w-80 p-8 border-r border-surface-border dark:border-white/5 bg-surface-muted/30 dark:bg-white/5 space-y-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-16 h-16 rounded-3xl bg-slate-200 dark:bg-slate-800" />
+                                        <div className="space-y-2">
+                                            <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-24" />
+                                            <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-16" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-full" />
+                                        <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-full" />
+                                    </div>
+                                </div>
+                                <div className="flex-1 p-8 space-y-6">
+                                    <div className="flex justify-between">
+                                        <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-48" />
+                                        <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded-full w-24" />
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-xl w-full" />
+                                        <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-xl w-full" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))
                 ) : filteredRequisitions.length > 0 ? (
                     filteredRequisitions.map((group) => (
                         <div

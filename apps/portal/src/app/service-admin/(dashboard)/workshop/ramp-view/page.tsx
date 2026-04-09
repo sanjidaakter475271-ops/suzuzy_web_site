@@ -5,9 +5,12 @@ import Breadcrumb from '@/components/service-admin/Breadcrumb';
 import RampCard from '@/components/service-admin/workshop/RampCard';
 import RampSidePanel from '@/components/service-admin/workshop/RampSidePanel';
 import AssignTechnicianModal from '@/components/service-admin/workshop/AssignTechnicianModal';
+import { Technician360Panel } from '@/components/service-admin/hr/Technician360Panel';
 import { Plus, Target, Users, Zap, Search, LayoutGrid, LayoutList, X } from 'lucide-react';
 import { useWorkshopStore } from '@/stores/service-admin/workshopStore';
 import { cn } from '@/lib/utils';
+import { Technician } from '@/types/service-admin/workshop';
+import { confirmAction } from '@/lib/confirm';
 
 // Memoized Stat Card - Compact Snappy Version
 const StatCard = memo(({ label, value, icon: Icon, color, bg, delay }: any) => (
@@ -30,8 +33,12 @@ const RampManagementPage = () => {
     const ramps = useWorkshopStore(state => state.ramps);
     const technicians = useWorkshopStore(state => state.technicians);
     const addRamp = useWorkshopStore(state => state.addRamp);
+    const approveTechnician = useWorkshopStore(state => state.approveTechnician);
+    const deleteTechnician = useWorkshopStore(state => state.deleteTechnician);
+    const isLoading = useWorkshopStore(state => state.isLoading);
 
     const [selectedRampId, setSelectedRampId] = useState<string | null>(null);
+    const [selectedTechId, setSelectedTechId] = useState<string | null>(null);
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -50,12 +57,18 @@ const RampManagementPage = () => {
         ramps.find(r => r.id === selectedRampId) || null
         , [ramps, selectedRampId]);
 
+    const selectedTechnician = useMemo(() =>
+        technicians.find(t => t.id === selectedTechId) || null
+        , [technicians, selectedTechId]);
+
     const handleRampClick = useCallback((rampId: string) => {
         setSelectedRampId(prev => prev === rampId ? null : rampId);
     }, []);
 
     const handleCloseSidePanel = useCallback(() => setSelectedRampId(null), []);
+    const handleCloseTechPanel = useCallback(() => setSelectedTechId(null), []);
     const handleOpenAssign = useCallback(() => setIsAssignModalOpen(true), []);
+    const handleOpenTechDetail = useCallback((techId: string) => setSelectedTechId(techId), []);
 
     return (
         <div className="h-full lg:h-[calc(100vh-65px)] flex flex-col lg:flex-row overflow-hidden bg-[#fafafa] dark:bg-[#080809] relative transition-colors duration-700 w-full max-w-full">
@@ -115,32 +128,54 @@ const RampManagementPage = () => {
                             <div className={cn(
                                 "grid gap-6 lg:gap-8 transition-all duration-500 ease-in-out w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
                             )}>
-                                {filteredRamps.map((ramp, i) => (
-                                    <div
-                                        key={ramp.id}
-                                        className="animate-in fade-in zoom-in-95 duration-500 ease-out"
-                                        style={{ animationDelay: `${i * 30}ms` }}
-                                    >
-                                        <RampCard
-                                            {...ramp}
-                                            isSelected={selectedRampId === ramp.id}
-                                            onClick={() => handleRampClick(ramp.id)}
-                                        />
-                                    </div>
-                                ))}
+                                {isLoading && ramps.length === 0 ? (
+                                    // Ramp Skeletons
+                                    Array.from({ length: 6 }).map((_, idx) => (
+                                        <div key={`ramp-skeleton-${idx}`} className="h-[240px] lg:h-[260px] rounded-[2.5rem] lg:rounded-[3rem] border-2 border-surface-border dark:border-white/5 bg-white dark:bg-white/5 animate-pulse p-6 space-y-6">
+                                            <div className="flex justify-between items-start">
+                                                <div className="space-y-2">
+                                                    <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-24" />
+                                                    <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-32" />
+                                                </div>
+                                                <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-800" />
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800" />
+                                                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-24" />
+                                            </div>
+                                            <div className="pt-4 h-12 bg-slate-200 dark:bg-slate-800 rounded-2xl w-full" />
+                                        </div>
+                                    ))
+                                ) : (
+                                    <>
+                                        {filteredRamps.map((ramp, i) => (
+                                            <div
+                                                key={ramp.id}
+                                                className="animate-in fade-in zoom-in-95 duration-500 ease-out"
+                                                style={{ animationDelay: `${i * 30}ms` }}
+                                            >
+                                                <RampCard
+                                                    {...ramp}
+                                                    isSelected={selectedRampId === ramp.id}
+                                                    onClick={() => handleRampClick(ramp.id)}
+                                                />
+                                            </div>
+                                        ))}
 
-                                <button
-                                    onClick={() => addRamp({ name: `BAY-${ramps.length + 1}` })}
-                                    className="h-[240px] lg:h-[260px] rounded-[2.5rem] lg:rounded-[3rem] border-2 border-dashed border-surface-border dark:border-white/10 flex flex-col items-center justify-center p-6 lg:p-8 gap-5 lg:gap-6 hover:border-brand/40 hover:bg-brand/[0.02] transition-all duration-500 ease-in-out group active:scale-95"
-                                >
-                                    <div className="w-14 h-14 lg:w-16 lg:h-16 bg-surface-page dark:bg-white/5 rounded-[1.2rem] lg:rounded-[1.6rem] flex items-center justify-center text-brand border border-surface-border dark:border-white/5 transition-all duration-500 group-hover:rotate-45 group-hover:scale-110 shadow-lg">
-                                        <Plus size={32} className="lg:w-[36px] lg:h-[36px]" strokeWidth={1} />
-                                    </div>
-                                    <div className="text-center group-hover:translate-y-[-2px] transition-transform duration-500">
-                                        <p className="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.3em] text-ink-muted/60 group-hover:text-brand transition-colors duration-500">Add New Bay</p>
-                                        <p className="text-[8px] font-bold text-ink-muted/30 uppercase tracking-widest mt-1">Create Service Bay</p>
-                                    </div>
-                                </button>
+                                        <button
+                                            onClick={() => addRamp({ name: `BAY-${ramps.length + 1}` })}
+                                            className="h-[240px] lg:h-[260px] rounded-[2.5rem] lg:rounded-[3rem] border-2 border-dashed border-surface-border dark:border-white/10 flex flex-col items-center justify-center p-6 lg:p-8 gap-5 lg:gap-6 hover:border-brand/40 hover:bg-brand/[0.02] transition-all duration-500 ease-in-out group active:scale-95"
+                                        >
+                                            <div className="w-14 h-14 lg:w-16 lg:h-16 bg-surface-page dark:bg-white/5 rounded-[1.2rem] lg:rounded-[1.6rem] flex items-center justify-center text-brand border border-surface-border dark:border-white/5 transition-all duration-500 group-hover:rotate-45 group-hover:scale-110 shadow-lg">
+                                                <Plus size={32} className="lg:w-[36px] lg:h-[36px]" strokeWidth={1} />
+                                            </div>
+                                            <div className="text-center group-hover:translate-y-[-2px] transition-transform duration-500">
+                                                <p className="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.3em] text-ink-muted/60 group-hover:text-brand transition-colors duration-500">Add New Bay</p>
+                                                <p className="text-[8px] font-bold text-ink-muted/30 uppercase tracking-widest mt-1">Create Service Bay</p>
+                                            </div>
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -165,6 +200,7 @@ const RampManagementPage = () => {
                         ramp={selectedRamp}
                         onClose={handleCloseSidePanel}
                         onAssignClick={handleOpenAssign}
+                        onTechDetailClick={handleOpenTechDetail}
                     />
                 )}
             </div>
@@ -173,6 +209,27 @@ const RampManagementPage = () => {
                 isOpen={isAssignModalOpen}
                 onClose={() => setIsAssignModalOpen(false)}
                 ramp={selectedRamp}
+            />
+
+            <Technician360Panel
+                technician={selectedTechnician}
+                isOpen={!!selectedTechId}
+                onClose={handleCloseTechPanel}
+                onApprove={(id) => {
+                    confirmAction({
+                        title: "Authorize Agent",
+                        description: "Are you sure you want to authorize this agent for workshop operations?",
+                        onConfirm: () => approveTechnician(id)
+                    });
+                }}
+                onDelete={(id) => {
+                    confirmAction({
+                        title: "Remove Agent",
+                        description: "This will remove the agent from the active stream. Proceed?",
+                        variant: 'danger',
+                        onConfirm: () => deleteTechnician(id)
+                    });
+                }}
             />
         </div>
     );

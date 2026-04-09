@@ -18,10 +18,12 @@ import {
     DepositWithdrawEntry
 } from '@/types/service-admin/finance';
 import { cn } from '@/lib/utils';
+import { confirmAction } from '@/lib/confirm';
 
 type FinanceTab = 'cashbook' | 'sales' | 'expenses' | 'deposits';
 
 const FinanceManagementPage = () => {
+    const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<FinanceTab>('cashbook');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editData, setEditData] = useState<any>(null);
@@ -31,6 +33,12 @@ const FinanceManagementPage = () => {
     const [sales, setSales] = useState<DailySalesEntry[]>(DAILY_SALES_DATA);
     const [expenses, setExpenses] = useState<ExpenseEntry[]>(EXPENSE_DATA);
     const [deposits, setDeposits] = useState<DepositWithdrawEntry[]>(DEPOSIT_WITHDRAW_DATA);
+
+    // Simulate initial load
+    React.useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 1000);
+        return () => clearTimeout(timer);
+    }, []);
 
     const handleAddOrUpdate = (entry: any) => {
         if (activeTab === 'cashbook') {
@@ -49,12 +57,17 @@ const FinanceManagementPage = () => {
     };
 
     const handleDelete = (id: string) => {
-        if (confirm('Are you sure you want to delete this entry?')) {
-            if (activeTab === 'cashbook') setCashbook(cashbook.filter(i => i.id !== id));
-            else if (activeTab === 'sales') setSales(sales.filter(i => i.id !== id));
-            else if (activeTab === 'expenses') setExpenses(expenses.filter(i => i.id !== id));
-            else if (activeTab === 'deposits') setDeposits(deposits.filter(i => i.id !== id));
-        }
+        confirmAction({
+            title: "Delete Entry",
+            description: "Are you sure you want to permanently delete this financial entry? This action cannot be undone.",
+            variant: 'danger',
+            onConfirm: () => {
+                if (activeTab === 'cashbook') setCashbook(cashbook.filter(i => i.id !== id));
+                else if (activeTab === 'sales') setSales(sales.filter(i => i.id !== id));
+                else if (activeTab === 'expenses') setExpenses(expenses.filter(i => i.id !== id));
+                else if (activeTab === 'deposits') setDeposits(deposits.filter(i => i.id !== id));
+            }
+        });
     };
 
     const handleEdit = (entry: any) => {
@@ -86,8 +99,7 @@ const FinanceManagementPage = () => {
                 <Button
                     className="bg-brand hover:bg-brand-hover text-white rounded-xl shadow-lg shadow-brand/20 gap-2 h-12 px-6"
                     onClick={() => { setEditData(null); setIsModalOpen(true); }}
-                >
-                    <Plus size={20} /> Add New Entry
+                >\n                    <Plus size={20} /> Add New Entry
                 </Button>
             </div>
 
@@ -151,70 +163,87 @@ const FinanceManagementPage = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-surface-border dark:divide-dark-border">
-                            {activeTab === 'cashbook' && cashbook.map((entry) => (
-                                <tr key={entry.id} className="hover:bg-surface-hover/50 dark:hover:bg-dark-sidebar/30 transition-colors group">
-                                    <td className="px-6 py-4 text-sm font-bold text-ink-heading dark:text-white">{entry.cashInType}</td>
-                                    <td className="px-6 py-4 text-sm font-mono font-bold text-success">Tk {entry.cashInAmount.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-sm font-bold text-ink-heading dark:text-white">{entry.cashOutType}</td>
-                                    <td className="px-6 py-4 text-sm font-mono font-bold text-danger">Tk {entry.cashOutAmount.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-right space-x-2">
-                                        <button onClick={() => handleEdit(entry)} className="p-2 text-ink-muted hover:text-brand bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-brand/20">
-                                            <Edit2 size={16} />
-                                        </button>
-                                        <button onClick={() => handleDelete(entry.id)} className="p-2 text-ink-muted hover:text-danger bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-lg transition-all duration-200">
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {activeTab === 'sales' && sales.map((entry) => (
-                                <tr key={entry.id} className="hover:bg-surface-hover/50 dark:hover:bg-dark-sidebar/30 transition-colors group">
-                                    <td className="px-6 py-4 text-sm font-bold text-ink-heading dark:text-white">{entry.date}</td>
-                                    <td className="px-6 py-4 text-sm font-mono text-ink-body dark:text-gray-300">#{entry.invoice}</td>
-                                    <td className="px-6 py-4 text-sm font-bold text-ink-heading dark:text-white">{entry.qty}</td>
-                                    <td className="px-6 py-4 text-sm font-mono font-bold text-brand">Tk {entry.total.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-right space-x-2">
-                                        <button onClick={() => handleEdit(entry)} className="p-2 text-ink-muted hover:text-brand bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-lg transition-all">
-                                            <Edit2 size={16} />
-                                        </button>
-                                        <button onClick={() => handleDelete(entry.id)} className="p-2 text-ink-muted hover:text-danger bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-lg transition-all">
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {activeTab === 'expenses' && expenses.map((entry) => (
-                                <tr key={entry.id} className="hover:bg-surface-hover/50 dark:hover:bg-dark-sidebar/30 transition-colors group">
-                                    <td className="px-6 py-4 text-sm font-bold text-ink-heading dark:text-white">{entry.date}<br /><span className="text-[10px] text-ink-muted">{entry.time}</span></td>
-                                    <td className="px-6 py-4"><span className="px-2 py-1 bg-danger/10 text-danger text-[10px] font-black uppercase rounded-md">{entry.category}</span></td>
-                                    <td className="px-6 py-4 text-sm text-ink-body dark:text-gray-300">{entry.description}</td>
-                                    <td className="px-6 py-4 text-sm font-mono font-bold text-danger">Tk {entry.totalAmount.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-right space-x-2">
-                                        <button onClick={() => handleEdit(entry)} className="p-2 text-ink-muted hover:text-brand bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-lg transition-all">
-                                            <Edit2 size={16} />
-                                        </button>
-                                        <button onClick={() => handleDelete(entry.id)} className="p-2 text-ink-muted hover:text-danger bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-lg transition-all">
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {activeTab === 'deposits' && deposits.map((entry) => (
-                                <tr key={entry.id} className="hover:bg-surface-hover/50 dark:hover:bg-dark-sidebar/30 transition-colors group">
-                                    <td className="px-6 py-4 text-sm font-bold text-ink-heading dark:text-white">{entry.date}</td>
-                                    <td className="px-6 py-4 text-sm text-ink-body dark:text-gray-300">{entry.note}</td>
-                                    <td className="px-6 py-4 text-sm font-mono font-bold text-success">Tk {entry.cashIn.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-sm font-mono font-bold text-danger">Tk {entry.cashOut.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-right space-x-2">
-                                        <button onClick={() => handleEdit(entry)} className="p-2 text-ink-muted hover:text-brand bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-lg transition-all">
-                                            <Edit2 size={16} />
-                                        </button>
-                                        <button onClick={() => handleDelete(entry.id)} className="p-2 text-ink-muted hover:text-danger bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-lg transition-all">
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
+                            {isLoading ? (
+                                Array.from({ length: 8 }).map((_, idx) => (
+                                    <tr key={idx} className="animate-pulse">
+                                        <td className="px-6 py-5"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-24" /></td>
+                                        <td className="px-6 py-5"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-32" /></td>
+                                        <td className="px-6 py-5"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-20" /></td>
+                                        <td className="px-6 py-5"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-28" /></td>
+                                        <td className="px-6 py-5 text-right flex justify-end gap-2">
+                                            <div className="w-8 h-8 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+                                            <div className="w-8 h-8 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <>
+                                    {activeTab === 'cashbook' && cashbook.map((entry) => (
+                                        <tr key={entry.id} className="hover:bg-surface-hover/50 dark:hover:bg-dark-sidebar/30 transition-colors group">
+                                            <td className="px-6 py-4 text-sm font-bold text-ink-heading dark:text-white">{entry.cashInType}</td>
+                                            <td className="px-6 py-4 text-sm font-mono font-bold text-success">Tk {entry.cashInAmount.toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-sm font-bold text-ink-heading dark:text-white">{entry.cashOutType}</td>
+                                            <td className="px-6 py-4 text-sm font-mono font-bold text-danger">Tk {entry.cashOutAmount.toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-right space-x-2">
+                                                <button onClick={() => handleEdit(entry)} className="p-2 text-ink-muted hover:text-brand bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-brand/20">
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button onClick={() => handleDelete(entry.id)} className="p-2 text-ink-muted hover:text-danger bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-lg transition-all duration-200">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {activeTab === 'sales' && sales.map((entry) => (
+                                        <tr key={entry.id} className="hover:bg-surface-hover/50 dark:hover:bg-dark-sidebar/30 transition-colors group">
+                                            <td className="px-6 py-4 text-sm font-bold text-ink-heading dark:text-white">{entry.date}</td>
+                                            <td className="px-6 py-4 text-sm font-mono text-ink-body dark:text-gray-300">#{entry.invoice}</td>
+                                            <td className="px-6 py-4 text-sm font-bold text-ink-heading dark:text-white">{entry.qty}</td>
+                                            <td className="px-6 py-4 text-sm font-mono font-bold text-brand">Tk {entry.total.toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-right space-x-2">
+                                                <button onClick={() => handleEdit(entry)} className="p-2 text-ink-muted hover:text-brand bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-lg transition-all">
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button onClick={() => handleDelete(entry.id)} className="p-2 text-ink-muted hover:text-danger bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-lg transition-all">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {activeTab === 'expenses' && expenses.map((entry) => (
+                                        <tr key={entry.id} className="hover:bg-surface-hover/50 dark:hover:bg-dark-sidebar/30 transition-colors group">
+                                            <td className="px-6 py-4 text-sm font-bold text-ink-heading dark:text-white">{entry.date}<br /><span className="text-[10px] text-ink-muted">{entry.time}</span></td>
+                                            <td className="px-6 py-4"><span className="px-2 py-1 bg-danger/10 text-danger text-[10px] font-black uppercase rounded-md">{entry.category}</span></td>
+                                            <td className="px-6 py-4 text-sm text-ink-body dark:text-gray-300">{entry.description}</td>
+                                            <td className="px-6 py-4 text-sm font-mono font-bold text-danger">Tk {entry.totalAmount.toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-right space-x-2">
+                                                <button onClick={() => handleEdit(entry)} className="p-2 text-ink-muted hover:text-brand bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-lg transition-all">
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button onClick={() => handleDelete(entry.id)} className="p-2 text-ink-muted hover:text-danger bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-lg transition-all">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {activeTab === 'deposits' && deposits.map((entry) => (
+                                        <tr key={entry.id} className="hover:bg-surface-hover/50 dark:hover:bg-dark-sidebar/30 transition-colors group">
+                                            <td className="px-6 py-4 text-sm font-bold text-ink-heading dark:text-white">{entry.date}</td>
+                                            <td className="px-6 py-4 text-sm text-ink-body dark:text-gray-300">{entry.note}</td>
+                                            <td className="px-6 py-4 text-sm font-mono font-bold text-success">Tk {entry.cashIn.toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-sm font-mono font-bold text-danger">Tk {entry.cashOut.toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-right space-x-2">
+                                                <button onClick={() => handleEdit(entry)} className="p-2 text-ink-muted hover:text-brand bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-lg transition-all">
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button onClick={() => handleDelete(entry.id)} className="p-2 text-ink-muted hover:text-danger bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border rounded-lg transition-all">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </>
+                            )}
                         </tbody>
                     </table>
                 </div>
