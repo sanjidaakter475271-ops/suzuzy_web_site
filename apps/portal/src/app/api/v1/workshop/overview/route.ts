@@ -14,68 +14,77 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Dealer context required" }, { status: 400 });
         }
 
-        // Fetch everything in parallel
-        const [cards, tickets, ramps, staff, tasks] = await Promise.all([
-            prisma.job_cards.findMany({
-                where: {
-                    status: { not: 'delivered' },
-                    dealer_id: dealerId
-                },
-                include: {
-                    service_tickets: {
-                        include: {
-                            service_vehicles: {
-                                include: { bike_models: true }
-                            },
-                            profiles: true
-                        }
-                    },
-                    service_tasks: true,
-                    service_requisitions: {
-                        include: {
-                            products: true
-                        }
-                    },
-                    qc_requests: {
-                        where: { status: 'pending' },
-                        orderBy: { created_at: 'desc' },
-                        take: 1
+        // Fetch everything sequentially to identify the culprit
+        console.log("[OVERVIEW_DEBUG] Starting cards fetch...");
+        const cards = await prisma.job_cards.findMany({
+            where: {
+                status: { not: 'delivered' },
+                dealer_id: dealerId
+            },
+            include: {
+                service_tickets: {
+                    include: {
+                        service_vehicles: {
+                            include: { bike_models: true }
+                        },
+                        profiles: true
                     }
                 },
-                orderBy: { created_at: 'desc' },
-                take: 100
-            }),
-            prisma.service_tickets.findMany({
-                where: {
-                    status: { not: 'closed' },
-                    profiles: { dealer_id: dealerId }
-                },
-                take: 50
-            }),
-            prisma.service_ramps.findMany({
-                where: { dealer_id: dealerId },
-                include: {
-                    service_staff: true,
-                    service_tickets_service_ramps_current_ticket_idToservice_tickets: {
-                        include: { service_vehicles: true }
+                service_tasks: true,
+                service_requisitions: {
+                    include: {
+                        products: true
                     }
                 },
-                orderBy: { ramp_number: 'asc' }
-            }),
-            prisma.service_staff.findMany({
-                where: {
-                    is_active: true,
-                    OR: [
-                        { dealer_id: dealerId },
-                        { status: 'pending', dealer_id: null }
-                    ]
-                },
-                include: { profiles: true }
-            }),
-            prisma.service_tasks.findMany({
-                take: 50
-            })
-        ]);
+                qc_requests: {
+                    where: { status: 'pending' },
+                    orderBy: { created_at: 'desc' },
+                    take: 1
+                }
+            },
+            orderBy: { created_at: 'desc' },
+            take: 100
+        });
+
+        console.log("[OVERVIEW_DEBUG] Starting tickets fetch...");
+        const tickets = await prisma.service_tickets.findMany({
+            where: {
+                status: { not: 'closed' },
+                profiles: { dealer_id: dealerId }
+            },
+            take: 50
+        });
+
+        console.log("[OVERVIEW_DEBUG] Starting ramps fetch...");
+        const ramps = await prisma.service_ramps.findMany({
+            where: { dealer_id: dealerId },
+            include: {
+                service_staff: true,
+                service_tickets_service_ramps_current_ticket_idToservice_tickets: {
+                    include: { service_vehicles: true }
+                }
+            },
+            orderBy: { ramp_number: 'asc' }
+        });
+
+        console.log("[OVERVIEW_DEBUG] Starting staff fetch...");
+        const staff = await prisma.service_staff.findMany({
+            where: {
+                is_active: true,
+                OR: [
+                    { dealer_id: dealerId },
+                    { status: 'pending', dealer_id: null }
+                ]
+            },
+            include: { profiles: true }
+        });
+
+        console.log("[OVERVIEW_DEBUG] Starting tasks fetch...");
+        const tasks = await prisma.service_tasks.findMany({
+            take: 50
+        });
+
+        console.log("[OVERVIEW_DEBUG] All fetches completed.");
 
         // Helper to convert Prisma Decimals to Numbers
         const serialize = (obj: any): any => {
