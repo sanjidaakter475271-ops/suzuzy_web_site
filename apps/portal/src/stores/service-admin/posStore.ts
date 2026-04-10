@@ -53,6 +53,7 @@ interface POSState {
     clearCart: () => void;
     loadJobBilling: (jobId: string) => Promise<void>;
     fetchInvoices: () => Promise<void>;
+    setCustomer: (customer: string | null) => void;
 }
 
 export const usePOSStore = create<POSState>((set, get) => ({
@@ -64,6 +65,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
     transport: 0,
     isLoading: false,
     activeJob: null,
+    selectedCustomer: null,
+    selectedVehicle: null,
     pagination: {
         page: 1,
         totalPages: 1,
