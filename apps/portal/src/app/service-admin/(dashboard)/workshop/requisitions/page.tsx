@@ -172,51 +172,51 @@ export default function RequisitionsPage() {
                     filteredRequisitions.map((group) => (
                         <div
                             key={group.id}
-                            className="bg-white dark:bg-white/5 border border-surface-border dark:border-white/10 rounded-[40px] overflow-hidden shadow-sm hover:shadow-xl hover:border-brand/30 transition-all group"
+                            className="bg-white dark:bg-white/5 border border-surface-border dark:border-white/10 rounded-xl overflow-hidden shadow-sm hover:shadow-xl hover:border-orange-500/50 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-orange-500/15 ease-out transition-all group"
                         >
                             <div className="flex flex-col lg:flex-row lg:items-stretch h-full">
                                 {/* Left Section: Tech Info */}
                                 <div className="lg:w-80 p-8 border-r border-surface-border dark:border-white/5 bg-surface-muted/30 dark:bg-white/5">
                                     <div className="flex items-center gap-4">
                                         <div className="relative">
-                                            <div className="w-16 h-16 rounded-3xl bg-brand/10 border-2 border-brand/20 flex items-center justify-center overflow-hidden">
+                                            <div className="w-16 h-16 rounded-2xl bg-brand/10 border-2 border-brand/20 group-hover:border-orange-500/30 group-hover:bg-orange-500/10 transition-colors flex items-center justify-center overflow-hidden">
                                                 {group.technicianAvatar ? (
                                                     <Image src={group.technicianAvatar} alt={group.technicianName} fill className="object-cover" />
                                                 ) : (
-                                                    <User className="text-brand" size={32} />
+                                                    <User className="text-brand group-hover:text-orange-500 transition-colors" size={32} />
                                                 )}
                                             </div>
-                                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 border-4 border-white dark:border-dark-page rounded-full shadow-lg" title="Technician is online" />
+                                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 border-4 border-white dark:border-dark-page rounded-full shadow-sm" title="Technician is online" />
                                         </div>
                                         <div>
-                                            <h3 className="font-black text-ink-heading dark:text-white uppercase tracking-wider">{group.technicianName}</h3>
-                                            <p className="text-[10px] text-brand font-black bg-brand/10 px-2 py-0.5 rounded-full mt-1 inline-block uppercase tracking-tighter">Technician</p>
+                                            <h3 className="font-bold font-sans text-ink-heading dark:text-white tracking-tight group-hover:text-orange-500 transition-colors duration-300">{group.technicianName}</h3>
+                                            <p className="text-[10px] text-brand font-semibold bg-brand/10 px-2 py-0.5 rounded-md mt-1 inline-block tracking-wider group-hover:bg-orange-500/10 group-hover:text-orange-600 transition-colors duration-300">Technician</p>
                                         </div>
                                     </div>
 
                                     <div className="mt-8 space-y-4">
                                         <div className="flex items-center justify-between text-xs">
-                                            <span className="text-ink-muted font-bold flex items-center gap-2"><Clock size={14} /> Time</span>
-                                            <span className="text-ink-heading dark:text-white font-black">{safeFormat(group.createdAt, 'hh:mm a')}</span>
+                                            <span className="text-ink-muted font-medium flex items-center gap-2"><Clock size={14} className="group-hover:text-orange-500/60 transition-colors" /> Time</span>
+                                            <span className="text-ink-heading dark:text-white font-semibold">{safeFormat(group.createdAt, 'hh:mm a')}</span>
                                         </div>
                                         <div className="flex items-center justify-between text-xs">
-                                            <span className="text-ink-muted font-bold flex items-center gap-2"><Calendar size={14} /> Date</span>
-                                            <span className="text-ink-heading dark:text-white font-black">{safeFormat(group.createdAt, 'MMM dd, yyyy')}</span>
+                                            <span className="text-ink-muted font-medium flex items-center gap-2"><Calendar size={14} className="group-hover:text-orange-500/60 transition-colors" /> Date</span>
+                                            <span className="text-ink-heading dark:text-white font-semibold">{safeFormat(group.createdAt, 'MMM dd, yyyy')}</span>
                                         </div>
 
                                         <div className="pt-4 mt-4 border-t border-surface-border dark:border-white/5 space-y-3">
                                             <div className="flex flex-col gap-1">
-                                                <p className="text-[10px] font-black text-ink-muted uppercase tracking-widest">Customer</p>
-                                                <p className="text-xs font-bold text-ink-heading dark:text-white truncate">{group.customerName}</p>
+                                                <p className="text-[10px] font-semibold text-ink-muted tracking-wider">Customer</p>
+                                                <p className="text-sm font-semibold text-ink-heading dark:text-white truncate">{group.customerName}</p>
                                             </div>
                                             <div className="flex flex-col gap-1">
-                                                <p className="text-[10px] font-black text-ink-muted uppercase tracking-widest">Problem Type</p>
-                                                <p className="text-xs font-medium text-ink-muted italic line-clamp-2">"{group.problemType}"</p>
+                                                <p className="text-[10px] font-semibold text-ink-muted tracking-wider">Problem Type</p>
+                                                <p className="text-sm font-medium text-ink-muted line-clamp-2">"{group.problemType}"</p>
                                             </div>
                                         </div>
 
                                         <div className="pt-4 mt-4 border-t border-surface-border dark:border-white/5">
-                                            <button className="w-full flex items-center justify-center gap-2 py-3 bg-white dark:bg-white/5 border border-surface-border dark:border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-brand hover:bg-brand hover:text-white transition-all shadow-sm">
+                                            <button className="w-full flex items-center justify-center gap-2 py-2.5 bg-white dark:bg-white/5 border border-surface-border dark:border-white/10 rounded-xl text-xs font-semibold tracking-wider text-brand hover:bg-orange-500 hover:text-white transition-all shadow-sm group-hover:border-orange-500/30 group-hover:text-orange-500">
                                                 <MapPin size={14} />
                                                 Locate Tech
                                             </button>
@@ -229,22 +229,22 @@ export default function RequisitionsPage() {
                                     <div className="p-8 pb-4 flex items-center justify-between border-b border-surface-border dark:border-white/5">
                                         <div className="flex items-center gap-6">
                                             <div>
-                                                <p className="text-[10px] font-black text-ink-muted uppercase tracking-widest">Job Card Number</p>
-                                                <h4 className="text-xl font-black text-ink-heading dark:text-white mt-1">#{group.jobNumber}</h4>
+                                                <p className="text-xs font-medium text-ink-muted">Job Card Number</p>
+                                                <h4 className="text-xl font-bold font-sans text-ink-heading dark:text-white mt-1 group-hover:text-orange-500 transition-colors duration-300">#{group.jobNumber}</h4>
                                             </div>
                                             <div className="w-px h-10 bg-surface-border dark:border-white/5" />
                                             <div>
-                                                <p className="text-[10px] font-black text-ink-muted uppercase tracking-widest">Requisition ID</p>
-                                                <h4 className="text-xl font-black text-brand mt-1 truncate max-w-[120px]">REQ-{group.id.substring(0, 8)}</h4>
+                                                <p className="text-xs font-medium text-ink-muted">Requisition ID</p>
+                                                <h4 className="text-xl font-bold font-sans text-brand mt-1 truncate max-w-[120px] group-hover:text-orange-600 transition-colors duration-300">REQ-{group.id.substring(0, 8)}</h4>
                                             </div>
                                         </div>
-                                        <div className={cn("px-4 py-1.5 rounded-full border text-[11px] font-black uppercase tracking-[0.1em] shadow-sm", getStatusStyles(group.status))}>
+                                        <div className={cn("px-4 py-1.5 rounded-md border text-[11px] font-semibold tracking-wider shadow-sm", getStatusStyles(group.status))}>
                                             {group.status}
                                         </div>
                                     </div>
 
                                     <div className="flex-1 p-8">
-                                        <div className="grid grid-cols-12 gap-4 text-[10px] font-black text-ink-muted uppercase tracking-widest border-b border-surface-border dark:border-white/5 pb-4 mb-4">
+                                        <div className="grid grid-cols-12 gap-4 text-xs font-medium text-ink-muted border-b border-surface-border dark:border-white/5 pb-4 mb-4">
                                             <div className="col-span-6">Product Description</div>
                                             <div className="col-span-2 text-center">Qty</div>
                                             <div className="col-span-2 text-right">Unit Price</div>
@@ -253,23 +253,23 @@ export default function RequisitionsPage() {
 
                                         <div className="space-y-4">
                                             {group.items.map((item) => (
-                                                <div key={item.id} className="grid grid-cols-12 gap-4 items-center group/item">
+                                                <div key={item.id} className="grid grid-cols-12 gap-4 items-center group/item hover:bg-orange-500/5 p-2 -mx-2 rounded-lg transition-colors duration-300">
                                                     <div className="col-span-6 flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-surface-muted dark:bg-white/5 rounded-xl border border-surface-border dark:border-white/10 flex items-center justify-center text-ink-muted group-hover/item:text-brand transition-colors">
+                                                        <div className="w-10 h-10 bg-surface-muted dark:bg-white/5 rounded-lg border border-surface-border dark:border-white/10 flex items-center justify-center text-ink-muted group-hover/item:text-orange-500 transition-colors">
                                                             <Package size={20} strokeWidth={1.5} />
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-black text-ink-heading dark:text-white leading-tight">{item.productName}</p>
-                                                            {item.notes && <p className="text-[10px] text-ink-muted mt-0.5 line-clamp-1 italic">"{item.notes}"</p>}
+                                                            <p className="text-sm font-semibold font-sans text-ink-heading dark:text-white leading-tight group-hover/item:text-orange-600 transition-colors">{item.productName}</p>
+                                                            {item.notes && <p className="text-xs text-ink-muted mt-0.5 line-clamp-1 italic">"{item.notes}"</p>}
                                                         </div>
                                                     </div>
                                                     <div className="col-span-2 text-center">
-                                                        <span className="text-sm font-black text-ink-heading dark:text-white bg-surface-muted dark:bg-white/10 px-3 py-1 rounded-lg border border-surface-border dark:border-white/5">
+                                                        <span className="text-sm font-semibold text-ink-heading dark:text-white bg-surface-muted dark:bg-white/10 px-3 py-1 rounded-md border border-surface-border dark:border-white/5 group-hover/item:border-orange-500/30 group-hover/item:text-orange-600 transition-colors">
                                                             {item.quantity}
                                                         </span>
                                                     </div>
-                                                    <div className="col-span-2 text-right font-bold text-ink-muted text-sm">৳{item.unitPrice.toLocaleString()}</div>
-                                                    <div className="col-span-2 text-right font-black text-ink-heading dark:text-white text-sm">৳{item.totalPrice.toLocaleString()}</div>
+                                                    <div className="col-span-2 text-right font-medium text-ink-muted text-sm">৳{item.unitPrice.toLocaleString()}</div>
+                                                    <div className="col-span-2 text-right font-bold font-sans text-ink-heading dark:text-white text-sm group-hover/item:text-orange-600 transition-colors">৳{item.totalPrice.toLocaleString()}</div>
                                                 </div>
                                             ))}
                                         </div>
@@ -278,8 +278,8 @@ export default function RequisitionsPage() {
                                     {/* Action Footer */}
                                     <div className="p-8 pt-4 bg-surface-muted/20 dark:bg-white/5 border-t border-surface-border dark:border-white/5 flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[10px] font-black text-ink-muted uppercase tracking-widest">Estimated Grand Total:</span>
-                                            <span className="text-2xl font-black text-brand tracking-tight">৳{group.totalAmount.toLocaleString()}</span>
+                                            <span className="text-xs font-medium text-ink-muted">Estimated Grand Total:</span>
+                                            <span className="text-2xl font-bold font-sans text-brand tracking-tight group-hover:text-orange-500 transition-colors duration-300">৳{group.totalAmount.toLocaleString()}</span>
                                         </div>
 
                                         {group.status === 'pending' && (

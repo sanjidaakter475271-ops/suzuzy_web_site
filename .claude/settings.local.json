@@ -53,7 +53,10 @@
       "c:\\Users\\IT\\.claude\\plans",
       "d:\\suzuzy_web_site\\apps\\portal\\src\\app\\api\\v1\\workshop\\staff\\[id]",
       "d:\\suzuzy_web_site\\apps\\portal\\src\\app\\service-admin\\(dashboard)\\workshop\\technicians\\[id]",
-      "D:\\suzuzy_web_site\\apps\\portal\\src\\app\\api\\v1\\technician\\products\\[id]"
+      "D:\\suzuzy_web_site\\apps\\portal\\src\\app\\api\\v1\\technician\\products\\[id]",
+      "D:\\suzuzy_web_site\\apps\\portal\\apps\\portal\\src\\app\\api\\v1\\crm\\customers",
+      "D:\\suzuzy_web_site\\apps\\portal\\apps\\portal\\src\\app\\service-admin\\(dashboard)\\crm\\customers",
+      "D:\\suzuzy_web_site\\apps\\portal\\apps\\portal\\src\\app\\(public)\\register\\customer"
     ]
   }
 }

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import TopNav from './TopNav';
+import FloatingNotifications from './FloatingNotifications';
 import { cn } from '@/lib/utils';
 
 interface DashboardLayoutProps {
@@ -32,6 +33,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                 <main className="flex-1 overflow-x-hidden overflow-y-auto bg-surface-page dark:bg-dark-page print:bg-white print:overflow-visible">
                     {children}
                 </main>
+                <div className="print:hidden">
+                    <FloatingNotifications />
+                </div>
             </div>
         </div>
     );

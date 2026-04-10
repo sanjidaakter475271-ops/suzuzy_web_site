@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma/client";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { broadcast } from "@/lib/socket-server";
+import { createNotification } from "@/lib/notifications";
 
 export async function POST(req: NextRequest) {
     try {
         const user = await getCurrentUser();
-        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!user || !user.dealerId) {
+            return NextResponse.json({ error: "Unauthorized or Dealer context missing" }, { status: 401 });
+        }
 
         const body = await req.json();
         const {
@@ -24,8 +27,10 @@ export async function POST(req: NextRequest) {
             laborCost
         } = body;
 
-        // transport is ignored for now as per user logic
-        void transport;
+        // Validation
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
+        }
 
         // Create Sale in transaction
         const sale = await prisma.$transaction(async (tx) => {
@@ -37,32 +42,45 @@ export async function POST(req: NextRequest) {
                 const product = await tx.products.findUnique({
                     where: { id: item.productId }
                 });
-                const cost = Number(product?.cost_price || 0);
+
+                if (!product) {
+                    throw new Error(`Product not found: ${item.name || item.productId}`);
+                }
+
+                // Check stock for direct sales (no requisition)
+                if (!item.requisitionId) {
+                    const currentStock = product.stock_quantity || 0;
+                    if (currentStock < item.qty) {
+                        throw new Error(`Insufficient stock for ${product.name}. Available: ${currentStock}, Requested: ${item.qty}`);
+                    }
+                }
+
+                const cost = Number(product.cost_price || 0);
                 totalCost += (cost * item.qty);
                 productData.push({ ...item, costPrice: cost, product });
             }
 
-            const discountAmount = (subtotal * (discount || 0)) / 100;
+            const discountAmount = (Number(subtotal) * Number(discount || 0)) / 100;
 
             // 2. Create Sale Record
             const newSale = await tx.sales.create({
                 data: {
-                    dealer_id: user.dealerId || "",
-                    customer_id: customerId,
-                    customer_name: customerName,
-                    customer_phone: customerPhone,
-                    customer_address: customerAddress,
+                    dealer_id: user.dealerId,
+                    customer_id: customerId || null,
+                    customer_name: customerName || null,
+                    customer_phone: customerPhone || null,
+                    customer_address: customerAddress || null,
                     sale_number: `SALE-${Date.now()}`,
-                    subtotal: subtotal,
-                    discount_value: discount || 0, // percentage
+                    subtotal: Number(subtotal),
+                    discount_value: Number(discount || 0), // percentage
                     discount_amount: discountAmount, // amount in currency
-                    grand_total: total,
+                    grand_total: Number(total),
                     payment_method: paymentMethod || 'cash',
                     status: 'paid',
-                    order_id: jobCardId,
                     total_cost: totalCost,
-                    total_profit: total - totalCost, // This now includes labor as profit
-                    other_charges: laborCost || 0
+                    total_profit: Number(total) - totalCost,
+                    other_charges: Number(laborCost || 0),
+                    notes: jobCardId ? `Linked to Job Card: ${jobCardId}` : undefined
                 }
             });
 
@@ -72,18 +90,18 @@ export async function POST(req: NextRequest) {
                     data: {
                         sale_id: newSale.id,
                         product_id: item.productId,
-                        product_name: item.name,
-                        quantity: item.qty,
-                        unit_selling_price: item.price,
-                        unit_cost_price: item.costPrice,
-                        total_amount: item.amount || (item.price * item.qty),
+                        product_name: item.name || item.product.name,
+                        quantity: Number(item.qty),
+                        unit_selling_price: Number(item.price),
+                        unit_cost_price: Number(item.costPrice),
+                        total_amount: Number(item.amount || (item.price * item.qty)),
                     }
                 });
 
-                // If NOT from a job card (which already deducted stock via requisition)
-                if (!jobCardId && item.product) {
+                // Deduct stock ONLY if not already deducted (i.e. if it's NOT a requisition from a job card)
+                if (!item.requisitionId) {
                     const oldStock = item.product.stock_quantity || 0;
-                    const newStock = oldStock - item.qty;
+                    const newStock = oldStock - Number(item.qty);
 
                     await tx.products.update({
                         where: { id: item.productId },
@@ -93,16 +111,17 @@ export async function POST(req: NextRequest) {
                     // Add movement record
                     await tx.inventory_movements.create({
                         data: {
-                            dealer_id: user.dealerId || item.product.dealer_id || "",
+                            dealer_id: user.dealerId,
                             product_id: item.productId,
                             movement_type: 'stock_out',
                             quantity_before: oldStock,
-                            quantity_change: -item.qty,
+                            quantity_change: -Number(item.qty),
                             quantity_after: newStock,
                             reference_type: 'sale',
                             reference_id: newSale.id,
+                            reference_number: newSale.sale_number,
                             performed_by: user.userId,
-                            reason: `Direct Sale ${newSale.sale_number}`
+                            reason: `Direct Sale`
                         }
                     });
                 }
@@ -110,15 +129,13 @@ export async function POST(req: NextRequest) {
 
             // 4. Update Job Card status if it was from a job
             if (jobCardId) {
-                // If we have a job card, we might want to store labor cost in other_charges
-
-                // If we have a job card, we might want to store labor cost in other_charges
-                // This is a mapping decision.
-
                 await tx.job_cards.update({
                     where: { id: jobCardId },
                     data: { status: 'delivered' }
                 });
+
+                // If it's a job, we should probably also create a service_invoice
+                // For now, we will just use the sales record as the invoice
             }
 
             return newSale;
@@ -130,11 +147,20 @@ export async function POST(req: NextRequest) {
             await broadcast('job_cards:changed', { id: jobCardId, status: 'delivered' });
         }
 
+        // 6. Create system notification for the user
+        await createNotification({
+            userId: user.userId,
+            title: 'Sale Completed',
+            message: `Sale ${sale.sale_number} for ৳${sale.grand_total} was processed successfully.`,
+            type: 'success',
+            linkUrl: `/service-admin/finance/sales/${sale.id}`
+        });
+
         return NextResponse.json({ success: true, data: sale });
 
-    } catch (error: unknown) {
+    } catch (error: any) {
         console.error("Sale Error:", error);
-        return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+        return NextResponse.json({ error: error.message || "Failed to process sale" }, { status: 500 });
     }
 }
 
@@ -142,10 +168,10 @@ export async function POST(req: NextRequest) {
 export async function GET(_req: NextRequest) {
     try {
         const user = await getCurrentUser();
-        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!user || !user.dealerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         const sales = await prisma.sales.findMany({
-            where: { dealer_id: user.dealerId || "" },
+            where: { dealer_id: user.dealerId },
             orderBy: { created_at: 'desc' },
             take: 100
         });
@@ -162,8 +188,8 @@ export async function GET(_req: NextRequest) {
 
         return NextResponse.json({ success: true, data: formattedSales });
 
-    } catch (error: unknown) {
+    } catch (error: any) {
         console.error("Fetch Sales Error:", error);
-        return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+        return NextResponse.json({ error: error.message || "Failed to fetch sales" }, { status: 500 });
     }
 }

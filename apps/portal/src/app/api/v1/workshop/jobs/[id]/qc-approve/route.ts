@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma/client";
 import { JOB_STATUS } from "@/lib/workshop/job-state-machine";
+import { createNotification } from "@/lib/notifications";
 import { z } from "zod";
 
 const serialize = (obj: any): any => {
@@ -239,6 +240,81 @@ export async function POST(
                 }
             });
 
+            // --- ADVANCED SERVICE TRACKING LOGIC ---
+            if (status === 'approved') {
+                const ticket = await tx.service_tickets.findUnique({
+                    where: { id: jobCard.ticket_id as string },
+                    select: { vehicle_id: true }
+                });
+
+                if (ticket?.vehicle_id) {
+                    const vehicleId = ticket.vehicle_id;
+
+                    // 1. Get service sequence
+                    const historyCount = await tx.service_history.count({
+                        where: { vehicle_id: vehicleId }
+                    });
+                    const nextSequence = historyCount + 1;
+
+                    // 2. Check for free service plan
+                    const servicePlan = await tx.customer_service_plans.findFirst({
+                        where: {
+                            vehicle_id: vehicleId,
+                            is_active: true
+                        }
+                    });
+
+                    let isFree = false;
+                    if (servicePlan && servicePlan.used_free_services < servicePlan.total_free_services) {
+                        isFree = true;
+                        // Increment used free services if not already handled by billing
+                        // We check if history for this job card already has is_free_service set to avoid double counting
+                        const existingHistory = await tx.service_history.findFirst({
+                            where: { job_card_id: jobId }
+                        });
+
+                        if (!existingHistory || !existingHistory.is_free_service) {
+                            await tx.customer_service_plans.update({
+                                where: { id: servicePlan.id },
+                                data: { used_free_services: { increment: 1 } }
+                            });
+                        }
+                    }
+
+                    // 3. Create or Update Service History
+                    const existingHistory = await tx.service_history.findFirst({
+                        where: { job_card_id: jobId }
+                    });
+
+                    if (existingHistory) {
+                        await tx.service_history.update({
+                            where: { id: existingHistory.id },
+                            data: {
+                                service_sequence: nextSequence,
+                                is_free_service: isFree,
+                                service_type: isFree ? 'free' : 'paid',
+                                dealer_id: dealerId
+                            }
+                        });
+                    } else {
+                        await tx.service_history.create({
+                            data: {
+                                vehicle_id: vehicleId,
+                                ticket_id: jobCard.ticket_id,
+                                job_card_id: jobId,
+                                service_date: new Date(),
+                                service_sequence: nextSequence,
+                                is_free_service: isFree,
+                                service_type: isFree ? 'free' : 'paid',
+                                dealer_id: dealerId,
+                                summary: `Service completed via QC approval. Sequence #${nextSequence}`
+                            }
+                        });
+                    }
+                }
+            }
+            // --- END ADVANCED SERVICE TRACKING ---
+
             // Log Job History
             await tx.job_state_history.create({
                 data: {
@@ -249,6 +325,26 @@ export async function POST(
                     reason: `Direct QC ${status}: ${notes || ''}`
                 }
             });
+
+            // Notify Technician about QC result
+            if (jobCard.technician_id) {
+                const staff = await tx.service_staff.findUnique({
+                    where: { id: jobCard.technician_id },
+                    select: { profile_id: true }
+                });
+
+                if (staff?.profile_id) {
+                    await createNotification({
+                        userId: staff.profile_id,
+                        title: status === 'approved' ? "Job QC Passed" : "Job QC Rejected",
+                        message: status === 'approved'
+                            ? `Your work on Job Card has passed Quality Check.`
+                            : `QC rejected: ${notes || 'Please check and fix issues.'}`,
+                        type: status === 'approved' ? 'success' : 'error',
+                        linkUrl: `/job/${jobId}` // Technician mobile app link
+                    }, tx);
+                }
+            }
 
             return updatedQc;
         }, {

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/client';
 import { getCurrentTechnician } from '@/lib/auth/get-technician';
 import { broadcast } from '@/lib/socket-server';
+import { createNotification } from '@/lib/notifications';
+import { ROLES } from '@/lib/auth/roles';
 
 type Params = Promise<{ id: string }>;
 
@@ -82,6 +84,29 @@ export async function POST(req: NextRequest, { params }: { params: Params }) {
             status: 'qc_pending',
             type: 'qc_request'
         });
+
+        // Notify Dealer Admins
+        try {
+            const admins = await prisma.profiles.findMany({
+                where: {
+                    dealer_id: technician.dealerId,
+                    role: { in: [ROLES.SERVICE_ADMIN, ROLES.DEALER_OWNER, ROLES.DEALER] }
+                },
+                select: { id: true }
+            });
+
+            for (const admin of admins) {
+                await createNotification({
+                    userId: admin.id,
+                    title: "QC Check Requested",
+                    message: `Technician requested QC for Job Card.`,
+                    type: 'info',
+                    linkUrl: `/service-admin/workshop/qc`
+                });
+            }
+        } catch (notifyError) {
+            console.error("[QC_NOTIFY_ERROR]", notifyError);
+        }
 
         return NextResponse.json({ success: true, qc });
     } catch (error: any) {

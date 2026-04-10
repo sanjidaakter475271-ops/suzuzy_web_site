@@ -228,39 +228,39 @@ const JobCardListPage = () => {
                         jobCards.map((job) => {
                             const ramp = ramps.find(r => r.id === job.assignedRampId);
                             return (
-                                <Card key={job.id} className="rounded-[2.5rem] border-2 border-transparent hover:border-brand/20 transition-all duration-500 hover:shadow-2xl group overflow-hidden">
+                                <Card key={job.id} className="rounded-xl border border-surface-border dark:border-white/5 hover:border-orange-500/50 transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-[1.02] hover:shadow-xl hover:shadow-orange-500/15 group overflow-hidden">
                                     <CardContent className="p-8 space-y-6">
                                         <div className="flex justify-between items-start">
                                             <div className="space-y-1">
                                                 <div className="flex items-center gap-2">
-                                                    <p className="text-[10px] font-black uppercase text-brand tracking-[0.2em]">JOB: #{job.jobNo}</p>
+                                                    <p className="text-[10px] font-semibold text-brand tracking-wider">JOB: #{job.jobNo}</p>
                                                     {ramp && (
-                                                        <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-500/10 text-emerald-600 rounded-md text-[8px] font-black uppercase">
+                                                        <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-500/10 text-emerald-600 rounded-md text-[9px] font-semibold uppercase">
                                                             <Hammer size={8} /> {ramp.name}
                                                         </div>
                                                     )}
                                                 </div>
-                                                <h3 className="text-lg font-black text-ink-heading dark:text-white group-hover:text-brand transition-colors tracking-tight">
+                                                <h3 className="text-lg font-bold font-sans text-ink-heading dark:text-white group-hover:text-orange-500 transition-colors duration-300 tracking-tight">
                                                     {job.customerName || job.customerId}
                                                 </h3>
                                             </div>
-                                            <div className={cn("px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm", getStatusStyles(job.status))}>
+                                            <div className={cn("px-3 py-1.5 rounded-md text-[10px] font-semibold uppercase tracking-wider shadow-sm", getStatusStyles(job.status))}>
                                                 {job.status.replace('-', ' ')}
                                             </div>
                                         </div>
 
-                                        <div className="p-4 bg-surface-page dark:bg-black/20 rounded-2xl border border-surface-border dark:border-white/5 relative">
-                                            <p className="text-xs text-ink-body dark:text-ink-muted line-clamp-2 italic font-medium leading-relaxed">
+                                        <div className="p-4 bg-surface-page dark:bg-black/20 rounded-xl border border-surface-border dark:border-white/5 relative">
+                                            <p className="text-sm text-ink-body dark:text-ink-muted line-clamp-2 font-medium leading-relaxed">
                                                 "{job.complaints}"
                                             </p>
                                         </div>
 
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-[10px] font-black text-ink-muted uppercase tracking-wider">
-                                                <Clock size={14} className="text-brand" />
+                                            <div className="flex items-center gap-2 text-xs font-medium text-ink-muted group-hover:text-orange-600/80 transition-colors duration-300">
+                                                <Clock size={14} className="text-brand group-hover:text-orange-500 transition-colors duration-300" />
                                                 <span>{new Date(job.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                                             </div>
-                                            <div className="flex items-center gap-2 text-[10px] font-black text-emerald-600 uppercase tracking-wider">
+                                            <div className="flex items-center gap-2 text-xs font-medium text-emerald-600">
                                                 <CheckCircle2 size={14} />
                                                 <span>{job.items.filter(i => i.status === 'completed').length}/{job.items.length} Tasks</span>
                                             </div>
@@ -268,11 +268,11 @@ const JobCardListPage = () => {
 
                                         <div className="pt-6 flex items-center justify-between border-t border-surface-border dark:border-dark-border/50">
                                             <div className="space-y-0.5">
-                                                <p className="text-[8px] font-black text-ink-muted uppercase tracking-widest">Bill Amount</p>
-                                                <p className="text-lg font-black text-ink-heading dark:text-white">৳{job.total.toLocaleString()}</p>
+                                                <p className="text-xs font-medium text-ink-muted">Bill Amount</p>
+                                                <p className="text-lg font-bold font-sans text-ink-heading dark:text-white group-hover:text-orange-500 transition-colors duration-300">৳{job.total.toLocaleString()}</p>
                                             </div>
                                             <Link href={`/service-admin/workshop/job-cards/${job.id}`}>
-                                                <button className="h-10 px-4 bg-brand/5 text-brand rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-brand hover:text-white transition-all duration-300">
+                                                <button className="h-9 px-4 bg-brand/5 text-brand group-hover:bg-orange-500 group-hover:text-white rounded-lg text-[10px] font-semibold uppercase tracking-wider flex items-center gap-2 transition-all duration-300">
                                                     Manage
                                                     <ChevronRight size={14} />
                                                 </button>

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { POSInvoice, POSItem } from '@/types/service-admin/pos';
 import { Product } from '@/types/service-admin/inventory';
-// Mock data imports removed — all data now fetched from real APIs
+import { toast } from 'sonner';
 
 interface POSState {
     products: Product[];
@@ -17,14 +17,38 @@ interface POSState {
         vehicleRegNo: string;
         laborCost: number;
     } | null;
+    selectedCustomer: {
+        id: string;
+        name: string;
+        phone: string;
+        email?: string;
+    } | null;
+    selectedVehicle: {
+        id: string;
+        regNo: string;
+        model?: string;
+    } | null;
+    pagination: {
+        page: number;
+        totalPages: number;
+        hasMore: boolean;
+    };
+    filters: {
+        search: string;
+        categoryId: string;
+        bikeModelId: string;
+    };
 
-    fetchProducts: () => Promise<void>;
+    fetchProducts: (reset?: boolean) => Promise<void>;
+    setFilters: (filters: Partial<POSState['filters']>) => void;
+    nextPage: () => void;
     addToCart: (product: Product) => void;
     removeFromCart: (productId: string) => Promise<void>;
     updateQty: (productId: string, qty: number) => void;
     setDiscount: (amount: number) => void;
     setTransport: (amount: number) => void;
-    setCustomer: (customer: string | null) => void;
+    setSelectedCustomer: (customer: POSState['selectedCustomer']) => void;
+    setSelectedVehicle: (vehicle: POSState['selectedVehicle']) => void;
     checkout: (jobCardId?: string, paymentMethod?: string) => Promise<any>;
     clearCart: () => void;
     loadJobBilling: (jobId: string) => Promise<void>;
@@ -40,20 +64,75 @@ export const usePOSStore = create<POSState>((set, get) => ({
     transport: 0,
     isLoading: false,
     activeJob: null,
+    pagination: {
+        page: 1,
+        totalPages: 1,
+        hasMore: false,
+    },
+    filters: {
+        search: '',
+        categoryId: '',
+        bikeModelId: '',
+    },
 
-    fetchProducts: async () => {
+    fetchProducts: async (reset = false) => {
+        const { pagination, filters, products, isLoading } = get();
+        if (isLoading) return;
+
+        const currentPage = reset ? 1 : pagination.page;
         set({ isLoading: true });
+
         try {
-            const res = await fetch('/api/v1/workshop/inventory');
+            const params = new URLSearchParams({
+                page: String(currentPage),
+                limit: '24', // Use a smaller batch size for POS
+                search: filters.search,
+                categoryId: filters.categoryId === 'All' ? '' : filters.categoryId,
+                bikeModelId: filters.bikeModelId === 'All' ? '' : filters.bikeModelId,
+            });
+
+            const res = await fetch(`/api/v1/workshop/inventory?${params.toString()}`);
             const data = await res.json();
+
             if (data.success) {
-                set({ products: data.data });
+                const newProducts = data.data;
+                const paginationInfo = data.pagination || { totalPages: 1, page: 1 };
+
+                set({
+                    products: reset ? newProducts : [
+                        ...products,
+                        ...newProducts.filter((newP: Product) => !products.some(oldP => oldP.id === newP.id))
+                    ],
+                    pagination: {
+                        page: currentPage,
+                        totalPages: paginationInfo.totalPages,
+                        hasMore: currentPage < paginationInfo.totalPages
+                    }
+                });
             }
         } catch (error) {
             console.error('POS fetch error:', error);
         } finally {
             set({ isLoading: false });
         }
+    },
+
+    setFilters: (newFilters) => {
+        set((state) => ({
+            filters: { ...state.filters, ...newFilters },
+            pagination: { ...state.pagination, page: 1 }
+        }));
+        get().fetchProducts(true);
+    },
+
+    nextPage: () => {
+        const { pagination, isLoading, fetchProducts } = get();
+        if (!pagination.hasMore || isLoading) return;
+
+        set((state) => ({
+            pagination: { ...state.pagination, page: state.pagination.page + 1 }
+        }));
+        fetchProducts(false);
     },
 
     addToCart: (product) => {
@@ -116,9 +195,11 @@ export const usePOSStore = create<POSState>((set, get) => ({
 
     setDiscount: (discount: number) => set({ discount }),
     setTransport: (transport: number) => set({ transport }),
-    setCustomer: (customer: string | null) => set({ customer }),
+    setSelectedCustomer: (customer) => set({ selectedCustomer: customer }),
+    setSelectedVehicle: (vehicle) => set({ selectedVehicle: vehicle }),
+    setCustomer: (customer) => set({ customer }),
 
-    clearCart: () => set({ cart: [], customer: null, discount: 0, transport: 0 }),
+    clearCart: () => set({ cart: [], customer: null, selectedCustomer: null, selectedVehicle: null, discount: 0, transport: 0 }),
 
     loadJobBilling: async (jobId: string) => {
         set({ isLoading: true });
@@ -168,8 +249,11 @@ export const usePOSStore = create<POSState>((set, get) => ({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    jobCardId,
-                    customerName: customer,
+                    jobCardId: jobCardId || activeJob?.id,
+                    customerId: get().selectedCustomer?.id,
+                    customerName: get().selectedCustomer?.name || customer,
+                    customerPhone: get().selectedCustomer?.phone,
+                    vehicleId: get().selectedVehicle?.id,
                     items: cart,
                     subtotal,
                     discount,
@@ -184,9 +268,10 @@ export const usePOSStore = create<POSState>((set, get) => ({
             if (!data.success) throw new Error(data.error);
 
             get().clearCart();
+            toast.success("Purchase completed successfully!");
             return data.data; // Return sale record
         } catch (error: any) {
-            alert(error.message);
+            toast.error(error.message || "Failed to complete checkout");
             return null;
         } finally {
             set({ isLoading: false });

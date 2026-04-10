@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma/client";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { broadcastEvent } from "@/lib/socket-server";
+import { createNotification } from "@/lib/notifications";
 
 // Local recursive Decimal-to-Number serializer
 const serialize = (obj: any): any => {
@@ -69,6 +70,26 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
                     notes: reason ? `${reqItem.notes || ''}\nReason: ${reason}` : reqItem.notes
                 }
             });
+
+            // 2.5 Notify Technician
+            if (reqItem.staff_id) {
+                const staff = await tx.service_staff.findUnique({
+                    where: { id: reqItem.staff_id },
+                    select: { profile_id: true }
+                });
+
+                if (staff?.profile_id) {
+                    await createNotification({
+                        userId: staff.profile_id,
+                        title: status === 'approved' ? "Requisition Approved" : "Requisition Rejected",
+                        message: status === 'approved'
+                            ? `Your part request for Job Card has been approved.`
+                            : `Part request rejected: ${reason || 'Contact inventory.'}`,
+                        type: status === 'approved' ? 'success' : 'error',
+                        linkUrl: `/parts-request` // Mobile app path
+                    }, tx);
+                }
+            }
 
             // 3. If approved, handle stock deduction with FIFO Batches
             if (status === 'approved' && reqItem.product_id) {

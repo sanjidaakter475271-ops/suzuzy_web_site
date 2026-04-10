@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Plus, Package } from 'lucide-react';
+import { Search, Plus, Package, Loader2 } from 'lucide-react';
 import { usePOSStore } from '@/stores/service-admin/posStore';
 import { Product } from '@/types/service-admin/inventory';
 import { cn } from '@/lib/utils';
@@ -11,26 +11,24 @@ interface ProductSearchSlotProps {
 }
 
 const ProductSearchSlot: React.FC<ProductSearchSlotProps> = ({ onSelect }) => {
-    const { products } = usePOSStore();
+    const { products, setFilters, isLoading } = usePOSStore();
     const [query, setQuery] = useState('');
-    const [suggestions, setSuggestions] = useState<Product[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+
         if (query.length > 1) {
-            const filtered = products.filter(p =>
-                p.name.toLowerCase().includes(query.toLowerCase()) ||
-                p.sku.toLowerCase().includes(query.toLowerCase()) ||
-                (p.brand && p.brand.toLowerCase().includes(query.toLowerCase()))
-            ).slice(0, 5);
-            setSuggestions(filtered);
-            setIsOpen(true);
+            debounceTimer.current = setTimeout(() => {
+                setFilters({ search: query });
+                setIsOpen(true);
+            }, 500);
         } else {
-            setSuggestions([]);
             setIsOpen(false);
         }
-    }, [query, products]);
+    }, [query, setFilters]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -62,10 +60,15 @@ const ProductSearchSlot: React.FC<ProductSearchSlotProps> = ({ onSelect }) => {
                 />
             </div>
 
-            {isOpen && suggestions.length > 0 && (
+            {isOpen && products.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-3 bg-white dark:bg-dark-card border-2 border-surface-border dark:border-dark-border rounded-[1.5rem] shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="p-2 space-y-1">
-                        {suggestions.map((product) => (
+                        {isLoading && query.length > 1 && products.length === 0 && (
+                            <div className="p-4 text-center">
+                                <Loader2 className="animate-spin text-brand mx-auto" size={20} />
+                            </div>
+                        )}
+                        {products.slice(0, 5).map((product) => (
                             <button
                                 key={product.id}
                                 onClick={() => handleSelect(product)}

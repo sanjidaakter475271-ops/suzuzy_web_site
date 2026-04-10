@@ -4,6 +4,7 @@ import DashboardLayout from '@/components/service-admin/layout/DashboardLayout';
 import { ServiceAdminGuard } from '@/components/guards/auth-guards';
 import { useSocketTrigger } from '@/hooks/useSocketTrigger';
 import { useWorkshopSync } from '@/hooks/useWorkshopSync';
+import { useNotificationSync } from '@/hooks/useNotificationSync';
 
 const WORKSHOP_EVENTS = [
     'job_cards:changed',
@@ -24,6 +25,9 @@ export default function DashboardGroupLayout({ children }: { children: React.Rea
 
     // Sync client store for workshop
     useWorkshopSync();
+
+    // Enable real-time notifications
+    useNotificationSync();
 
 
     return (

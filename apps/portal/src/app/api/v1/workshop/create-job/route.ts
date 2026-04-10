@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma/client";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { broadcast } from "@/lib/socket-server";
+import { createNotification } from "@/lib/notifications";
 
 /**
  * Generate a human-readable unique number
@@ -134,17 +135,24 @@ export async function POST(req: NextRequest) {
                 });
 
                 if (staff?.profile_id) {
-                    await tx.notifications.create({
-                        data: {
-                            user_id: staff.profile_id,
-                            title: "New Job Assigned",
-                            message: `You have been assigned to a new ${vehicle_model} (Reg: ${vehicle_reg_no}). Job #: ${serviceNumber}`,
-                            type: 'job',
-                            link_url: `/job/${jobCard.id}`
-                        }
-                    });
+                    await createNotification({
+                        userId: staff.profile_id,
+                        title: "New Job Assigned",
+                        message: `You have been assigned to a new ${vehicle_model} (Reg: ${vehicle_reg_no}). Job #: ${serviceNumber}`,
+                        type: 'job',
+                        linkUrl: `/job/${jobCard.id}`
+                    }, tx);
                 }
             }
+
+            // G. Create Notification for the Admin who created it
+            await createNotification({
+                userId: user.userId,
+                title: "Job Card Created",
+                message: `Successfully created Job Card #${serviceNumber} for ${customer_name}.`,
+                type: 'success',
+                linkUrl: `/service-admin/workshop/job-cards/${jobCard.id}`
+            }, tx);
 
             return { vehicle, serviceTicket, jobCard };
         });
@@ -157,14 +165,23 @@ export async function POST(req: NextRequest) {
             technicianId: technician_id
         });
 
+        // Broadcast notifications outside of transaction
         if (technician_id) {
-            await broadcast('notification:new', {
-                technician_id: technician_id,
-                title: "New Job Assigned",
-                message: `You have been assigned to Job Card: ${result.serviceTicket.service_number}`,
-                type: 'job'
+            const staff = await prisma.service_staff.findUnique({
+                where: { id: technician_id },
+                select: { profile_id: true }
             });
+            if (staff?.profile_id) {
+                await broadcast('notification:new', {
+                    user_id: staff.profile_id,
+                    notification: { title: "New Job Assigned", message: `New Job #: ${result.serviceTicket.service_number}` }
+                });
+            }
         }
+        await broadcast('notification:new', {
+            user_id: user.userId,
+            notification: { title: "Job Card Created", message: `Job Card #${result.serviceTicket.service_number} created.` }
+        });
 
         return NextResponse.json({
             success: true,

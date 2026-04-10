@@ -155,6 +155,69 @@ export async function POST(req: NextRequest) {
                 data: { status: 'completed' }
             });
 
+            // --- ADVANCED SERVICE TRACKING LOGIC ---
+            const vehicleId = jobCard.service_tickets?.vehicle_id;
+            if (vehicleId) {
+                // 1. Get service sequence
+                const historyCount = await tx.service_history.count({
+                    where: { vehicle_id: vehicleId }
+                });
+                const nextSequence = historyCount + 1;
+
+                // 2. Check for free service plan
+                const servicePlan = await tx.customer_service_plans.findFirst({
+                    where: {
+                        vehicle_id: vehicleId,
+                        is_active: true
+                    }
+                });
+
+                let isFree = false;
+                if (servicePlan && servicePlan.used_free_services < servicePlan.total_free_services) {
+                    isFree = true;
+                    // Increment used free services
+                    await tx.customer_service_plans.update({
+                        where: { id: servicePlan.id },
+                        data: { used_free_services: { increment: 1 } }
+                    });
+                }
+
+                // 3. Create or Update Service History with sequence data
+                // Check if an initial entry exists from create-job
+                const existingHistory = await tx.service_history.findFirst({
+                    where: { job_card_id: jobCard.id }
+                });
+
+                if (existingHistory) {
+                    await tx.service_history.update({
+                        where: { id: existingHistory.id },
+                        data: {
+                            service_sequence: nextSequence,
+                            is_free_service: isFree,
+                            service_type: isFree ? 'free' : 'paid',
+                            total_cost: grand_total,
+                            dealer_id: dealerId
+                        }
+                    });
+                } else {
+                    await tx.service_history.create({
+                        data: {
+                            vehicle_id: vehicleId,
+                            ticket_id: jobCard.ticket_id,
+                            job_card_id: jobCard.id,
+                            service_date: new Date(),
+                            service_sequence: nextSequence,
+                            is_free_service: isFree,
+                            service_type: isFree ? 'free' : 'paid',
+                            total_cost: grand_total,
+                            dealer_id: dealerId,
+                            summary: `Service completed. Sequence #${nextSequence}`
+                        }
+                    });
+                }
+            }
+            // --- END ADVANCED SERVICE TRACKING ---
+
             // Handle Job History/Events
             await tx.job_events.create({
                 data: {

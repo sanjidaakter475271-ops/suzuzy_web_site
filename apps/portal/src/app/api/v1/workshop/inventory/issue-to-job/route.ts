@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma/client";
 import { getCurrentUser } from "@/lib/auth/get-user";
+import { createNotification } from "@/lib/notifications";
 import { z } from "zod";
 
 const issueSchema = z.object({
@@ -59,6 +60,24 @@ export async function POST(req: NextRequest) {
                     total_price: (Number(variant.price) || 0) * quantity
                 }
             });
+
+            // C. Notify Technician
+            if (jobCard.technician_id) {
+                const staff = await tx.service_staff.findUnique({
+                    where: { id: jobCard.technician_id },
+                    select: { profile_id: true }
+                });
+
+                if (staff?.profile_id) {
+                    await createNotification({
+                        userId: staff.profile_id,
+                        title: "Parts Issued",
+                        message: `${quantity}x ${variant.parts?.name || 'item'} issued to your job.`,
+                        type: 'success',
+                        linkUrl: `/job/${job_card_id}`
+                    }, tx);
+                }
+            }
 
             return usage;
         });

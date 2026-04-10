@@ -445,10 +445,13 @@ model dealers {
   sales                                    sales[]
   service_appointments                     service_appointments[]
   service_estimates                        service_estimates[]
+  service_history                          service_history[]
   service_invoices                         service_invoices[]
   service_payments                         service_payments[]
   service_ramps                            service_ramps[]
   service_staff                            service_staff[]
+  customer_registration_qr                 customer_registration_qr[]
+  customer_service_plans                   customer_service_plans[]
   shift_templates                          shift_templates[]
   shipments                                shipments[]
   staff_schedules                          staff_schedules[]
@@ -1166,6 +1169,7 @@ model profiles {
   customer_addresses                                              customer_addresses[]
   customer_communications                                         customer_communications[]
   customer_ledger                                                 customer_ledger[]
+  customer_service_plans                                          customer_service_plans[]
   dealer_documents                                                dealer_documents[]
   dealer_payouts                                                  dealer_payouts[]
   dealer_reviews                                                  dealer_reviews[]
@@ -2032,6 +2036,7 @@ model service_vehicles {
   customer_id          String?                @db.Uuid
   engine_number        String                 @unique
   chassis_number       String                 @unique
+  reg_no               String?                @unique(map: "service_vehicles_reg_no_key")
   phone_number         String
   model_id             String?                @db.Uuid
   customer_name        String?
@@ -2061,6 +2066,7 @@ model service_vehicles {
   service_history      service_history[]
   service_invoices     service_invoices[]
   service_tickets      service_tickets[]
+  customer_service_plans customer_service_plans[]
   profiles             profiles?              @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
   bike_models          bike_models?           @relation(fields: [model_id], references: [id], onUpdate: NoAction)
   warranty_claims      warranty_claims[]
@@ -2356,12 +2362,58 @@ model service_history {
   summary                  String?
   next_service_due_date    DateTime?         @db.Date
   next_service_due_mileage Int?
+  service_sequence         Int?
+  is_free_service          Boolean?          @default(false)
+  service_type             String?           @db.VarChar(50)
+  dealer_id                String?           @db.Uuid
   created_at               DateTime?         @default(now()) @db.Timestamptz(6)
   job_cards                job_cards?        @relation(fields: [job_card_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   service_tickets          service_tickets?  @relation(fields: [ticket_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   service_vehicles         service_vehicles? @relation(fields: [vehicle_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  dealers                  dealers?          @relation(fields: [dealer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([vehicle_id], map: "idx_service_history_vehicle_id")
+  @@index([dealer_id], map: "idx_service_history_dealer_id")
+  @@schema("public")
+}
+
+model customer_service_plans {
+  id                    String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customer_id           String            @db.Uuid
+  vehicle_id            String            @db.Uuid
+  dealer_id             String            @db.Uuid
+  total_free_services   Int               @default(5)
+  used_free_services    Int               @default(0)
+  plan_type             String?           @default("purchase") @db.VarChar(50)
+  is_active             Boolean?          @default(true)
+  notes                 String?
+  created_at            DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime?         @default(now()) @db.Timestamptz(6)
+
+  profiles              profiles          @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  service_vehicles      service_vehicles  @relation(fields: [vehicle_id], references: [id], onDelete: Cascade)
+  dealers               dealers           @relation(fields: [dealer_id], references: [id], onDelete: Cascade)
+
+  @@index([customer_id])
+  @@index([vehicle_id])
+  @@index([dealer_id])
+  @@schema("public")
+}
+
+model customer_registration_qr {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dealer_id   String    @db.Uuid
+  qr_secret   String    @db.VarChar(100)
+  label       String?   @default("Reception") @db.VarChar(100)
+  is_active   Boolean?  @default(true)
+  scan_count  Int?      @default(0)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+
+  dealers     dealers   @relation(fields: [dealer_id], references: [id], onDelete: Cascade)
+
+  @@unique([dealer_id, qr_secret])
+  @@index([dealer_id])
   @@schema("public")
 }
 

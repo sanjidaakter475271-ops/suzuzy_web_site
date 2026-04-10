@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/client';
 import { getCurrentTechnician } from '@/lib/auth/get-technician';
 import { broadcast } from '@/lib/socket-server';
+import { createNotification } from '@/lib/notifications';
+import { ROLES } from '@/lib/auth/roles';
 
 type Params = Promise<{ id: string }>;
 
@@ -103,13 +105,37 @@ export async function POST(req: NextRequest, { params }: { params: Params }) {
             technicianId: technician.serviceStaffId
         });
 
-        // Also broadcast to inventory if parts might be involved (optional but good)
-        if (status === 'paused') {
-            await broadcast('notifications:new', {
-                type: 'job_paused',
-                message: `Job #${id.substring(0, 8)} paused by technician.`,
-                userId: technician.userId
-            });
+        // Persistent Notifications for Admins
+        try {
+            if (status === 'completed' || status === 'paused') {
+                const jobWithTicket = await prisma.job_cards.findUnique({
+                    where: { id },
+                    include: { service_tickets: { select: { service_number: true } } }
+                });
+                const jobNo = jobWithTicket?.service_tickets?.service_number || "N/A";
+
+                const admins = await prisma.profiles.findMany({
+                    where: {
+                        dealer_id: technician.dealerId,
+                        role: { in: [ROLES.SERVICE_ADMIN, ROLES.DEALER_OWNER, ROLES.DEALER] }
+                    },
+                    select: { id: true }
+                });
+
+                for (const admin of admins) {
+                    await createNotification({
+                        userId: admin.id,
+                        title: status === 'completed' ? "Job Finished" : "Job Paused",
+                        message: status === 'completed'
+                            ? `Technician has finished work on Job Card ${jobNo}. Ready for billing.`
+                            : `Job Card ${jobNo} has been paused by technician.`,
+                        type: status === 'completed' ? 'success' : 'warning',
+                        linkUrl: `/service-admin/workshop/job-cards/${id}`
+                    });
+                }
+            }
+        } catch (notifyErr) {
+            console.error("[JOB_STATUS_NOTIFY_ERROR]", notifyErr);
         }
 
         return NextResponse.json({ success: true, status });

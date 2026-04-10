@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/client';
 import { getCurrentTechnician } from '@/lib/auth/get-technician';
 import { broadcastEvent } from "@/lib/socket-server";
+import { createNotification } from '@/lib/notifications';
+import { ROLES } from '@/lib/auth/roles';
 import crypto from "crypto";
 
 // Helper to convert Prisma Decimals to Numbers
@@ -165,6 +167,30 @@ export async function POST(req: NextRequest) {
             dealerId: technician.dealerId,
             itemCount: created.length
         });
+
+        // Notify Dealer Admins
+        try {
+            const admins = await prisma.profiles.findMany({
+                where: {
+                    dealer_id: technician.dealerId,
+                    role: { in: [ROLES.SERVICE_ADMIN, ROLES.DEALER_OWNER, ROLES.DEALER] }
+                },
+                select: { id: true }
+            });
+
+            for (const admin of admins) {
+                await createNotification({
+                    userId: admin.id,
+                    title: "New Parts Requisition",
+                    message: `Technician requested ${created.length} parts for Job Card ${jobNo}.`,
+                    type: 'warning',
+                    linkUrl: `/service-admin/workshop/requisitions`
+                });
+            }
+        } catch (notifyError) {
+            console.error("[REQUISITION_NOTIFY_ERROR]", notifyError);
+            // Don't fail the requisition creation if notification fails
+        }
 
         return NextResponse.json({ success: true, data: serialize(created) });
     } catch (error: unknown) {

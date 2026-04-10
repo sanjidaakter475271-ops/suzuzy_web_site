@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePOSStore } from '@/stores/service-admin/posStore';
+import { useInventoryStore } from '@/stores/service-admin/inventoryStore';
 import Breadcrumb from '@/components/service-admin/Breadcrumb';
 import { Button } from '@/components/service-admin/ui';
 import InvoicePreview from '@/components/service-admin/pos/InvoicePreview';
@@ -12,7 +13,8 @@ import ProductGrid from '@/components/service-admin/pos/ProductGrid';
 import {
     ArrowLeft, Save, CreditCard,
     Banknote, QrCode, Smartphone,
-    Tag, Plus, CheckCircle, Printer, Edit3
+    Tag, Plus, CheckCircle, Printer, Edit3,
+    Filter, Bike, Loader2
 } from 'lucide-react';
 import { Product } from '@/types/service-admin/inventory';
 import { cn } from '@/lib/utils';
@@ -31,19 +33,32 @@ const InvoiceGeneratorPage = () => {
         removeFromCart,
         updateQty,
         discount,
-        checkout
+        checkout,
+        fetchProducts,
+        setFilters,
+        filters
     } = usePOSStore();
+
+    const {
+        categories,
+        bikeModels,
+        fetchCategories,
+        fetchBikeModels
+    } = useInventoryStore();
 
     const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
     const [isFinalized, setIsFinalized] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mfs'>('cash');
     const [saleData, setSaleData] = useState<any>(null);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (jobId) {
             loadJobBilling(jobId as string);
         }
-    }, [jobId, loadJobBilling]);
+        fetchProducts(true);
+        fetchCategories();
+        fetchBikeModels();
+    }, [jobId, loadJobBilling, fetchProducts, fetchCategories, fetchBikeModels]);
 
     if (isLoading && !activeJob) return <div className="p-8 text-center font-black uppercase text-ink-muted animate-pulse">Loading Job Details...</div>;
     if (!activeJob) return <div className="p-8 text-center font-black uppercase text-ink-muted">Job not found</div>;
@@ -159,11 +174,61 @@ const InvoiceGeneratorPage = () => {
                     {viewMode === 'edit' ? (
                         <>
                             {/* Product Search & Grid Area */}
-                            <div className="p-6 bg-surface-card dark:bg-dark-card border-b border-surface-border dark:border-dark-border shadow-sm">
+                            <div className="p-6 bg-surface-card dark:bg-dark-card border-b border-surface-border dark:border-dark-border shadow-sm space-y-4">
                                 <ProductSearchSlot onSelect={handleAddProduct} />
+
+                                <div className="flex flex-col md:flex-row gap-4 items-center">
+                                    <div className="flex items-center gap-2 w-full md:w-auto">
+                                        <Filter size={16} className="text-ink-muted hidden md:block" />
+                                        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide flex-1">
+                                            <button
+                                                onClick={() => setFilters({ categoryId: 'All' })}
+                                                className={cn(
+                                                    "px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border",
+                                                    filters.categoryId === 'All' || !filters.categoryId
+                                                        ? "bg-brand text-white border-brand shadow-lg shadow-brand/20"
+                                                        : "bg-white dark:bg-dark-card text-ink-muted border-surface-border dark:border-dark-border hover:bg-surface-hover hover:border-brand/30"
+                                                )}
+                                            >
+                                                All Categories
+                                            </button>
+                                            {categories.map(cat => (
+                                                <button
+                                                    key={cat.id}
+                                                    onClick={() => setFilters({ categoryId: cat.id })}
+                                                    className={cn(
+                                                        "px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border",
+                                                        filters.categoryId === cat.id
+                                                            ? "bg-brand text-white border-brand shadow-lg shadow-brand/20"
+                                                            : "bg-white dark:bg-dark-card text-ink-muted border-surface-border dark:border-dark-border hover:bg-surface-hover hover:border-brand/30"
+                                                    )}
+                                                >
+                                                    {cat.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 w-full md:w-auto md:border-l md:border-surface-border dark:md:border-dark-border md:pl-4">
+                                        <Bike size={16} className="text-ink-muted hidden md:block" />
+                                        <select
+                                            value={filters.bikeModelId || 'All'}
+                                            onChange={(e) => setFilters({ bikeModelId: e.target.value })}
+                                            className="bg-white dark:bg-dark-card border border-surface-border dark:border-dark-border rounded-xl px-4 py-2 text-[9px] font-black uppercase tracking-widest outline-none focus:border-brand transition-all cursor-pointer w-full"
+                                        >
+                                            <option value="All">All Bike Models</option>
+                                            {bikeModels.map(model => (
+                                                <option key={model.id} value={model.id}>{model.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
                             <div className="flex-1 overflow-hidden p-6">
-                                <h3 className="text-[10px] font-black uppercase text-ink-muted tracking-[0.2em] mb-4 pl-4">Fast Add Products</h3>
+                                <div className="flex justify-between items-center mb-4 pl-4">
+                                    <h3 className="text-[10px] font-black uppercase text-ink-muted tracking-[0.2em]">Product Catalog</h3>
+                                    {isLoading && <Loader2 className="animate-spin text-brand" size={16} />}
+                                </div>
                                 <ProductGrid onSelect={handleAddProduct} />
 
                                 <div className="mt-8 px-4 pb-12">

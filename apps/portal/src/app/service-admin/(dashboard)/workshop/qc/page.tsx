@@ -92,17 +92,17 @@ const QCChecklistPage = () => {
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-black text-ink-heading dark:text-white">Quality Control (QC)</h1>
-                    <p className="text-sm text-ink-muted">Final inspection before delivery to customer.</p>
+                    <h1 className="text-2xl font-bold font-sans tracking-tight text-ink-heading dark:text-white group-hover:text-orange-500 transition-colors duration-300">Quality Control (QC)</h1>
+                    <p className="text-sm text-ink-muted font-medium">Final inspection before delivery to customer.</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1 overflow-hidden">
                 {/* Job Selection Sidebar */}
                 <div className="lg:col-span-4 space-y-4 overflow-y-auto custom-scrollbar pr-2">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-ink-muted px-1 flex items-center justify-between">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted px-1 flex items-center justify-between">
                         Pending Inspection
-                        <span className="bg-brand/10 text-brand px-2 py-0.5 rounded-full">{readyForQC.length}</span>
+                        <span className="bg-brand/10 text-brand px-2 py-0.5 rounded-md">{readyForQC.length}</span>
                     </h3>
 
                     {readyForQC.map((job) => (
@@ -110,30 +110,32 @@ const QCChecklistPage = () => {
                             key={job.id}
                             onClick={() => setSelectedJobId(job.id)}
                             className={cn(
-                                "cursor-pointer transition-all border-2",
-                                selectedJobId === job.id ? "border-brand bg-brand-soft/30 shadow-lg shadow-brand/5" : "border-surface-border dark:border-dark-border hover:border-brand/40"
+                                "cursor-pointer transition-all duration-300 ease-out border-2 group",
+                                selectedJobId === job.id
+                                    ? "border-brand bg-brand-soft/30 shadow-lg shadow-brand/5"
+                                    : "border-surface-border dark:border-dark-border hover:border-orange-500/50 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-md hover:shadow-orange-500/10"
                             )}
                         >
                             <CardContent className="p-4 space-y-3">
                                 <div className="flex justify-between items-start">
                                     <div className="space-y-0.5">
-                                        <p className="text-[10px] font-black uppercase text-brand">JOB #{job.jobNo}</p>
-                                        <h4 className="font-bold text-ink-heading dark:text-white truncate">{job.customerName || 'No Name'}</h4>
+                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-brand group-hover:text-orange-500 transition-colors duration-300">JOB #{job.jobNo}</p>
+                                        <h4 className="font-semibold font-sans text-ink-heading dark:text-white truncate group-hover:text-orange-600 transition-colors duration-300">{job.customerName || 'No Name'}</h4>
                                     </div>
                                     <div className={cn(
-                                        "px-2 py-0.5 rounded-full text-[9px] font-black uppercase",
+                                        "px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider",
                                         job.status === 'qc_approved' ? 'bg-success-bg text-success' : 'bg-amber-100 text-amber-600'
                                     )}>
                                         {job.status.replace('_', ' ')}
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3 text-xs text-ink-muted">
-                                    <div className="flex items-center gap-1">
-                                        <Bike size={12} />
+                                <div className="flex items-center gap-3 text-xs font-medium text-ink-muted">
+                                    <div className="flex items-center gap-1 group-hover:text-orange-600/70 transition-colors duration-300">
+                                        <Bike size={12} className="group-hover:text-orange-500 transition-colors duration-300" />
                                         {job.vehicleId}
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        <Clock size={12} />
+                                    <div className="flex items-center gap-1 group-hover:text-orange-600/70 transition-colors duration-300">
+                                        <Clock size={12} className="group-hover:text-orange-500 transition-colors duration-300" />
                                         {(() => {
                                             const updatedDate = new Date(job.updatedAt);
                                             if (isNaN(updatedDate.getTime())) return 'Recently';
@@ -198,22 +200,22 @@ const QCChecklistPage = () => {
                                                 key={item.id}
                                                 onClick={() => handleToggleItem(item.id)}
                                                 className={cn(
-                                                    "p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center justify-between group",
+                                                    "p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 ease-out flex items-center justify-between group hover:-translate-y-0.5",
                                                     item.checked
-                                                        ? "bg-success-bg border-success text-success"
-                                                        : "bg-surface-page dark:bg-dark-page border-surface-border dark:border-dark-border hover:border-brand/40"
+                                                        ? "bg-success-bg border-success text-success shadow-sm"
+                                                        : "bg-surface-page dark:bg-dark-page border-surface-border dark:border-dark-border hover:border-orange-500/50 hover:shadow-sm hover:shadow-orange-500/10"
                                                 )}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <div className={cn(
-                                                        "w-5 h-5 rounded flex items-center justify-center transition-colors",
-                                                        item.checked ? "bg-success text-white" : "bg-white dark:bg-dark-page border-2 border-surface-border dark:border-dark-border group-hover:border-brand"
+                                                        "w-5 h-5 rounded flex items-center justify-center transition-colors duration-300",
+                                                        item.checked ? "bg-success text-white" : "bg-white dark:bg-dark-page border-2 border-surface-border dark:border-dark-border group-hover:border-orange-500"
                                                     )}>
                                                         {item.checked && <CheckCircle2 size={14} />}
                                                     </div>
-                                                    <span className="text-sm font-bold">{item.label}</span>
+                                                    <span className="text-sm font-semibold font-sans group-hover:text-orange-600 transition-colors duration-300">{item.label}</span>
                                                 </div>
-                                                {!item.checked && <ArrowRight size={14} className="text-ink-muted opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />}
+                                                {!item.checked && <ArrowRight size={14} className="text-ink-muted opacity-0 group-hover:text-orange-500 group-hover:opacity-100 transition-all duration-300 group-hover:translate-x-1" />}
                                             </div>
                                         ))}
                                     </div>

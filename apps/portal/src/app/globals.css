@@ -327,4 +327,19 @@
   .animate-fade {
     animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
+
+  @keyframes swing {
+    0% { transform: rotate(0deg); }
+    10% { transform: rotate(10deg); }
+    30% { transform: rotate(-10deg); }
+    50% { transform: rotate(5deg); }
+    70% { transform: rotate(-5deg); }
+    90% { transform: rotate(2deg); }
+    100% { transform: rotate(0deg); }
+  }
+
+  .animate-swing {
+    animation: swing 2s ease-in-out infinite;
+    transform-origin: top center;
+  }
 }
