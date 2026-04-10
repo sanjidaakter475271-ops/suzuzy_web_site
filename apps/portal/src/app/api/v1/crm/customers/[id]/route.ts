@@ -19,7 +19,7 @@ export async function GET(
         let profile;
         try {
             profile = await prisma.profiles.findFirst({
-                where: { id, dealer_id: user.dealerId },
+                where: { id, dealer_id: user.dealerId! },
                 include: {
                     service_vehicles: {
                         include: { bike_models: { select: { name: true } } }

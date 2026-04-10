@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
             // 2. Create Sale Record
             const newSale = await tx.sales.create({
                 data: {
-                    dealer_id: user.dealerId,
+                    dealer_id: user.dealerId!,
                     customer_id: customerId || null,
                     customer_name: customerName || null,
                     customer_phone: customerPhone || null,
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
                     // Add movement record
                     await tx.inventory_movements.create({
                         data: {
-                            dealer_id: user.dealerId,
+                            dealer_id: user.dealerId!,
                             product_id: item.productId,
                             movement_type: 'stock_out',
                             quantity_before: oldStock,
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
                             reference_type: 'sale',
                             reference_id: newSale.id,
                             reference_number: newSale.sale_number,
-                            performed_by: user.userId,
+                            performed_by: user.userId!,
                             reason: `Direct Sale`
                         }
                     });
@@ -167,19 +167,19 @@ export async function POST(req: NextRequest) {
         });
 
         // 5. Real-time broadcasts
-        await broadcast('inventory:changed', { triggeredBy: user.userId });
+        await broadcast('inventory:changed', { triggeredBy: user.userId! });
         if (jobCardId) {
             await broadcast('job_cards:changed', { id: jobCardId, status: 'delivered' });
             await broadcast('requisition:status_changed', {
                 jobId: jobCardId,
                 status: 'issued',
-                dealerId: user.dealerId
+                dealerId: user.dealerId!
             });
         }
 
         // 6. Create system notification for the user
         await createNotification({
-            userId: user.userId,
+            userId: user.userId!,
             title: 'Sale Completed',
             message: `Sale ${sale.sale_number} for ৳${sale.grand_total} was processed successfully.`,
             type: 'success',
@@ -201,7 +201,7 @@ export async function GET(_req: NextRequest) {
         if (!user || !user.dealerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         const sales = await prisma.sales.findMany({
-            where: { dealer_id: user.dealerId },
+            where: { dealer_id: user.dealerId! },
             orderBy: { created_at: 'desc' },
             take: 100
         });

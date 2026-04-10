@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Authentication required" }, { status: 401 });
         }
 
-        const dealerId = user.dealerId;
+        const dealerId = user.dealerId!;
         if (!dealerId) {
             return NextResponse.json({ error: "Dealer context required" }, { status: 400 });
         }

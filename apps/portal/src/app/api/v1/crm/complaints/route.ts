@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
         }
 
-        const dealerId = user.dealerId;
+        const dealerId = user.dealerId!;
 
         // Fetch all complaints (support tickets) for this dealer
         const complaints = await prisma.support_tickets.findMany({
