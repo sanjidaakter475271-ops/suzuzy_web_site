@@ -107,6 +107,12 @@ File bugs here with exact file paths so they're easy to find and fix.
 - **Status:** fixed
 - **Notes:** Installed `@capacitor/splash-screen`, configured dark background, and manually hide after initial auth check.
 
+### [BUG-007] Customer Detail 500 Error (P2022 Schema Mismatch)
+- **File:** `apps/portal/src/app/api/v1/crm/customers/[id]/route.ts`
+- **Problem:** API failed with error P2022 because the `service_history` table was missing columns defined in the Prisma schema.
+- **Status:** fixed
+- **Notes:** Refactored the route to fetch service history, technician info, and financials through the `service_tickets` -> `job_cards` -> `service_invoices` relation chain.
+
 ### [BUG-001] Missing React Imports
 - **File:** `pages/MyJobs.tsx`
 - **Problem:** `ReferenceError: React is not defined` after refactoring.

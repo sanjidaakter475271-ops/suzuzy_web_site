@@ -32,10 +32,45 @@ export interface CustomerDetail {
   presentAddress?: CustomerAddress;
   vehicles: CustomerVehicle[];
   servicePlans: ServicePlan[];
+  invoices: Invoice[];
   totalSpent: number;
   outstandingBalance: number;
   totalServices: number;
+  totalFreeServices: number;
+  usedFreeServices: number;
+  remainingFreeServices: number;
+  totalPaidServices: number;
+  complaints: Complaint[];
+  ratings: Rating[];
   createdAt: string;
+}
+
+export interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  grandTotal: number;
+  paidAmount: number;
+  dueAmount: number;
+  paymentStatus: string;
+  invoiceDate: string;
+}
+
+export interface Complaint {
+  id: string;
+  subject: string;
+  status: string;
+  priority: string;
+  createdAt: string;
+}
+
+export interface Rating {
+  id: string;
+  rating: number;
+  comment: string;
+  staffRating: number;
+  timingRating: number;
+  createdAt: string;
+  ticketNumber?: string;
 }
 
 export interface CustomerVehicle {
@@ -75,4 +110,8 @@ export interface ServiceHistoryEntry {
   nextServiceDueDate?: string;
   nextServiceDueMileage?: number;
   ticketId?: string;
+  technicianName?: string;
+  technicians?: string[];
+  status?: string;
+  tasks?: string[];
 }

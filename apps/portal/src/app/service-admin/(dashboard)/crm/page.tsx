@@ -18,7 +18,7 @@ const CRMOverviewPage = () => {
     const menuItems = [
         { title: "Customer List", icon: Users, path: "/service-admin/crm/customers", color: "bg-brand", desc: "Manage detailed customer profiles and history." },
         { title: "Vehicle List", icon: Bike, path: "/service-admin/crm/vehicles", color: "bg-info", desc: "Track all registered vehicles and service records." },
-        { title: "Complaints", icon: MessageSquare, path: "/service-admin/crm/complaints", color: "bg-danger", desc: "Log and resolve customer complaints." },
+        { title: "Complaints & Rating", icon: MessageSquare, path: "/service-admin/crm/complaints", color: "bg-danger", desc: "Manage customer issues and monitor service quality." },
         { title: "Reminder Logs", icon: Send, path: "/service-admin/crm/reminders", color: "bg-success", desc: "History of automated SMS and WhatsApp alerts." },
     ];
 

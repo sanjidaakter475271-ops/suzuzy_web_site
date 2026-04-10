@@ -36,6 +36,8 @@ d:\suzuzy_web_site\
 
 > Always use `getCurrentUser()` from `@/lib/auth/get-user.ts` in API routes — it enriches JWT with `dealerId` from the database. Using JWT payload alone misses the `dealerId`.
 
+> **DATABASE SYNC WARNING**: The `service_history` table in the production DB may be missing columns defined in `schema.prisma` (causing P2022 errors). For comprehensive customer history, always prefer querying through the `service_tickets` -> `job_cards` -> `service_invoices` chain.
+
 > This project uses **Prisma 7** with the **client engine** + **pg adapter**. The `PrismaClient` constructor MUST receive an `adapter` parameter.
 
 ---

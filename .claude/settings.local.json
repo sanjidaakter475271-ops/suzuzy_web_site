@@ -49,7 +49,15 @@
       "mcp__filesystem__edit_file",
       "Bash(grep -nC 5 \"CREATE TABLE \\\\\"public\\\\\".\\\\\"job_cards\\\\\"\" apps/portal/prisma/migrations/0_init/migration.sql)",
       "Bash(grep -nC 5 \"CREATE TABLE \\\\\"job_cards\\\\\"\" prisma/migrations/0_init/migration.sql)",
-      "Bash(grep -nC 20 \"CREATE TABLE \\\\\"public\\\\\".\\\\\"job_cards\\\\\"\" prisma/migrations/0_init/migration.sql)"
+      "Bash(grep -nC 20 \"CREATE TABLE \\\\\"public\\\\\".\\\\\"job_cards\\\\\"\" prisma/migrations/0_init/migration.sql)",
+      "Bash(psql --version)",
+      "Bash(node check-db.js)",
+      "Bash(DIRECT_URL=\"postgresql://postgres.idqikowpudzjickwpfzr:Nazmul%402%40%40%40@aws-1-ap-south-1.pooler.supabase.com:5432/postgres\" npx prisma db push)",
+      "Bash(DIRECT_URL=\"postgresql://postgres.idqikowpudzjickwpfzr:Nazmul%402%40%40%40@aws-1-ap-south-1.pooler.supabase.com:5432/postgres\" npx prisma db push --accept-data-loss)",
+      "Bash(node -e ':*)",
+      "Bash(DIRECT_URL=\"postgresql://postgres.idqikowpudzjickwpfzr:Nazmul%402%40%40%40@aws-1-ap-south-1.pooler.supabase.com:5432/postgres\" npx prisma generate)",
+      "Bash(awk '{print $2}')",
+      "Bash(ls -R apps/portal/src/app/api/v1/crm/customers/[id] apps/portal/src/app/service-admin/\\\\\\(dashboard\\\\\\)/crm/customers/[id])"
     ],
     "additionalDirectories": [
       "C:\\Users\\IT\\.claude\\projects\\d--suzuzy_web_site\\memory",

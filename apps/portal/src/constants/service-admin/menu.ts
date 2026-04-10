@@ -90,7 +90,7 @@ export const SIDEBAR_MENU: MenuGroup[] = [
                 subItems: [
                     { title: "Customer List", path: "/service-admin/crm/customers" },
                     { title: "Vehicle List", path: "/service-admin/crm/vehicles" },
-                    { title: "Complaints", path: "/service-admin/crm/complaints" },
+                    { title: "Complaints & Rating", path: "/service-admin/crm/complaints" },
                     { title: "Reminder Logs", path: "/service-admin/crm/reminders" },
                 ]
             },

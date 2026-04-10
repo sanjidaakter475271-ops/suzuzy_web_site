@@ -3,6 +3,23 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { prisma } from "@/lib/prisma/client";
 import { broadcast } from "@/lib/socket-server";
 
+// Helper to convert Prisma Decimals to Numbers
+const serialize = (obj: any): any => {
+    if (obj === null || obj === undefined) return obj;
+    if (Array.isArray(obj)) return obj.map(serialize);
+    if (typeof obj === 'object') {
+        if (obj.constructor && obj.constructor.name === 'Decimal') {
+            return Number(obj);
+        }
+        const newObj: any = {};
+        for (const key in obj) {
+            newObj[key] = serialize(obj[key]);
+        }
+        return newObj;
+    }
+    return obj;
+};
+
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -43,23 +60,6 @@ export async function GET(
         if (!job || (job.dealer_id !== user.dealerId && user.role !== 'super_admin')) {
             return NextResponse.json({ error: "Job card not found or forbidden" }, { status: 404 });
         }
-
-        // Helper to convert Prisma Decimals to Numbers
-        const serialize = (obj: any): any => {
-            if (obj === null || obj === undefined) return obj;
-            if (Array.isArray(obj)) return obj.map(serialize);
-            if (typeof obj === 'object') {
-                if (obj.constructor && obj.constructor.name === 'Decimal') {
-                    return Number(obj);
-                }
-                const newObj: any = {};
-                for (const key in obj) {
-                    newObj[key] = serialize(obj[key]);
-                }
-                return newObj;
-            }
-            return obj;
-        };
 
         return NextResponse.json({ success: true, data: serialize(job) });
     } catch (error: any) {
@@ -151,7 +151,7 @@ export async function PATCH(
             });
         }
 
-        return NextResponse.json({ success: true, data: updatedJob });
+        return NextResponse.json({ success: true, data: serialize(updatedJob) });
     } catch (error: any) {
         console.error("[JOB_CARD_PATCH_ERROR]", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });

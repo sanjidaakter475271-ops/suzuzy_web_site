@@ -5,46 +5,59 @@ import { prisma } from "@/lib/prisma/client";
 export async function GET(request: NextRequest) {
     try {
         const user = await getCurrentUser();
-        if (!user || (!user.dealerId && user.role !== 'admin')) {
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // Only block if role REQUIRES dealerId but it's missing
+        if (user.isDealerScoped && !user.dealerId) {
+            return NextResponse.json({ error: "Unauthorized: Dealer ID required" }, { status: 401 });
         }
 
         const { searchParams } = new URL(request.url);
         const query = searchParams.get("query") || "";
         const page = parseInt(searchParams.get("page") || "1");
         const limit = parseInt(searchParams.get("limit") || "10");
-        const skip = (page - 1) * limit;
+        const skip = Math.max(0, (page - 1) * limit);
 
-        // Build where clause for filtering by role and dealer
-        const whereClause: any = {
-            dealer_id: user.dealerId,
+        // Build robust where clause
+        const andConditions: any[] = [];
+
+        // Apply dealer scoping if user has a dealerId
+        if (user.dealerId) {
+            andConditions.push({ dealer_id: user.dealerId });
+        }
+
+        // Basic criteria for being a CRM customer
+        andConditions.push({
             OR: [
                 { role: 'customer' },
                 { service_vehicles: { some: {} } }
             ]
-        };
+        });
 
+        // Apply search query
         if (query) {
-            whereClause.AND = [
-                {
-                    OR: [
-                        { full_name: { contains: query, mode: 'insensitive' } },
-                        { phone: { contains: query } },
-                        {
-                            service_vehicles: {
-                                some: {
-                                    OR: [
-                                        { engine_number: { contains: query, mode: 'insensitive' } },
-                                        { chassis_number: { contains: query, mode: 'insensitive' } },
-                                        { reg_no: { contains: query, mode: 'insensitive' } },
-                                    ]
-                                }
+            andConditions.push({
+                OR: [
+                    { full_name: { contains: query, mode: 'insensitive' } },
+                    { phone: { contains: query } },
+                    {
+                        service_vehicles: {
+                            some: {
+                                OR: [
+                                    { engine_number: { contains: query, mode: 'insensitive' } },
+                                    { chassis_number: { contains: query, mode: 'insensitive' } },
+                                    { reg_no: { contains: query, mode: 'insensitive' } },
+                                ]
                             }
                         }
-                    ]
-                }
-            ];
+                    }
+                ]
+            });
         }
+
+        const whereClause = { AND: andConditions };
 
         const [total, data] = await Promise.all([
             prisma.profiles.count({ where: whereClause }),

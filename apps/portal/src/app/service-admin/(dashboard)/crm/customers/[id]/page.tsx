@@ -6,7 +6,8 @@ import axios from "axios";
 import {
     User, Bike, History, Wallet, Phone, Mail, MapPin,
     Calendar, Briefcase, FileText, ChevronRight, ArrowLeft,
-    Clock, Wrench, CheckCircle2, AlertCircle, TrendingUp
+    Clock, Wrench, CheckCircle2, AlertCircle, TrendingUp,
+    MessageSquare, Star
 } from "lucide-react";
 import { format } from "date-fns";
 import Breadcrumb from "@/components/service-admin/Breadcrumb";
@@ -64,10 +65,11 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
         { id: "vehicles", label: "Vehicles", icon: Bike },
         { id: "history", label: "Service History", icon: History },
         { id: "financials", label: "Financials", icon: Wallet },
+        { id: "complaints", label: "Complaints & Rating", icon: MessageSquare },
     ];
 
     return (
-        <div className="p-6 lg:p-8 space-y-8 animate-fade">
+        <div className="p-6 lg:p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-2">
                     <Breadcrumb
@@ -103,37 +105,90 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             </div>
 
             {/* KPI Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="bg-gradient-to-br from-brand to-brand-hover text-white border-none shadow-brand/20">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card className="bg-gradient-to-br from-brand to-brand-hover text-white border-none shadow-brand/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl group">
                     <CardContent className="p-6 flex items-center justify-between">
                         <div>
                             <p className="text-white/70 text-sm font-bold uppercase tracking-wider">Total Revenue</p>
                             <h3 className="text-3xl font-black mt-1">৳{customer.totalSpent.toLocaleString()}</h3>
                         </div>
-                        <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm">
+                        <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm group-hover:bg-white/30 transition-colors">
                             <TrendingUp size={24} />
                         </div>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group">
                     <CardContent className="p-6 flex items-center justify-between">
                         <div>
-                            <p className="text-ink-muted text-sm font-bold uppercase tracking-wider">Total Services</p>
-                            <h3 className="text-3xl font-black mt-1 text-ink-heading dark:text-white">{customer.totalServices}</h3>
+                            <p className="text-ink-muted text-sm font-bold uppercase tracking-wider">Service Count</p>
+                            <div className="flex items-baseline gap-2 mt-1">
+                                <h3 className="text-3xl font-black text-ink-heading dark:text-white">{customer.totalServices}</h3>
+                                <span className="text-xs font-bold text-ink-muted">Total</span>
+                            </div>
                         </div>
-                        <div className="p-4 bg-brand-soft rounded-2xl">
-                            <History size={24} className="text-brand" />
+                        <div className="p-4 bg-brand-soft rounded-2xl group-hover:bg-brand group-hover:text-white transition-all">
+                            <History size={24} className="text-brand group-hover:text-white" />
                         </div>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group">
+                    <CardContent className="p-6 flex items-center justify-between">
+                        <div>
+                            <p className="text-ink-muted text-sm font-bold uppercase tracking-wider">Free Services</p>
+                            <div className="flex items-baseline gap-2 mt-1">
+                                <h3 className="text-3xl font-black text-emerald-500">{customer.usedFreeServices}/{customer.totalFreeServices}</h3>
+                                <span className="text-xs font-bold text-ink-muted">Used</span>
+                            </div>
+                        </div>
+                        <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                            <CheckCircle2 size={24} className="text-emerald-500 group-hover:text-white" />
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group">
+                    <CardContent className="p-6 flex items-center justify-between">
+                        <div>
+                            <p className="text-ink-muted text-sm font-bold uppercase tracking-wider">Remaining Free</p>
+                            <h3 className="text-3xl font-black mt-1 text-amber-500">{customer.remainingFreeServices}</h3>
+                        </div>
+                        <div className="p-4 bg-amber-50 dark:bg-amber-500/10 rounded-2xl group-hover:bg-amber-500 group-hover:text-white transition-all">
+                            <Clock size={24} className="text-amber-500 group-hover:text-white" />
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card className="transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group">
+                    <CardContent className="p-6 flex items-center justify-between">
+                        <div>
+                            <p className="text-ink-muted text-sm font-bold uppercase tracking-wider">Paid Services</p>
+                            <h3 className="text-3xl font-black mt-1 text-ink-heading dark:text-white">{customer.totalPaidServices}</h3>
+                        </div>
+                        <div className="p-4 bg-brand-soft rounded-2xl group-hover:bg-brand group-hover:text-white transition-all">
+                            <Wallet size={24} className="text-brand group-hover:text-white" />
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group border-red-100 hover:border-danger transition-all">
+                    <CardContent className="p-6 flex items-center justify-between">
+                        <div>
+                            <p className="text-ink-muted text-sm font-bold uppercase tracking-wider">Outstanding</p>
+                            <h3 className="text-3xl font-black mt-1 text-danger">৳{customer.outstandingBalance.toLocaleString()}</h3>
+                        </div>
+                        <div className="p-4 bg-red-50 dark:bg-red-500/10 rounded-2xl group-hover:bg-danger group-hover:text-white transition-all">
+                            <AlertCircle size={24} className="text-danger group-hover:text-white" />
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group">
                     <CardContent className="p-6 flex items-center justify-between">
                         <div>
                             <p className="text-ink-muted text-sm font-bold uppercase tracking-wider">Active Vehicles</p>
                             <h3 className="text-3xl font-black mt-1 text-ink-heading dark:text-white">{customer.vehicles.length}</h3>
                         </div>
-                        <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl">
-                            <Bike size={24} className="text-emerald-500" />
+                        <div className="p-4 bg-slate-50 dark:bg-dark-border rounded-2xl group-hover:bg-ink-heading group-hover:text-white transition-all">
+                            <Bike size={24} className="text-ink-muted group-hover:text-white" />
                         </div>
                     </CardContent>
                 </Card>
@@ -141,23 +196,23 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
 
             {/* Main Content Tabs */}
             <div className="space-y-6">
-                <div className="flex gap-2 p-1.5 bg-surface-page dark:bg-dark-page rounded-2xl inline-flex">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={cn(
-                                "flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all",
-                                activeTab === tab.id
-                                    ? "bg-white dark:bg-dark-card text-brand shadow-soft"
-                                    : "text-ink-muted hover:text-ink-heading dark:hover:text-white"
-                            )}
-                        >
-                            <tab.icon size={18} />
-                            {tab.label}
-                        </button>
-                    ))}
-                </div>
+                    <div className="flex gap-2 p-1.5 bg-surface-page dark:bg-dark-page rounded-2xl inline-flex transition-all duration-500">
+                        {tabs.map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={cn(
+                                    "flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 transform",
+                                    activeTab === tab.id
+                                        ? "bg-white dark:bg-dark-card text-brand shadow-soft scale-105"
+                                        : "text-ink-muted hover:text-ink-heading dark:hover:text-white hover:bg-white/50 dark:hover:bg-dark-card/50 hover:scale-105"
+                                )}
+                            >
+                                <tab.icon size={18} className={cn("transition-transform duration-300", activeTab === tab.id && "scale-110")} />
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
 
                 <div className="min-h-[400px]">
                     {activeTab === "overview" && (
@@ -272,11 +327,11 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
 
                     {activeTab === "vehicles" && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            {customer.vehicles.map((v) => (
-                                <Card key={v.id} className="group hover:border-brand transition-all">
+                            {customer.vehicles?.map((v) => (
+                                <Card key={v.id} className="group hover:border-brand transition-all duration-300 hover:scale-[1.02] hover:shadow-xl">
                                     <CardHeader className="flex flex-row items-center justify-between space-y-0">
                                         <div className="flex items-center gap-3">
-                                            <div className="p-3 bg-brand-soft rounded-2xl group-hover:bg-brand group-hover:text-white transition-colors">
+                                            <div className="p-3 bg-brand-soft rounded-2xl group-hover:bg-brand group-hover:text-white transition-all duration-300 group-hover:rotate-6">
                                                 <Bike size={24} />
                                             </div>
                                             <div>
@@ -365,7 +420,8 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                                                 <th className="pb-4 font-black uppercase text-[10px] text-ink-muted">Seq</th>
                                                 <th className="pb-4 font-black uppercase text-[10px] text-ink-muted">Date</th>
                                                 <th className="pb-4 font-black uppercase text-[10px] text-ink-muted">Vehicle</th>
-                                                <th className="pb-4 font-black uppercase text-[10px] text-ink-muted">Type</th>
+                                                <th className="pb-4 font-black uppercase text-[10px] text-ink-muted">Technician</th>
+                                                <th className="pb-4 font-black uppercase text-[10px] text-ink-muted">Type / Status</th>
                                                 <th className="pb-4 font-black uppercase text-[10px] text-ink-muted">Mileage</th>
                                                 <th className="pb-4 font-black uppercase text-[10px] text-ink-muted">Cost</th>
                                                 <th className="pb-4 font-black uppercase text-[10px] text-ink-muted">Action</th>
@@ -374,7 +430,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                                         <tbody className="divide-y divide-surface-border dark:divide-dark-border/50">
                                             {customer.history && customer.history.length > 0 ? (
                                                 customer.history.map((h) => (
-                                                    <tr key={h.id} className="group hover:bg-surface-page dark:hover:bg-dark-page transition-colors">
+                                                    <tr key={h.id} className="group hover:bg-brand-soft/30 dark:hover:bg-brand/10 transition-all duration-300 cursor-default hover:scale-[1.002]">
                                                         <td className="py-4">
                                                             <span className="w-8 h-8 rounded-lg bg-surface-page dark:bg-dark-page border border-surface-border dark:border-dark-border flex items-center justify-center font-black text-xs text-ink-muted">
                                                                 #{h.serviceSequence || "-"}
@@ -390,12 +446,29 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                                                             </div>
                                                         </td>
                                                         <td className="py-4">
-                                                            <span className={cn(
-                                                                "px-2 py-0.5 rounded text-[10px] font-black uppercase",
-                                                                h.serviceType === "free" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10" : "bg-brand-soft text-brand"
-                                                            )}>
-                                                                {h.serviceType}
-                                                            </span>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm font-bold text-ink-heading dark:text-white">
+                                                                    {h.technicians && h.technicians.length > 0
+                                                                        ? h.technicians.join(", ")
+                                                                        : h.technicianName || "N/A"}
+                                                                </span>
+                                                                <span className="text-[10px] text-ink-muted uppercase">
+                                                                    {h.technicians && h.technicians.length > 1 ? "Technicians" : "Technician"}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-4">
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className={cn(
+                                                                    "px-2 py-0.5 rounded text-[10px] font-black uppercase w-fit",
+                                                                    h.serviceType === "free" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10" : "bg-brand-soft text-brand"
+                                                                )}>
+                                                                    {h.serviceType}
+                                                                </span>
+                                                                <span className="text-[10px] font-bold text-ink-muted uppercase">
+                                                                    {h.status?.replace('_', ' ')}
+                                                                </span>
+                                                            </div>
                                                         </td>
                                                         <td className="py-4 text-sm font-bold text-ink-muted">
                                                             {h.mileage?.toLocaleString() || "-"} km
@@ -465,13 +538,169 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                                     <CardTitle>Recent Invoices</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-center py-20 bg-surface-page dark:bg-dark-page rounded-2xl border border-dashed border-surface-border dark:border-dark-border">
-                                        <Wallet size={40} className="mx-auto text-slate-200 mb-2" />
-                                        <p className="text-ink-muted font-bold">No recent invoices found.</p>
-                                        <Button variant="ghost" className="mt-2 text-brand font-black">View All Bills</Button>
-                                    </div>
+                                    {customer.invoices && customer.invoices.length > 0 ? (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left">
+                                                <thead>
+                                                    <tr className="border-b border-surface-border dark:border-dark-border/50">
+                                                        <th className="pb-4 font-black uppercase text-[10px] text-ink-muted">Inv #</th>
+                                                        <th className="pb-4 font-black uppercase text-[10px] text-ink-muted">Date</th>
+                                                        <th className="pb-4 font-black uppercase text-[10px] text-ink-muted">Amount</th>
+                                                        <th className="pb-4 font-black uppercase text-[10px] text-ink-muted">Due</th>
+                                                        <th className="pb-4 font-black uppercase text-[10px] text-ink-muted">Status</th>
+                                                        <th className="pb-4 font-black uppercase text-[10px] text-ink-muted">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-surface-border dark:divide-dark-border/50">
+                                                    {customer.invoices?.map((inv) => (
+                                                        <tr key={inv.id} className="group hover:bg-brand-soft/30 dark:hover:bg-brand/10 transition-all duration-300 cursor-default hover:scale-[1.002]">
+                                                            <td className="py-4 font-bold text-sm text-brand group-hover:underline transition-all">{inv.invoiceNumber}</td>
+                                                            <td className="py-4 text-sm font-bold">
+                                                                {format(new Date(inv.invoiceDate), "dd MMM yyyy")}
+                                                            </td>
+                                                            <td className="py-4 font-black text-sm">৳{inv.grandTotal.toLocaleString()}</td>
+                                                            <td className="py-4 font-bold text-sm text-danger">৳{inv.dueAmount.toLocaleString()}</td>
+                                                            <td className="py-4">
+                                                                <span className={cn(
+                                                                    "px-2 py-0.5 rounded text-[10px] font-black uppercase",
+                                                                    inv.paymentStatus === "paid" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10" :
+                                                                    inv.paymentStatus === "partial" ? "bg-amber-50 text-amber-600 dark:bg-amber-500/10" :
+                                                                    "bg-red-50 text-red-600 dark:bg-red-500/10"
+                                                                )}>
+                                                                    {inv.paymentStatus}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-4">
+                                                                <Button variant="ghost" className="p-2 h-auto">
+                                                                    <FileText size={16} />
+                                                                </Button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-20 bg-surface-page dark:bg-dark-page rounded-2xl border border-dashed border-surface-border dark:border-dark-border">
+                                            <Wallet size={40} className="mx-auto text-slate-200 mb-2" />
+                                            <p className="text-ink-muted font-bold">No recent invoices found.</p>
+                                            <Button variant="ghost" className="mt-2 text-brand font-black">View All Bills</Button>
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
+                        </div>
+                    )}
+                    {activeTab === "complaints" && (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            {/* Complaints Section */}
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xl font-black text-ink-heading dark:text-white flex items-center gap-2">
+                                        <MessageSquare size={24} className="text-brand" />
+                                        Customer Complaints
+                                    </h3>
+                                    <Button variant="outline" size="sm" className="text-xs font-black uppercase">Log New</Button>
+                                </div>
+
+                                {customer.complaints && customer.complaints.length > 0 ? (
+                                    <div className="space-y-4">
+                                        {customer.complaints.map((c) => (
+                                            <Card key={c.id} className="transition-all duration-300 hover:scale-[1.01] hover:shadow-md border-l-4 border-l-brand">
+                                                <CardContent className="p-5">
+                                                    <div className="flex justify-between items-start mb-3">
+                                                        <div className="space-y-1">
+                                                            <p className="font-bold text-ink-heading dark:text-white">{c.subject}</p>
+                                                            <p className="text-[10px] text-ink-muted font-black uppercase">
+                                                                {format(new Date(c.createdAt), "PPP")}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <span className={cn(
+                                                                "px-2 py-0.5 rounded text-[10px] font-black uppercase",
+                                                                c.priority === "high" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
+                                                            )}>
+                                                                {c.priority}
+                                                            </span>
+                                                            <span className={cn(
+                                                                "px-2 py-0.5 rounded text-[10px] font-black uppercase",
+                                                                c.status === "open" ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"
+                                                            )}>
+                                                                {c.status}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <Button variant="ghost" size="sm" className="w-full text-xs h-8 border border-dashed border-surface-border hover:border-brand">
+                                                        View Conversation
+                                                    </Button>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="py-20 text-center bg-surface-page dark:bg-dark-page rounded-2xl border border-dashed border-surface-border">
+                                        <MessageSquare size={40} className="mx-auto text-slate-200 mb-2" />
+                                        <p className="text-ink-muted font-bold">No active complaints found.</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Ratings Section */}
+                            <div className="space-y-6">
+                                <h3 className="text-xl font-black text-ink-heading dark:text-white flex items-center gap-2">
+                                    <Star size={24} className="text-amber-500" />
+                                    Service Feedback
+                                </h3>
+
+                                {customer.ratings && customer.ratings.length > 0 ? (
+                                    <div className="space-y-4">
+                                        {customer.ratings.map((r) => (
+                                            <Card key={r.id} className="transition-all duration-300 hover:scale-[1.01] hover:shadow-md">
+                                                <CardContent className="p-5">
+                                                    <div className="flex justify-between items-center mb-4">
+                                                        <div className="flex gap-0.5">
+                                                            {[...Array(5)].map((_, i) => (
+                                                                <Star
+                                                                    key={i}
+                                                                    size={16}
+                                                                    className={cn(i < r.rating ? "fill-amber-500 text-amber-500" : "text-slate-200")}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                        <p className="text-[10px] font-black text-brand uppercase">Ticket: {r.ticketNumber || "N/A"}</p>
+                                                    </div>
+                                                    <p className="text-sm text-ink-muted italic mb-4 leading-relaxed">
+                                                        "{r.comment || "No comment provided."}"
+                                                    </p>
+                                                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-surface-border dark:border-dark-border/50">
+                                                        <div>
+                                                            <p className="text-[10px] font-black text-ink-muted uppercase">Staff Conduct</p>
+                                                            <div className="flex gap-0.5 mt-1">
+                                                                {[...Array(5)].map((_, i) => (
+                                                                    <div key={i} className={cn("h-1 w-4 rounded-full", i < r.staffRating ? "bg-emerald-500" : "bg-slate-100")} />
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[10px] font-black text-ink-muted uppercase">Timing & Speed</p>
+                                                            <div className="flex gap-0.5 mt-1">
+                                                                {[...Array(5)].map((_, i) => (
+                                                                    <div key={i} className={cn("h-1 w-4 rounded-full", i < r.timingRating ? "bg-amber-500" : "bg-slate-100")} />
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="py-20 text-center bg-surface-page dark:bg-dark-page rounded-2xl border border-dashed border-surface-border">
+                                        <Star size={40} className="mx-auto text-slate-200 mb-2" />
+                                        <p className="text-ink-muted font-bold">No service feedback yet.</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>

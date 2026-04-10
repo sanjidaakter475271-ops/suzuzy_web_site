@@ -3,6 +3,23 @@ import { prisma } from "@/lib/prisma/client";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { z } from "zod";
 
+// Helper to convert Prisma Decimals to Numbers for JSON serialization
+const serialize = (obj: any): any => {
+    if (obj === null || obj === undefined) return obj;
+    if (Array.isArray(obj)) return obj.map(serialize);
+    if (typeof obj === 'object') {
+        if (obj.constructor && obj.constructor.name === 'Decimal') {
+            return Number(obj);
+        }
+        const newObj: any = {};
+        for (const key in obj) {
+            newObj[key] = serialize(obj[key]);
+        }
+        return newObj;
+    }
+    return obj;
+};
+
 const taskSchema = z.object({
     item_name: z.string().min(1, "Name is required"),
     cost: z.number().min(0, "Cost must be a positive number"),
@@ -53,7 +70,7 @@ export async function POST(
             }
         });
 
-        return NextResponse.json({ success: true, data: { ...task, cost } });
+        return NextResponse.json({ success: true, data: serialize({ ...task, cost }) });
     } catch (error: any) {
         console.error("[ADD_TASK_ERROR]", error);
         return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
