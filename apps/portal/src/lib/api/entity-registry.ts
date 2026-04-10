@@ -71,7 +71,7 @@ export const ENTITY_REGISTRY: Record<string, EntityConfig> = {
         model: 'service_ramps',
         scopeBy: 'dealer_id',
         includes: {
-            service_tickets_service_ramps_current_ticket_idToservice_tickets: {
+            current_ticket: {
                 include: { service_vehicles: true }
             },
             service_staff: true

@@ -42,7 +42,7 @@ export async function getDashboardStats(user: any) {
                 orderBy: { ramp_number: 'asc' },
                 include: {
                     service_staff: true,
-                    service_tickets_service_ramps_current_ticket_idToservice_tickets: {
+                    current_ticket: {
                         include: {
                             service_vehicles: {
                                 include: { bike_models: true }
@@ -81,7 +81,7 @@ export async function getDashboardStats(user: any) {
         ]);
 
         const formattedRamps = ramps.map(ramp => {
-            const currentTicket = ramp.service_tickets_service_ramps_current_ticket_idToservice_tickets;
+            const currentTicket = ramp.current_ticket;
             return {
                 id: ramp.id,
                 ramp_number: ramp.ramp_number,

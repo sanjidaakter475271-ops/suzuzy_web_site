@@ -34,7 +34,7 @@ const ActiveRampsWidget = ({ data }: ActiveRampsWidgetProps) => {
                             title={`Ramp ${ramp.ramp_number}`}
                         >
                             {ramp.status === 'busy' ?
-                                (ramp.current_ticket?.service_number?.slice(-4) || ramp.service_tickets_service_ramps_current_ticket_idToservice_tickets?.service_number?.slice(-4) || 'BUSY') :
+                                (ramp.current_ticket?.service_number?.slice(-4) || 'BUSY') :
                                 ramp.ramp_number}
                         </div>
                     ))}

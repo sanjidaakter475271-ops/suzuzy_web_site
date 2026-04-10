@@ -167,7 +167,7 @@ export const useWorkshopStore = create<WorkshopState>((set, get) => ({
 
             // 4. Map Ramps
             const ramps: Ramp[] = rampsRaw.map((ramp: any) => {
-                const ticket = ramp.service_tickets_service_ramps_current_ticket_idToservice_tickets;
+                const ticket = ramp.current_ticket || ramp.service_tickets_service_ramps_current_ticket_idToservice_tickets;
                 const card = cardsRaw.find((c: any) => c.ticket_id === ramp.current_ticket_id);
 
                 return {

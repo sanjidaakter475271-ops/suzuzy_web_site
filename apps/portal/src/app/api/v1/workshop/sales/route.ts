@@ -4,6 +4,23 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { broadcast } from "@/lib/socket-server";
 import { createNotification } from "@/lib/notifications";
 
+// Helper to convert Prisma Decimals to Numbers for JSON serialization
+const serialize = (obj: any): any => {
+    if (obj === null || obj === undefined) return obj;
+    if (Array.isArray(obj)) return obj.map(serialize);
+    if (typeof obj === 'object') {
+        if (obj.constructor && obj.constructor.name === 'Decimal') {
+            return Number(obj);
+        }
+        const newObj: any = {};
+        for (const key in obj) {
+            newObj[key] = serialize(obj[key]);
+        }
+        return newObj;
+    }
+    return obj;
+};
+
 export async function POST(req: NextRequest) {
     try {
         const user = await getCurrentUser();
@@ -134,8 +151,16 @@ export async function POST(req: NextRequest) {
                     data: { status: 'delivered' }
                 });
 
-                // If it's a job, we should probably also create a service_invoice
-                // For now, we will just use the sales record as the invoice
+                // Mark all approved requisitions as 'issued' since they are now part of a completed sale
+                await tx.service_requisitions.updateMany({
+                    where: {
+                        job_card_id: jobCardId,
+                        status: 'approved'
+                    },
+                    data: {
+                        status: 'issued'
+                    }
+                });
             }
 
             return newSale;
@@ -145,6 +170,11 @@ export async function POST(req: NextRequest) {
         await broadcast('inventory:changed', { triggeredBy: user.userId });
         if (jobCardId) {
             await broadcast('job_cards:changed', { id: jobCardId, status: 'delivered' });
+            await broadcast('requisition:status_changed', {
+                jobId: jobCardId,
+                status: 'issued',
+                dealerId: user.dealerId
+            });
         }
 
         // 6. Create system notification for the user
@@ -156,7 +186,7 @@ export async function POST(req: NextRequest) {
             linkUrl: `/service-admin/finance/sales/${sale.id}`
         });
 
-        return NextResponse.json({ success: true, data: sale });
+        return NextResponse.json({ success: true, data: serialize(sale) });
 
     } catch (error: any) {
         console.error("Sale Error:", error);
@@ -186,7 +216,7 @@ export async function GET(_req: NextRequest) {
             createdAt: s.created_at
         }));
 
-        return NextResponse.json({ success: true, data: formattedSales });
+        return NextResponse.json({ success: true, data: serialize(formattedSales) });
 
     } catch (error: any) {
         console.error("Fetch Sales Error:", error);

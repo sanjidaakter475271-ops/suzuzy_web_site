@@ -4,6 +4,23 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { broadcast } from "@/lib/socket-server";
 import { createNotification } from "@/lib/notifications";
 
+// Helper to convert Prisma Decimals to Numbers for JSON serialization
+const serialize = (obj: any): any => {
+    if (obj === null || obj === undefined) return obj;
+    if (Array.isArray(obj)) return obj.map(serialize);
+    if (typeof obj === 'object') {
+        if (obj.constructor && obj.constructor.name === 'Decimal') {
+            return Number(obj);
+        }
+        const newObj: any = {};
+        for (const key in obj) {
+            newObj[key] = serialize(obj[key]);
+        }
+        return newObj;
+    }
+    return obj;
+};
+
 /**
  * Generate a human-readable unique number
  * Format: PREFIX-YYYYMMDD-XXXX
@@ -85,7 +102,7 @@ export async function POST(req: NextRequest) {
                     ramp_id: ramp_id || null,
                     staff_id: technician_id || null,
                     appointment_id: appointment_id || null,
-                } as any
+                }
             });
 
             // C. Create Job Card
@@ -185,7 +202,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            data: result.jobCard,
+            data: serialize(result.jobCard),
             message: "Job card created and assigned successfully"
         }, { status: 201 });
 
