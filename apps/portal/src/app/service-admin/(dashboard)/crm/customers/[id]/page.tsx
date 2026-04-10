@@ -600,7 +600,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                                         <MessageSquare size={24} className="text-brand" />
                                         Customer Complaints
                                     </h3>
-                                    <Button variant="outline" size="sm" className="text-xs font-black uppercase">Log New</Button>
+                                    <Button variant="outline" className="text-[10px] px-2 py-1 font-black uppercase">Log New</Button>
                                 </div>
 
                                 {customer.complaints && customer.complaints.length > 0 ? (
@@ -630,7 +630,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <Button variant="ghost" size="sm" className="w-full text-xs h-8 border border-dashed border-surface-border hover:border-brand">
+                                                    <Button variant="ghost" className="w-full text-xs h-8 border border-dashed border-surface-border hover:border-brand">
                                                         View Conversation
                                                     </Button>
                                                 </CardContent>
@@ -658,15 +658,14 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                                             <Card key={r.id} className="transition-all duration-300 hover:scale-[1.01] hover:shadow-md">
                                                 <CardContent className="p-5">
                                                     <div className="flex justify-between items-center mb-4">
-                                                        <div className="flex gap-0.5">
-                                                            {[...Array(5)].map((_, i) => (
-                                                                <Star
-                                                                    key={i}
-                                                                    size={16}
-                                                                    className={cn(i < r.rating ? "fill-amber-500 text-amber-500" : "text-slate-200")}
-                                                                />
-                                                            ))}
-                                                        </div>
+                                        <div className="flex gap-0.5">
+                                            {[...Array(5)].map((_, i) => (
+                                                <Star
+                                                    key={i}
+                                                    className={cn("w-4 h-4 transition-all duration-300", i < r.rating ? "fill-amber-500 text-amber-500 scale-110" : "text-slate-100")}
+                                                />
+                                            ))}
+                                        </div>
                                                         <p className="text-[10px] font-black text-brand uppercase">Ticket: {r.ticketNumber || "N/A"}</p>
                                                     </div>
                                                     <p className="text-sm text-ink-muted italic mb-4 leading-relaxed">

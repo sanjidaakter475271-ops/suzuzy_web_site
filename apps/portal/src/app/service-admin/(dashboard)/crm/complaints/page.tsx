@@ -178,7 +178,7 @@ const ComplaintsPage = () => {
                                             <p className="text-xs font-bold text-ink-muted">
                                                 ID: <span className="text-ink-heading dark:text-white">#{c.id.substr(0, 8)}</span>
                                             </p>
-                                            <Button variant="ghost" size="sm" className="text-xs gap-1 hover:bg-brand-soft hover:text-brand transition-all">
+                                            <Button variant="ghost" className="text-xs gap-1 py-1 hover:bg-brand-soft hover:text-brand transition-all">
                                                 View Thread <ChevronRight size={14} />
                                             </Button>
                                         </div>
